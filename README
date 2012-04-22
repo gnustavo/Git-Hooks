@@ -1,0 +1,6 @@
+Git::Hooks - A framework for implementing Git hooks.
+
+Copyright (c) 2012 by CPqD (http://www.cpqd.com.br/)
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
