@@ -4,30 +4,34 @@ use warnings;
 package Git::Hooks;
 # ABSTRACT: A framework for implementing Git hooks.
 
-use File::Basename;
-use File::Spec::Functions;
-use Git;
-
 use Exporter qw/import/;
-
-my @hooks = qw/ applypatch_msg pre_applypatch post_applypatch
-		pre_commit prepare_commit_msg commit_msg
-		post_commit pre_rebase post_checkout post_merge
-		pre_receive update post_receive post_update
-		pre_auto_gc post_rewrite /;
-
-our @EXPORT = (run_hook => @hooks);
 
 our @Conf_Files;
 our $Repo;
 our %Hooks;
+our @EXPORT;
 
-for my $hook (@hooks) {
-    *Git::Hooks::$hook = sub (&) {
-	my ($foo) = @_;
-	$Hooks{$hook}{$foo} ||= sub { $foo->($Repo, @_); };
-    };
+BEGIN {
+    my @hooks = qw/ applypatch_msg pre_applypatch post_applypatch
+		    pre_commit prepare_commit_msg commit_msg
+		    post_commit pre_rebase post_checkout post_merge
+		    pre_receive update post_receive post_update
+		    pre_auto_gc post_rewrite /;
+
+    for my $hook (@hooks) {
+	no strict 'refs'; ## no critic
+	*$hook = sub (&) {
+	    my ($foo) = @_;
+	    $Hooks{$hook}{$foo} ||= sub { $foo->($Repo, @_); };
+	};
+    }
+
+    @EXPORT = (run_hook => @hooks);
 }
+
+use File::Basename;
+use File::Spec::Functions;
+use App::gh::Git;
 
 sub run_hook {
     my ($hook_name, @args) = @_;
@@ -67,7 +71,7 @@ sub run_hook {
 1; # End of SVN::Hooks
 __END__
 
-=for Pod::Coverage run_hook POST_COMMIT POST_LOCK POST_REVPROP_CHANGE POST_UNLOCK PRE_COMMIT PRE_LOCK PRE_REVPROP_CHANGE PRE_UNLOCK START_COMMIT
+=for Pod::Coverage applypatch_msg pre_applypatch post_applypatch pre_commit prepare_commit_msg commit_msg post_commit pre_rebase post_checkout post_merge pre_receive update post_receive post_update pre_auto_gc post_rewrite
 
 =head1 SYNOPSIS
 
