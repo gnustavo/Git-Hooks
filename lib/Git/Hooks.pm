@@ -11,6 +11,8 @@ our $Repo;
 our %Hooks;
 our @EXPORT;
 
+use Data::Util qw(:all);
+
 BEGIN {
     my @hooks = qw/ applypatch_msg pre_applypatch post_applypatch
 		    pre_commit prepare_commit_msg commit_msg
@@ -19,14 +21,15 @@ BEGIN {
 		    pre_auto_gc post_rewrite /;
 
     for my $hook (@hooks) {
-	no strict 'refs'; ## no critic
-	*$hook = sub (&) {
-	    my ($foo) = @_;
-	    $Hooks{$hook}{$foo} ||= sub { $foo->($Repo, @_); };
-	};
+	install_subroutine('Git::Hooks',
+			   $hook => sub (&) {
+			       my ($foo) = @_;
+			       $Hooks{$hook}{$foo} ||= sub { $foo->($Repo, @_); };
+			   }
+		       );
     }
 
-    @EXPORT = (run_hook => @hooks);
+    @EXPORT = ('run_hook', @hooks);
 }
 
 use File::Basename;
@@ -54,9 +57,9 @@ sub run_hook {
     }
 
     foreach my $hook (values %{$Hooks{$hook_name}}) {
-	if (ref $hook eq 'CODE') {
+	if (is_code_ref($hook)) {
 	    $hook->($Repo, @args);
-	} elsif (ref $hook eq 'ARRAY') {
+	} elsif (is_array_ref($hook)) {
 	    foreach my $h (@$hook) {
 		$h->($Repo, @args);
 	    }
