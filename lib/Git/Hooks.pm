@@ -6,6 +6,7 @@ package Git::Hooks;
 # ABSTRACT: A framework for implementing Git hooks.
 
 use Exporter qw/import/;
+use Data::Util qw(:all);
 
 our $Git;
 our %Hooks;
