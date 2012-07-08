@@ -158,13 +158,14 @@ sub check_acls {
 	$op = 'C';		# create
     } elsif ($new_commit eq '0' x 40) {
 	$op = 'D';		# delete
-    } elsif ($ref =~ m:^heads/: &&
-		 $git->command('merge-base', $old_commit, $new_commit) eq $old_commit) {
-	$op = 'U';		# update (fast-forward) branch
     } else {
-	$op = 'R';		# rewind/rebase
+	chomp(my $merge_base = $git->command('merge-base', $old_commit, $new_commit));
+	if ($ref =~ m:^heads/: && $merge_base eq $old_commit) {
+	    $op = 'U';		# update (fast-forward) branch
+	} else {
+	    $op = 'R';		# rewind/rebase
+	}
     }
-
     my $acls = grok_acls($git);
 
     foreach my $acl (@$acls) {
