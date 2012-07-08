@@ -1,3 +1,4 @@
+use 5.010;
 use strict;
 use warnings;
 
@@ -6,72 +7,104 @@ package Git::Hooks;
 
 use Exporter qw/import/;
 
-our @Conf_Files;
-our $Repo;
+our $Git;
 our %Hooks;
 our @EXPORT;
 
-use Data::Util qw(:all);
-
 BEGIN {
-    my @hooks = qw/ applypatch_msg pre_applypatch post_applypatch
-		    pre_commit prepare_commit_msg commit_msg
-		    post_commit pre_rebase post_checkout post_merge
-		    pre_receive update post_receive post_update
-		    pre_auto_gc post_rewrite /;
+    my @installers =
+	qw/ APPLYPATCH_MSG PRE_APPLYPATCH POST_APPLYPATCH
+	    PRE_COMMIT PREPARE_COMMIT_MSG COMMIT_MSG
+	    POST_COMMIT PRE_REBASE POST_CHECKOUT POST_MERGE
+	    PRE_RECEIVE UPDATE POST_RECEIVE POST_UPDATE
+	    PRE_AUTO_GC POST_REWRITE /;
 
-    for my $hook (@hooks) {
-	install_subroutine('Git::Hooks',
-			   $hook => sub (&) {
-			       my ($foo) = @_;
-			       $Hooks{$hook}{$foo} ||= sub { $foo->($Repo, @_); };
-			   }
-		       );
+    for my $installer (@installers) {
+	my $hook = lc $installer;
+	$hook =~ tr/_/-/;
+	install_subroutine(
+	    'Git::Hooks',
+	    $installer => sub (&) {
+		my ($foo) = @_;
+		$Hooks{$hook}{$foo} ||= sub { $foo->(@_); };
+	    }
+	);
     }
 
-    @EXPORT = ('run_hook', @hooks);
+    @EXPORT = (@installers, 'config', 'run_hook');
 }
 
 use File::Basename;
 use File::Spec::Functions;
-use App::gh::Git;
+use Git::More;
+
+sub config {
+    my ($plugin) = @_;
+    return $Git->get_config()->{$plugin};
+}
 
 sub run_hook {
     my ($hook_name, @args) = @_;
 
     $hook_name = basename $hook_name;
 
-    $Repo = Git->repository();
+    $Git = Git::More->repository();
 
-    # Reload all configuration files
-    unshift @Conf_Files, catfile('hooks', 'git-hooks.conf');
-    foreach my $conf (@Conf_Files) {
-	my $conffile = file_name_is_absolute($conf) ? $conf : catfile($Repo->repo_path(), $conf);
-	next unless -e $conffile; # Configuration files are optional
-	package main;
-	unless (my $return = do $conffile) {
-	    die "couldn't parse '$conffile': $@\n" if $@;
-	    die "couldn't do '$conffile': $!\n"    unless defined $return;
-	    die "couldn't run '$conffile'\n"       unless $return;
+    # If there's no githooks options we are disabled.
+    my $config = $Git->get_config->{githooks} or return;
+
+    # Grok the enabled hooks. Return if there is none.
+    my $enabled_hooks = $config->{$hook_name} or return;
+
+    # Some hooks affect lists of commits. Let's grok them at once.
+    if ($hook_name eq 'update') {
+	# @ARGV == REF OLDCOMMIT NEWCOMMIT
+	$Git->set_affected_ref(@ARGV);
+    } elsif ($hook_name eq 'pre-receive') {
+	# pre-receive gets the list of affected commits via STDIN.
+	while (<>) {
+	    chomp;
+	    my ($old_commit, $new_commit, $ref) = split;
+	    $Git->set_affected_ref($ref, $old_commit, $new_commit);
 	}
     }
 
-    foreach my $hook (values %{$Hooks{$hook_name}}) {
-	if (is_code_ref($hook)) {
-	    $hook->($Repo, @args);
-	} elsif (is_array_ref($hook)) {
-	    foreach my $h (@$hook) {
-		$h->($Repo, @args);
+    # Grok the directories where we'll look for the hook scripts.
+
+    my @hooksdir;
+    # First the local directory 'hooks.d' under the repository path
+    push @hooksdir, 'hooks.d';
+    # Then, the optional list of directories specified by the hooksdir
+    # config option
+    push @hooksdir, @{$config->{hooksdir}} if exists $config->{hooksdir};
+    # And finally, the Git::Hooks standard hooks directory
+    push @hooksdir, catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks');
+
+    # Execute every enabled script found in the @hooksdir directories
+    foreach my $dir (grep {-d} @hooksdir) {
+	foreach my $hook (@$enabled_hooks) {
+	    my $script = catfile($dir, $hook);
+	    next unless -f $script;
+
+	    my $exit = do $script;
+	    unless ($exit) {
+		die "Git::Hooks: couldn't parse $script: $@\n" if $@;
+		die "Git::Hooks: couldn't do $script: $!\n"    unless defined $exit;
+		die "Git::Hooks: couldn't run $script\n"       unless $exit;
 	    }
-	} else {
-	    die "Git::Hooks: internal error!\n";
 	}
+    }
+
+    # Call every hook function installed by the hook scripts before.
+    foreach my $hook (values %{$Hooks{$hook_name}}) {
+	$hook->($Git, @args);
     }
 
     return;
 }
 
-1; # End of SVN::Hooks
+
+1; # End of Git::Hooks
 __END__
 
 =for Pod::Coverage applypatch_msg pre_applypatch post_applypatch pre_commit prepare_commit_msg commit_msg post_commit pre_rebase post_checkout post_merge pre_receive update post_receive post_update pre_auto_gc post_rewrite
@@ -85,26 +118,26 @@ A single script can implement several hooks:
 	use Git::Hooks;
 
 	PRE_COMMIT {
-	    my ($repo) = @_;
+	    my ($git) = @_;
 	    # ...
 	};
 
 	COMMIT_MSG {
-	    my ($repo, $msg_file) = @_;
+	    my ($git, $msg_file) = @_;
 	    # ...
 	};
 
 	run_hook($0, @ARGV);
 
-Or you can use already implemented hooks via plugins:
+Or you can use already implemented hooks which are installed in the
+Git/Hooks directory, in the Git/Hooks.pm installation. These hooks are
+enabled by Git configuration options. (More on this later.) If you're
+only using Git::Hooks standard hooks, all you need is the following
+script:
 
 	#!/usr/bin/env perl
 
 	use Git::Hooks;
-	use Git::Hooks::DenyFilenames;
-	use Git::Hooks::DenyChanges;
-	use Git::Hooks::CheckProperty;
-	...
 
 	run_hook($0, @ARGV);
 
@@ -157,11 +190,13 @@ read and you may have to maintain several of them.
 
 This arrangement is inefficient in two ways. First because each script
 runs as a separate process, which usually have a high startup cost
-because they are, well, scripts and not binaries. And second, because
-as each script is called in turn they have no memory of the scripts
-called before and have to gather the information about the transaction
-again and again, normally by calling the C<git> command, which spawns
-yet another process.
+because they are, well, scripts and not binaries. (For a dissent view
+on this, see
+L<http://gnustavo.wordpress.com/2012/06/28/programming-languages-start-up-times/>.)
+And second, because as each script is called in turn they have no
+memory of the scripts called before and have to gather the information
+about the transaction again and again, normally by calling the C<git>
+command, which spawns yet another process.
 
 =back
 
@@ -171,7 +206,7 @@ solve these problems.
 Instead of having separate scripts implementing different
 functionality you may have a single script implementing all the
 funcionality you need either directly or using some of the existing
-plugins, which are implemented by Perl modules in the Git::Hooks::
+plugins, which are implemented by Perl scripts in the Git::Hooks::
 namespace. This single script can be used to implement all standard
 hooks, because each hook knows when to perform based on the context in
 which the script was called.
@@ -184,14 +219,11 @@ a script there using the Git::Hooks module.
 
 	$ cd /path/to/repo/.git/hooks
 
-	$ cat >git-hooks.pl <<END_OF_SCRIPT
+	$ cat >git-hooks.pl <<EOT
 	#!/usr/bin/env perl
-
 	use Git::Hooks;
-
 	run_hook($0, @ARGV);
-
-	END_OF_SCRIPT
+	EOT
 
 	$ chmod +x git-hooks.pl
 
@@ -207,11 +239,11 @@ for nothing.)
 	$ ln -s git-hooks.pl commit-msg
 	$ ln -s git-hooks.pl post-commit
 
-As is the script won't do anything. You have to implement some hooks or
-use some of the existing ones implemented as plugins. Either way, the
-script should end with a call to C<run_hooks> passing to it the name
-with which it wass called (C<$0>) and all the arguments it received
-(C<@ARGV>).
+As is, the script won't do anything. You have to implement some hooks
+or use some of the existing ones implemented as plugins. Either way,
+the script should end with a call to C<run_hooks> passing to it the
+name with which it was called (C<$0>) and all the arguments it
+received (C<@ARGV>).
 
 =head2 Implementing Hooks
 
@@ -219,10 +251,10 @@ Implement hooks using one of the hook I<directives> below. Each one of
 them gets a single block (anonymous function) as argument. The block
 will be called by C<run_hook> with proper arguments, as indicated
 below. These arguments are the ones gotten from @ARGV, with the
-exception of the ones identified by C<SVN::Look>. These are SVN::Look
+exception of the ones identified by C<Git>. These are Git::More
 objects which can be used to grok detailed information about the
 repository and the current transaction. (Please, refer to the
-L<SVN::Look> documentation to know how to use it.)
+L<Git::More> documentation to know how to use it.)
 
 =over
 
@@ -260,45 +292,14 @@ L<SVN::Look> documentation to know how to use it.)
 
 =back
 
-FIXME...
-
-This is an example of a script implementing two hooks:
-
-	#!/usr/bin/env perl
-
-	use Git::Hooks;
-
-	# ...
-
-	START_COMMIT {
-	    my ($repos_path, $username, $capabilities) = @_;
-
-	    exists $committers{$username}
-		or die "User '$username' is not allowed to commit.\n";
-
-	    $capabilities =~ /mergeinfo/
-		or die "Your Subversion client does not support mergeinfo capability.\n";
-	};
-
-	PRE_COMMIT {
-	    my ($svnlook) = @_;
-
-	    foreach my $added ($svnlook->added()) {
-		$added !~ /\.(exe|o|jar|zip)$/
-		    or die "Please, don't commit binary files such as '$added'.\n";
-	    }
-	};
-
-	run_hook($0, @ARGV);
-
 Note that the hook directives resemble function definitions but
 they're not. They are function calls, and as such must end with a
 semi-colon.
 
-Most of the C<start-commit> and C<pre-*> hooks are used to check some
-condition. If the condition holds, they must simply end without
-returning anything. Otherwise, they must C<die> with a suitable error
-message.
+Most of the hooks are used to check some condition. If the condition
+holds, they must simply end without returning anything. Otherwise,
+they must C<die> with a suitable error message. This will prevent Git
+from finishing its operation.
 
 Also note that each hook directive can be called more than once if you
 need to implement more than one specific hook.
@@ -306,148 +307,93 @@ need to implement more than one specific hook.
 =head2 Using Plugins
 
 There are several hooks already implemented as plugin modules under
-the namespace C<SVN::Hooks::>, which you can use. The main ones are
+the namespace C<Git::Hooks::>, which you can use. The main ones are
 described succinctly below. Please, see their own documentation for
 more details.
 
 =over
 
-=item SVN::Hooks::AllowPropChange
+=item Git::Hooks::check-acls.pl
 
-Allow only specified users make changes in revision properties.
+Allow you to specify who can commit or push to the repository and
+affect which Git refs.
 
-=item SVN::Hooks::CheckCapability
+=item Git::Hooks::check-jira.pl
 
-Check if the Subversion client implements the required capabilities.
-
-=item SVN::Hooks::CheckJira
-
-Integrate Subversion with the JIRA
-L<http://www.atlassian.com/software/jira/> ticketing system.
-
-=item SVN::Hooks::CheckLog
-
-Check if the log message in a commit conforms to a Regexp.
-
-=item SVN::Hooks::CheckMimeTypes
-
-Check if the files added to the repository have the C<svn:mime-type>
-property set. Moreover, for text files, check if the properties
-C<svn:eol-style> and C<svn:keywords> are also set.
-
-=item SVN::Hooks::CheckProperty
-
-Check for specific properties for specific kinds of files.
-
-=item SVN::Hooks::CheckStructure
-
-Check if the files and directories being added to the repository
-conform to a specific structure.
-
-=item SVN::Hooks::DenyChanges
-
-Deny the addition, modification, or deletion of specific files and
-directories in the repository. Usually used to deny modifications in
-the C<tags> directory.
-
-=item SVN::Hooks::DenyFilenames
-
-Deny the addition of files which file names doesn't comply with a
-Regexp. Usually used to disallow some characteres in the filenames.
-
-=item SVN::Hooks::Notify
-
-Sends notification emails after successful commits.
-
-=item SVN::Hooks::UpdateConfFile
-
-Allows you to maintain Subversion configuration files versioned in the
-same repository where they are used. Usually used to maintain the
-configuration file for the hooks and the repository access control
-file.
+Integrate Git with the JIRA L<http://www.atlassian.com/software/jira/>
+ticketing system.
 
 =back
 
-This is an example of a script using some plugins:
+=head2 Configuration
 
-	#!/usr/bin/perl
+Git::Hooks is configured via Git's own configuration
+infrastructure. The framework defines a few options which are
+described below. Each plugin may define other specific options which
+are described in their own documentation.
 
-	use SVN::Hooks;
-	use SVN::Hooks::CheckProperty;
-	use SVN::Hooks::DenyChanges;
-	use SVN::Hooks::DenyFilenames;
+You should get comfortable with C<git config> command (read C<git help
+config>) to know how to configure Git::Hooks.
 
-	# Accept only letters, digits, underlines, periods, and hifens
-	DENY_FILENAMES(qr/[^-\/\.\w]/i);
+When you invoke C<run_hook>, the command C<git config --list> is
+invoked to grok all configuration affecting the current
+repository. Note that this will fetch all C<--system>, C<--global>,
+and C<--local> options, in this order. You may use this mechanism to
+define configuration global to a user or local to a repository.
 
-	# Disallow modifications in the tags directory
-	DENY_UPDATE(qr:^tags:);
+=over
 
-	# OpenOffice.org documents need locks
-	CHECK_PROPERTY(qr/\.(?:od[bcfgimpst]|ot[ghpst])$/i => 'svn:needs-lock');
+=item githooks.HOOK
 
-	run_hook($0, @ARGV);
+To enable a plugin you must register it with the appropriate
+C<githooks.HOOK> option. For instance, if you want to enable the
+C<check-jira.pl> plugin in the C<update> hook, you must do this:
 
-Those directives are implemented and exported by the hooks. Note that
-using hooks you don't need to be explicit about which one of the nine
-hooks will be triggered by the directives. This is on purpose, because
-some plugins can trigger more than one hook. The plugin documentation
-should tell you which hooks can be triggered so that you know which
-symbolic links you need to create in the F<hooks> repository
-directory.
+    $ git config githooks.update check-jira.pl
 
-=head2 Configuration file
+Note that you may enable more than one plugin to the same hook. For
+instance:
 
-Before calling the hooks, the function C<run_hook> evaluates a file
-called F<svn-hooks.conf> under the F<conf> directory in the
-repository, if it exists. Hence, you can choose to put all the
-directives in this file and not in the script under the F<hooks>
-directory.
+    $ git config githooks.update check-acls.pl
 
-The advantage of this is that you can then manage the configuration
-file with the C<SVN::Hooks::UpdateConfFile> and have it versioned
-under the same repository that it controls.
+And you may enable the same plugin in more than one hook, if it makes
+sense to do so. For instance:
 
-One way to do this is to use this hook script:
+    $ git config githooks.commit-msg check-jira.pl
 
-	#!/usr/bin/perl
+=item githooks.hooksdir
 
-	use SVN::Hooks;
-	use SVN::Hooks::UpdateConfFile;
-	use ...
+The plugins enabled for a hook are searched for in three places. First
+they're are searched for in the C<hooks.d> directory under the
+repository path (usually in C<.git/hooks.d>).
 
-	UPDATE_CONF_FILE(
-	    'conf/svn-hooks.conf' => 'svn-hooks.conf',
-	    validator             => [qw(/usr/bin/perl -c)],
-	    rotate                => 2,
-	);
+Then, they are searched for in every directory specified with the
+C<githooks.hooksdir> option.  You may set it more than once if you
+have more than one directory holding your hooks.
 
-	run_hook($0, @ARGV);
+Finally, they are searched for in Git::Hooks installation.
 
-Use this hook script and create a directory called F<conf> at the root
-of the repository (besides the common F<trunk>, F<branches>, and
-F<tags> directories). Add the F<svn-hooks.conf> file under the F<conf>
-directory. Then, whenever you commit a new version of the file, the
-pre-commit hook will validate it sintactically (C</usr/bin/perl -c>)
-and copy its new version to the F<conf/svn-hooks.conf> file in the
-repository. (Read the L<SVN::Hooks::UpdateConfFile> documentation to
-understand it in details.)
+The first match is taken as the desired plugin, which is executed and
+the search stops.
 
-Being a Perl script, it's possible to get fancy with the configuration
-file, using variables, functions, and whatever. But for most purposes
-it consists just in a series of configuration directives.
+=back
 
-Don't forget to end it with the C<1;> statement, though, because it's
-evaluated with a C<do> statement and needs to end with a true
-expression.
-
-Please, see the plugins documentation to know about the directives.
+Please, see the plugins documentation to know about their own
+configuration options.
 
 =head1 PLUGIN DEVELOPER TUTORIAL
 
 Yet to do.
 
 =head1 EXPORT
+
+=head2 config PLUGIN
+
+This function is used by plugin developers, to try to uniformize the
+way plugins grok their own configuration options. It simply invokes
+C<Git::More::get_config>, to grok all configuration options for the
+repository and returns the hash-ref containing the options for the
+section called PLUGIN.
 
 =head2 run_hook
 
@@ -458,35 +404,7 @@ Its first argument must be the name of the hook that was
 called. Usually you just pass C<$0> to it, since it knows to extract
 the basename of the parameter.
 
-Its second argument must be the path to the directory where the
-repository was created.
-
 The remaining arguments depend on the hook for which it's being
-called, like this:
-
-=over
-
-=item * start-commit repo-path user capabilities
-
-=item * pre-commit repo-path txn
-
-=item * post-commit repo-path rev
-
-=item * pre-lock repo-path path user
-
-=item * post-lock repo-path user
-
-=item * pre-unlock repo-path path user
-
-=item * post-unlock repo-path user
-
-=item * pre-revprop-change repo-path rev user propname action
-
-=item * post-revprop-change repo-path rev user propname action
-
-=back
-
-But as these are exactly the arguments Subversion passes when it calls
-the hooks, you usually call C<run_hook> like this:
+called. Usually you just pass C<@ARGV> to it. And that's it. Mostly.
 
 	run_hook($0, @ARGV);
