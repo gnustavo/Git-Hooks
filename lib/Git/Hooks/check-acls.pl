@@ -194,11 +194,9 @@ PRE_RECEIVE {
 
     return if im_admin($git);
 
-    while (<>) {
-	chomp;
-	my ($old_commit, $new_commit, $ref) = split;
-	$ref =~ s:refs/::;
-	check_acls($git, $ref, $old_commit, $new_commit);
+    my $refs = $git->get_affected_refs();
+    while (my ($refname, $ref) = each %$refs) {
+	check_acls($git, $refname, @{$ref->{range}});
     }
 };
 
