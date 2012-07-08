@@ -52,27 +52,25 @@ sub grok_acls {
     return $acls;
 }
 
-sub grok_groups_file {
-    my ($git, $file) = @_;
-    open my $fh, '<', $file
-	or die "$HOOK: can't open groups file ($file): $!\n";
+sub grok_groups_spec {
+    my ($git, $specs, $source) = @_;
     my %groups;
-    while (<$fh>) {
+    foreach (@$specs) {
 	s/\#.*//;		# strip comments
 	next unless /\S/;	# skip blank lines
 	/^\s*(\w+)\s*=\s*(.+?)\s*$/
-	    or die "$HOOK: invalid line in group file [$file:$.].\n";
+	    or die "$HOOK: invalid line in '$source': $_\n";
 	my ($groupname, $members) = ($1, $2);
-	exists $groups{$groupname}
-	    and die "$HOOK: redefinition of group ($groupname) in groups file [$file:$.].\n";
+	exists $groups{"\@$groupname"}
+	    and die "$HOOK: redefinition of group ($groupname) in '$source': $_\n";
 	foreach my $member (split / /, $members) {
-	    if ($member =~ /^@/) {
+	    if ($member =~ /^\@/) {
 		# group member
-		$groups{$groupname}{$member} = $groups{$member}
-		    or die "HOOK: unknown group ($member) cited in groups file [$file:$.].\n";
+		$groups{"\@$groupname"}{$member} = $groups{$member}
+		    or die "HOOK: unknown group ($member) cited in '$source': $_\n";
 	    } else {
 		# user member
-		$groups{$groupname}{$member} = undef;
+		$groups{"\@$groupname"}{$member} = undef;
 	    }
 	}
     }
@@ -86,20 +84,28 @@ sub grok_groups {
 	    or die "$HOOK: you have to define the check-acls.groups option to use groups.\n";
 
 	if (my ($groupfile) = ($option->[-1] =~ /^file:(.*)/)) {
-	    grok_groups_file($git, $groupfile);
+	    my @groupspecs = read_file($groupfile);
+	    defined $groupspecs[0]
+		or die "$HOOK: can't open groups file ($groupfile): $!\n";
+	    grok_groups_spec($git, \@groupspecs, $groupfile);
 	} else {
-	    die "$HOOK: check-acls.groups value ($option->[-1]) is invalid.\n";
+	    my @groupspecs = split /\n/, $option->[-1];
+	    grok_groups_spec($git, \@groupspecs, "$HOOK.groups");
 	}
     };
     return $groups;
 }
 
 sub im_memberof {
-    my ($git, $group) = @_;
+    my ($git, $groupname) = @_;
 
-    my $groups = grok_groups($git);
-    return 1 if exists $groups->{$myself};
-    while (my ($member, $subgroup) = each %$groups) {
+    state $groups = grok_groups($git);
+
+    return 0 unless exists $groups->{$groupname};
+
+    my $group = $groups->{$groupname};
+    return 1 if exists $group->{$myself};
+    while (my ($member, $subgroup) = each %$group) {
 	next     unless defined $subgroup;
 	return 1 if     im_memberof($git, $member);
     }
@@ -250,7 +256,7 @@ set.
 
 You can define user groups in order to make it easier to configure
 general acls. Use this option to tell where to find group
-definitions in one of these ways (just one for now :-):
+definitions in one of these ways:
 
 =over
 
@@ -270,6 +276,11 @@ only between users and group references.
 Note that a group can reference other groups by name. To make a group
 reference, simple prefix its name with an at sign (@). Group
 references must reference groups previously defined in the file.
+
+=item GROUPS
+
+If the option's value doesn't start with any of the above prefixes, it
+must contain the group definitions itself.
 
 =back
 
