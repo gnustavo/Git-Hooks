@@ -91,7 +91,7 @@ $clone->command(config => '--replace-all', 'check-acls.acl', 'admin D heads/fix'
 check_can_push('allow ACL delete ref', ':refs/heads/fix');
 
 $clone->command(config => '--replace-all', 'check-acls.acl', 'admin CDU heads/master');
-$repo->command(reset => '--hard', 'HEAD^^'); # rewind fix locally
+$repo->command(reset => '--hard', 'HEAD~2'); # rewind fix locally
 check_cannot_push('deny ACL rewrite ref', '+master:master'); # try to push it
 
 $clone->command(config => '--replace-all', 'check-acls.acl', 'admin R heads/master');
