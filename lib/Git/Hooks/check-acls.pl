@@ -158,9 +158,12 @@ sub check_acls {
 	$op = 'C';		# create
     } elsif ($new_commit eq '0' x 40) {
 	$op = 'D';		# delete
+    } elsif ($ref !~ m:^heads/:) {
+	$op = 'R';		# rewrite a non-branch
     } else {
-	chomp(my $merge_base = $git->command('merge-base', $old_commit, $new_commit));
-	if ($ref =~ m:^heads/: && $merge_base eq $old_commit) {
+	my $refs = $git->get_affected_commit_ids();
+	if (@{$refs->{$ref}{ids}}) {
+	    # If we can reach $new_commit from $old_commit, it's a fast-forward
 	    $op = 'U';		# update (fast-forward) branch
 	} else {
 	    $op = 'R';		# rewind/rebase
