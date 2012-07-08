@@ -183,8 +183,6 @@ UPDATE {
 
     return if im_admin($git);
 
-    $ref =~ s:refs/::;
-
     check_acls($git, $ref, $old_commit, $new_commit);
 };
 

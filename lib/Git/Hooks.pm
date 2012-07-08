@@ -59,13 +59,15 @@ sub run_hook {
 
     # Some hooks affect lists of commits. Let's grok them at once.
     if ($hook_name eq 'update') {
-	# @ARGV == REF OLDCOMMIT NEWCOMMIT
-	$Git->set_affected_ref(@ARGV);
+	my ($ref, $old_commit, $new_commit) = @ARGV;
+	$ref =~ s:refs/::;
+	$Git->set_affected_ref($ref, $old_commit, $new_commit);
     } elsif ($hook_name eq 'pre-receive') {
 	# pre-receive gets the list of affected commits via STDIN.
 	while (<>) {
 	    chomp;
 	    my ($old_commit, $new_commit, $ref) = split;
+	    $ref =~ s:refs/::;
 	    $Git->set_affected_ref($ref, $old_commit, $new_commit);
 	}
     }
