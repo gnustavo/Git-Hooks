@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 16;
+use Test::More tests => 20;
 
 require "test-functions.pl";
 
