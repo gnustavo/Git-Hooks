@@ -184,6 +184,8 @@ UPDATE {
 
     return if im_admin($git);
 
+    $ref =~ s:refs/::;
+
     check_acls($git, $ref, $old_commit, $new_commit);
 };
 
@@ -195,6 +197,7 @@ PRE_RECEIVE {
     while (<>) {
 	chomp;
 	my ($old_commit, $new_commit, $ref) = split;
+	$ref =~ s:refs/::;
 	check_acls($git, $ref, $old_commit, $new_commit);
     }
 };
@@ -365,9 +368,6 @@ hook forbids pushing or deleting anything not under "refs/".
 Refnames that start with ^ are Perl regular expressions, and the ^
 is kept as part of the regexp.  \\ is needed to get just one \, so
 \\d expands to \d in Perl.
-
-Refnames that don't start with ^ but that end with / are prefix
-matches; all other refnames are strict equality matches.
 
 =back
 
