@@ -171,9 +171,7 @@ sub check_acls {
 	my ($who, $what, $refspec) = @$acl;
 	next unless match_user($git, $who);
 	next unless match_ref($ref, $refspec);
-	# If matched who and ref then we stop here. This ACL defines
-	# the operations that this user can perform on this ref.
-	return index($what, $op) != -1;
+	return if index($what, $op) != -1;
     }
 
     die "$HOOK: you ($myself) cannot change $ref.\n";
