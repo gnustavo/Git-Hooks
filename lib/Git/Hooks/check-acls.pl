@@ -108,7 +108,7 @@ sub im_memberof {
 
 sub match_user {
     my ($git, $spec) = @_;
-    if ($spec =~ /^^/) {
+    if ($spec =~ /^\^/) {
 	return 1 if $myself =~ $spec;
     } elsif ($spec =~ /^@/) {
 	return 1 if im_memberof($git, $spec);
@@ -120,7 +120,7 @@ sub match_user {
 
 sub match_ref {
     my ($ref, $spec) = @_;
-    if ($spec =~ /^^/) {
+    if ($spec =~ /^\^/) {
 	return 1 if $ref =~ $spec;
     } else {
 	return 1 if $ref eq $spec;
