@@ -1,0 +1,5 @@
+/Git-Hooks-*
+/.build
+*.bak
+*.tar.gz
+*~
