@@ -175,7 +175,7 @@ sub check_acls {
 	return if index($what, $op) != -1;
     }
 
-    die "$HOOK: you ($myself) cannot change $ref.\n";
+    die "$HOOK: you ($myself) cannot change ($op) ref $ref.\n";
 }
 
 UPDATE {
