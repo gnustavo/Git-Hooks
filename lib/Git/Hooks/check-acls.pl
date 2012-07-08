@@ -19,6 +19,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
+use File::Slurp;
 
 my $HOOK = "check-acls";
 

@@ -19,6 +19,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
+use File::Slurp;
 use Data::Util qw(:check);
 use List::MoreUtils qw/uniq/;
 use JIRA::Client;
@@ -188,12 +189,8 @@ COMMIT_MSG {
 	return unless $git->is_ref_enabled($branches, $cur_branch);
     }
 
-    my $msg = do {
-	open my $fh, '<', $commit_msg_file
-	    or die "$HOOK: Can't open file '$commit_msg_file' for reading: $!\n";
-	local $/ = undef;
-	<$fh>;
-    };
+    my $msg = read_file($commit_msg_file);
+    defined $msg or die "$HOOK: Can't open file '$commit_msg_file' for reading: $!\n";
 
     check_commit_msg(
 	$git,
