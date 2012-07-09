@@ -200,34 +200,34 @@ COMMIT_MSG {
 };
 
 sub check_ref {
-    my ($git, $ref, $commits) = @_;
+    my ($git, $ref) = @_;
 
     if (my $branches = $Config->{branches}) {
 	return unless $git->is_ref_enabled($branches, $ref);
     }
+
+    my $commits = $git->get_affected_commits()->{$ref}{commits};
 
     foreach my $commit (@$commits) {
 	check_commit_msg($git, $commit, $ref);
     }
 };
 
-UPDATE {
-    my ($git, $ref) = @_;
-
-    my $commits = $git->get_affected_commits()->{$ref};
-
-    check_ref($git, $ref, $commits);
-};
-
-PRE_RECEIVE {
+# This routine can act both as an update or a pre-receive hook.
+sub check_affected_refs {
     my ($git) = @_;
 
-    my $refs = $git->get_affected_commits();
+    return if im_admin($git);
 
-    while (my ($ref, $commits) = each %$refs) {
-	check_ref($git, $ref, $commits);
+    my $refs = $git->get_affected_refs();
+    while (my ($refname, $ref) = each %$refs) {
+	check_ref($git, $refname, @{$ref->{range}});
     }
-};
+}
+
+# Install hooks
+UPDATE      \&check_affected_refs;
+PRE_RECEIVE \&check_affected_refs;
 
 1;
 

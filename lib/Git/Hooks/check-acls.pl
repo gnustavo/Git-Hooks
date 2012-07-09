@@ -178,15 +178,8 @@ sub check_acls {
     die "$HOOK: you ($myself) cannot change ($op) ref $ref.\n";
 }
 
-UPDATE {
-    my ($git, $ref, $old_commit, $new_commit) = @_;
-
-    return if im_admin($git);
-
-    check_acls($git, $ref, $old_commit, $new_commit);
-};
-
-PRE_RECEIVE {
+# This routine can act both as an update or a pre-receive hook.
+sub check_affected_refs {
     my ($git) = @_;
 
     return if im_admin($git);
@@ -195,7 +188,11 @@ PRE_RECEIVE {
     while (my ($refname, $ref) = each %$refs) {
 	check_acls($git, $refname, @{$ref->{range}});
     }
-};
+}
+
+# Install hooks
+UPDATE      \&check_affected_refs;
+PRE_RECEIVE \&check_affected_refs;
 
 1;
 
