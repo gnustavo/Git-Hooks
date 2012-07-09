@@ -391,6 +391,5 @@ documentation to understand how to use these objects.
 
 =head1 REFERENCES
 
-This script is heavily inspired (and sometimes even derived) from the
-Joyjit Nath's git-jira-hook
-(L<https://github.com/joyjit/git-jira-hook/tree/4b9f7354851602c7d6e8a39386f0c16d729d2ac2>).
+This script is heavily inspired (and sometimes derived) from Joyjit
+Nath's git-jira-hook (L<https://github.com/joyjit/git-jira-hook>).
