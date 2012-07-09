@@ -73,13 +73,13 @@ $clone->command(config => '--replace-all', 'check-acls.acl', '@admins U refs/hea
 check_can_push('allow ACL user in group ');
 
 $clone->command(config => '--replace-all', 'check-acls.acl', 'admin DUR refs/heads/fix');
-$repo->command(checkout => '-b', 'fix');
+$repo->command(checkout => '-q', '-b', 'fix');
 check_cannot_push('deny ACL create ref', 'heads/fix');
 
 $clone->command(config => '--replace-all', 'check-acls.acl', 'admin C refs/heads/fix');
 check_can_push('allow create ref', 'heads/fix');
 
-$repo->command(checkout => 'master');
+$repo->command(checkout => '-q', 'master');
 $repo->command(branch => '-D', 'fix');
 
 check_cannot_push('deny ACL delete ref', ':refs/heads/fix');
