@@ -161,13 +161,9 @@ sub check_acls {
     } elsif ($ref !~ m:^heads/:) {
 	$op = 'R';		# rewrite a non-branch
     } else {
-	my $refs = $git->get_affected_commit_ids();
-	if (@{$refs->{$ref}{ids}}) {
-	    # If we can reach $new_commit from $old_commit, it's a fast-forward
-	    $op = 'U';		# update (fast-forward) branch
-	} else {
-	    $op = 'R';		# rewind/rebase
-	}
+	# This is an U if "merge-base(old, new) == old". Otherwise it's an R.
+	chomp(my $merge_base = $git->command('merge-base' => $old_commit, $new_commit));
+	$op = ($merge_base eq $old_commit) ? 'U' : 'R';
     }
     my $acls = grok_acls($git);
 
