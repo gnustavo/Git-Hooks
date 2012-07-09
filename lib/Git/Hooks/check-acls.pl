@@ -158,7 +158,7 @@ sub check_acls {
 	$op = 'C';		# create
     } elsif ($new_commit eq '0' x 40) {
 	$op = 'D';		# delete
-    } elsif ($ref !~ m:^heads/:) {
+    } elsif ($ref !~ m:^refs/heads/:) {
 	$op = 'R';		# rewrite a non-branch
     } else {
 	# This is an U if "merge-base(old, new) == old". Otherwise it's an R.
