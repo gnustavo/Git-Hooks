@@ -129,8 +129,6 @@ sub new_commit {
 sub test_command {
     my ($git, $cmd, @args) = @_;
 
-    state $errfile = catfile($T, 'stderr');
-
     my $pid = open my $pipe, '-|';
     if (! defined $pid) {
 	return (0, undef, undef, "Can't fork: $!\n");
@@ -139,14 +137,10 @@ sub test_command {
 	local $/ = undef;
 	my $stdout = <$pipe>;
 	my $exit = close $pipe;
-	my $stderr = do {
-	    open my $fh, '<', $errfile or die "Can't open $errfile: $!\n";
-	    <$fh>;
-	};
 	if ($exit) {
-	    return (1, undef, $stdout, $stderr);
+	    return (1, undef, $stdout);
 	} else {
-	    return (0, $!, $stdout, $stderr);
+	    return (0, $!, $stdout);
 	}
     } else {
 	# child
@@ -161,7 +155,7 @@ sub test_command {
 	    }
 	}
 	close STDERR;
-	open STDERR, '>', $errfile;
+	open STDERR, '>&', \*STDOUT;
 	exec git => $cmd, @args;
 	die "Can't exec git $cmd: $!\n";
     }
@@ -169,20 +163,21 @@ sub test_command {
 
 sub test_ok {
     my ($testname, @args) = @_;
-    my ($ok, $exit, $stdout, $stderr) = test_command(@args);
+    my ($ok, $exit, $stdout) = test_command(@args);
     if ($ok) {
 	pass($testname);
     } else {
 	fail($testname);
-	diag(" exit=$exit\n stdout=$stdout\n stderr=$stderr\n");
+	diag(" exit=$exit\n stdout=$stdout\n");
     }
 }
 
 sub test_nok {
     my ($testname, @args) = @_;
-    my ($ok) = test_command(@args);
+    my ($ok, $exit, $stdout) = test_command(@args);
     if ($ok) {
 	fail($testname);
+	diag(" stdout=$stdout\n");
     } else {
 	pass($testname);
     }
@@ -190,15 +185,15 @@ sub test_nok {
 
 sub test_nok_match {
     my ($testname, $regex, @args) = @_;
-    my ($ok, $exit, $stdout, $stderr) = test_command(@args);
+    my ($ok, $exit, $stdout) = test_command(@args);
     if ($ok) {
 	fail($testname);
-	diag(" succeeded without intention\n stdout=$stdout\n stderr=$stderr\n");
+	diag(" succeeded without intention\n stdout=$stdout\n");
     } elsif ($stderr =~ $regex) {
 	pass($testname);
     } else {
 	fail($testname);
-	diag(" did not match regex ($regex) for stderr\n exit=$exit\n stdout=$stdout\n stderr=$stderr\n");
+	diag(" did not match regex ($regex) for stderr\n exit=$exit\n stdout=$stdout\n");
     }
 }
 
