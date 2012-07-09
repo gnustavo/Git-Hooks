@@ -357,28 +357,16 @@ Delete an existing ref.
 
 =back
 
-The 'refname' component specifies which refs this ACL applies to. It's
-specified in one of two ways:
-
-Refnames are matched by always assuming a prefix of "refs/".  This
-hook forbids pushing or deleting anything not under "refs/".
-
-Refnames that start with ^ are Perl regular expressions, and the ^
-is kept as part of the regexp.  \\ is needed to get just one \, so
-\\d expands to \d in Perl.
+The 'refname' component specifies which refs this ACL applies to. It
+can be specified as the complete ref name (e.g. "refs/heads/master")
+or by a regular expression starting with a caret (C<^>), which is kept
+as part of the regexp.
 
 =back
 
-Anything pushed to "heads/" (ok, really "refs/heads/") must be
-a commit.  Tags are not permitted here.
-
-Anything pushed to "tags/" (err, really "refs/tags/") must be an
-annotated tag.  Commits, blobs, trees, etc. are not permitted here.
-Annotated tag signatures aren't checked, nor are they required.
-
 =head1 REFERENCES
 
-This script is heavily inspired (and sometimes even derived) from the
+This script is heavily inspired (and sometimes derived) from the
 update-paranoid example hook which comes with the Git distribution
 (L<https://github.com/gitster/git/blob/b12905140a8239ac687450ad43f18b5f0bcfb62e/contrib/hooks/update-paranoid>).
 

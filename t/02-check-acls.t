@@ -54,13 +54,13 @@ check_can_push('allow if admin in group');
 
 $clone->command(config => '--unset', 'check-acls.admin');
 
-$clone->command(config => 'check-acls.acl', 'admin U master');
+$clone->command(config => 'check-acls.acl', 'admin U refs/heads/master');
 check_cannot_push('deny ACL master');
 
-$clone->command(config => '--replace-all', 'check-acls.acl', 'admin U heads/master');
+$clone->command(config => '--replace-all', 'check-acls.acl', 'admin U refs/heads/master');
 check_can_push('allow ACL heads/master');
 
-$clone->command(config => '--replace-all', 'check-acls.acl', 'admin U heads/branch');
+$clone->command(config => '--replace-all', 'check-acls.acl', 'admin U refs/heads/branch');
 check_cannot_push('deny ACL other ref');
 
 $clone->command(config => '--replace-all', 'check-acls.acl', 'admin U refs/heads/master');
@@ -69,17 +69,17 @@ check_cannot_push('deny ACL refs/heads/master');
 $clone->command(config => '--replace-all', 'check-acls.acl', 'admin U ^.*/master');
 check_can_push('allow ACL regex ref');
 
-$clone->command(config => '--replace-all', 'check-acls.acl', '^adm U heads/master');
+$clone->command(config => '--replace-all', 'check-acls.acl', '^adm U refs/heads/master');
 check_can_push('allow ACL regex user');
 
-$clone->command(config => '--replace-all', 'check-acls.acl', '@admins U heads/master');
+$clone->command(config => '--replace-all', 'check-acls.acl', '@admins U refs/heads/master');
 check_can_push('allow ACL user in group ');
 
-$clone->command(config => '--replace-all', 'check-acls.acl', 'admin DUR heads/fix');
+$clone->command(config => '--replace-all', 'check-acls.acl', 'admin DUR refs/heads/fix');
 $repo->command(checkout => '-b', 'fix');
 check_cannot_push('deny ACL create ref', 'heads/fix');
 
-$clone->command(config => '--replace-all', 'check-acls.acl', 'admin C heads/fix');
+$clone->command(config => '--replace-all', 'check-acls.acl', 'admin C refs/heads/fix');
 check_can_push('allow create ref', 'heads/fix');
 
 $repo->command(checkout => 'master');
@@ -87,19 +87,19 @@ $repo->command(branch => '-D', 'fix');
 
 check_cannot_push('deny ACL delete ref', ':refs/heads/fix');
 
-$clone->command(config => '--replace-all', 'check-acls.acl', 'admin D heads/fix');
+$clone->command(config => '--replace-all', 'check-acls.acl', 'admin D refs/heads/fix');
 check_can_push('allow ACL delete ref', ':refs/heads/fix');
 
-$clone->command(config => '--replace-all', 'check-acls.acl', 'admin CDU heads/master');
+$clone->command(config => '--replace-all', 'check-acls.acl', 'admin CDU refs/heads/master');
 $repo->command(reset => '--hard', 'HEAD~2'); # rewind fix locally
 check_cannot_push('deny ACL rewrite ref', '+master:master'); # try to push it
 
-$clone->command(config => '--replace-all', 'check-acls.acl', 'admin R heads/master');
+$clone->command(config => '--replace-all', 'check-acls.acl', 'admin R refs/heads/master');
 check_can_push('allow ACL rewrite ref', '+master:master'); # try to push it
 
-$clone->command(config => '--replace-all', 'check-acls.acl', 'admin CRUD heads/master');
+$clone->command(config => '--replace-all', 'check-acls.acl', 'admin CRUD refs/heads/master');
 $repo->command(tag => '-a', '-mtag', 'objtag'); # object tag
 check_cannot_push('deny ACL push tag');
 
-$clone->command(config => 'check-acls.acl', 'admin CRUD ^tags/');
+$clone->command(config => 'check-acls.acl', 'admin CRUD ^refs/tags/');
 check_can_push('allow ACL push tag');
