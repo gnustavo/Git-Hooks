@@ -39,10 +39,10 @@ foreach my $option (qw/jiraurl jirauser jirapass/) {
 }
 $Config->{jiraurl} =~ s/\/+$//;
 
-# Projects is an array which we'll convert into a hash to speed up
+# Project is an array which we'll convert into a hash to speed up
 # lookups
-if (exists $Config->{projects}) {
-    $Config->{projects} = {map {($_ => undef)} $Config->{projects}};
+if (exists $Config->{project}) {
+    $Config->{project} = {map {($_ => undef)} $Config->{project}};
 }
 
 # Matchlog and matchkey are scalars which we'll convert into Regexes
@@ -143,7 +143,7 @@ sub check_commit_msg {
     }
 
     # Check if there is a restriction on the project keys allowed
-    if (my $option = $Config->{projects}) {
+    if (my $option = $Config->{project}) {
 	state $projects = [map {($_ => undef)} @$option];
 	foreach my $key (@keys) {
 	    my ($pkey, $pnum) = split /-/, $key;
@@ -316,12 +316,12 @@ message where the keys are going to be looked for.
 For example, set it to "C<\[([^]]+)\]>" to require that JIRA keys be
 cited inside the first pair of brackets found in the message.
 
-=item check-jira.projects
+=item check-jira.project
 
 By default, the commiter can reference any JIRA issue in the commit
 log. You can restrict the allowed keys to a set of JIRA projects by
-specifying a comma-or-space-separated list of project keys to this
-option.
+specifying a JIRA project key to this option. You can enable more than
+one project by specifying more than one value to this option.
 
 =item check-jira.require => [01]
 
