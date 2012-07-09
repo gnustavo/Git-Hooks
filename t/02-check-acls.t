@@ -21,7 +21,7 @@ sub check_cannot_push {
     my ($testname, $ref) = @_;
     new_commit($repo, $file);
     test_nok_match($testname, qr/cannot change/, $repo,
-		   'push', $clone->repo_path(), $ref || 'master');
+		   'push', '--tags', $clone->repo_path(), $ref || 'master');
 }
 
 # Enable plugin
@@ -54,17 +54,14 @@ check_can_push('allow if admin in group');
 
 $clone->command(config => '--unset', 'check-acls.admin');
 
-$clone->command(config => 'check-acls.acl', 'admin U refs/heads/master');
+$clone->command(config => 'check-acls.acl', 'admin U master');
 check_cannot_push('deny ACL master');
 
 $clone->command(config => '--replace-all', 'check-acls.acl', 'admin U refs/heads/master');
-check_can_push('allow ACL heads/master');
+check_can_push('allow ACL refs/heads/master');
 
 $clone->command(config => '--replace-all', 'check-acls.acl', 'admin U refs/heads/branch');
 check_cannot_push('deny ACL other ref');
-
-$clone->command(config => '--replace-all', 'check-acls.acl', 'admin U refs/heads/master');
-check_cannot_push('deny ACL refs/heads/master');
 
 $clone->command(config => '--replace-all', 'check-acls.acl', 'admin U ^.*/master');
 check_can_push('allow ACL regex ref');
@@ -90,6 +87,9 @@ check_cannot_push('deny ACL delete ref', ':refs/heads/fix');
 $clone->command(config => '--replace-all', 'check-acls.acl', 'admin D refs/heads/fix');
 check_can_push('allow ACL delete ref', ':refs/heads/fix');
 
+$clone->command(config => '--replace-all', 'check-acls.acl', 'admin U refs/heads/master');
+check_can_push('allow ACL refs/heads/master again, to force a successful push');
+
 $clone->command(config => '--replace-all', 'check-acls.acl', 'admin CDU refs/heads/master');
 $repo->command(reset => '--hard', 'HEAD~2'); # rewind fix locally
 check_cannot_push('deny ACL rewrite ref', '+master:master'); # try to push it
@@ -101,5 +101,5 @@ $clone->command(config => '--replace-all', 'check-acls.acl', 'admin CRUD refs/he
 $repo->command(tag => '-a', '-mtag', 'objtag'); # object tag
 check_cannot_push('deny ACL push tag');
 
-$clone->command(config => 'check-acls.acl', 'admin CRUD ^refs/tags/');
+$clone->command(config => '--add', 'check-acls.acl', 'admin CRUD ^refs/tags/');
 check_can_push('allow ACL push tag');
