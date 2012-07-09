@@ -184,9 +184,9 @@ sub check_commit_msg {
 COMMIT_MSG {
     my ($git, $commit_msg_file) = @_;
 
-    my $cur_branch = 'refs/heads/' . $git->get_current_branch();
-    if (my $branches = $Config->{branches}) {
-	return unless $git->is_ref_enabled($branches, $cur_branch);
+    my $current_branch = 'refs/heads/' . $git->get_current_branch();
+    if (my $refs = $Config->{ref}) {
+	return unless $git->is_ref_enabled($refs, $current_branch);
     }
 
     my $msg = read_file($commit_msg_file);
@@ -195,7 +195,7 @@ COMMIT_MSG {
     check_commit_msg(
 	$git,
 	{ commit => '', body => $msg },	# fake a commit hash to simplify check_commit_msg
-	$cur_branch,
+	$current_branch,
     );
 };
 
