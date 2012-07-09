@@ -343,17 +343,17 @@ specified as a string of one or more of the following opcodes:
 
 Create a new ref.
 
-=item D
+=item R
 
-Delete an existing ref.
+Rewind/Rebase an existing ref. (With commit loss.)
 
 =item U
 
 Update an existing ref. (A fast-forward with no commit loss.)
 
-=item R
+=item D
 
-Rewind/Rebase an existing ref. (With commit loss.)
+Delete an existing ref.
 
 =back
 
