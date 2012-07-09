@@ -203,8 +203,8 @@ COMMIT_MSG {
 sub check_ref {
     my ($git, $ref) = @_;
 
-    if (my $branches = $Config->{branches}) {
-	return unless $git->is_ref_enabled($branches, $ref);
+    if (my $refs = $Config->{ref}) {
+	return unless is_hook_enabled_for_ref($refs, $ref);
     }
 
     my $commits = $git->get_affected_commits()->{$ref}{commits};
@@ -285,6 +285,18 @@ of the system, global, or local scopes. The script will use the most
 restricted one.
 
 =over
+
+=item check-jira.ref
+
+By default, the message of every commit is checked. If you want to
+have them checked only for some refs (usually some branch under
+refs/heads/), you may specify them with one or more instances of this
+option.
+
+The refs can be specified as a complete ref name
+(e.g. "refs/heads/master") or by a regular expression starting with a
+caret (C<^>), which is kept as part of the regexp
+(e.g. "^refs/heads/(master|fix)").
 
 =item check-jira.jiraurl
 
