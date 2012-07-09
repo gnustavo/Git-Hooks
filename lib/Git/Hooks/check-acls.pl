@@ -152,6 +152,8 @@ sub im_admin {
 sub check_acls {
     my ($git, $ref, $old_commit, $new_commit) = @_;
 
+    my $acls = grok_acls($git);
+
     # Grok which operation we're doing on this ref
     my $op;
     if      ($old_commit eq '0' x 40) {
@@ -165,7 +167,6 @@ sub check_acls {
 	chomp(my $merge_base = $git->command('merge-base' => $old_commit, $new_commit));
 	$op = ($merge_base eq $old_commit) ? 'U' : 'R';
     }
-    my $acls = grok_acls($git);
 
     foreach my $acl (@$acls) {
 	my ($who, $what, $refspec) = @$acl;
