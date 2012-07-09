@@ -162,7 +162,7 @@ sub check_commit_msg {
 	    die ferror($key, $commit, $ref, "is already resolved");
 	}
 
-	if (my $committer = $Config->{by_assignee}) {
+	if (my $committer = $Config->{'by-assignee'}) {
 	    if ($ENV{$committer} ne $issue->{assignee}) {
 		die ferror($key, $commit, $ref,
 			   "is currently assigned to '$issue->{assignee}' but should be assigned to you ($ENV{$committer})");
@@ -334,7 +334,7 @@ By default, every issue referenced must be unresolved, i.e., it must
 not have a resolution. You can relax this requirement by setting this
 option to 0.
 
-=item check-jira.by_assignee
+=item check-jira.by-assignee
 
 By default, the commiter can reference any valid JIRA issue. Setting
 this value to the name of an environment variable, the script will
