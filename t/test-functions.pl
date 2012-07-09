@@ -8,6 +8,7 @@ use File::Temp qw/tempdir/;
 use File::Spec::Functions ':ALL';
 use File::Path;
 use File::Copy;
+use File::Slurp;
 use URI::file;
 use Config;
 use Git::More;
@@ -96,14 +97,12 @@ sub new_repos {
 }
 
 sub new_commit {
-    my ($git, $file) = @_;
+    my ($git, $file, $msg) = @_;
 
-    open my $fh, '>>', $file or die "can't open $file: $!";
-    say $fh "commit line";
-    close $fh;
+    append_file($file, $msg || 'new commit');
 
     $git->command(add => $file);
-    $git->command(commit => '-q', '-mcommit');
+    $git->command(commit => '-q', '-m', $msg || 'commit');
 }
 
 sub test_command {
