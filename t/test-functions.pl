@@ -106,26 +106,6 @@ sub new_commit {
     $git->command(commit => '-q', '-mcommit');
 }
 
-#my ($last_stdout, $last_stderr);
-#sub test_command_old {
-#    my ($git, @args) = @_;
-#    open my $fh, '>', \$last_stderr or die "can't open to write to a string: $!";
-#    try {
-#	warn "enter try\n";
-#	$last_stdout = $git->command([@args], {STDERR => $fh});
-#	warn "leave try\n";
-#	return 1;
-#    } catch Git::Error::Command with {
-#	my $E = shift;
-#	use Data::Dumper;
-#	warn "enter catch ($E)", ref($E), "|", Dumper($E), "\n";
-#	$last_stdout = $E->cmd_output();
-#	warn "leave catch ($E)($last_stdout)($last_stderr)\n";
-#	return 0;
-#    };
-#    warn "end command\n";
-#}
-
 sub test_command {
     my ($git, $cmd, @args) = @_;
 
