@@ -32,16 +32,28 @@ BEGIN {
 	);
     }
 
-    @EXPORT = (@installers, 'config', 'run_hook');
+    @EXPORT = (@installers, 'hook_config', 'is_hook_enabled_for_ref', 'run_hook');
 }
 
 use File::Basename;
 use File::Spec::Functions;
 use Git::More;
 
-sub config {
+sub hook_config {
     my ($plugin) = @_;
     return $Git->get_config()->{$plugin};
+}
+
+sub is_hook_enabled_for_ref {
+    my ($specs, $ref) = @_;
+    foreach (@$specs) {
+	if (/^\^/) {
+	    return 1 if $ref =~ qr/$_/;
+	} else {
+	    return 1 if $ref eq $_;
+	}
+    }
+    return 0;
 }
 
 sub run_hook {

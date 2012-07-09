@@ -19,6 +19,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
+use Git::Hooks;
 use File::Slurp;
 use Data::Util qw(:check);
 use List::MoreUtils qw/uniq/;
@@ -29,7 +30,7 @@ my $HOOK = "check-jira";
 #############
 # Grok hook configuration, check it and set defaults.
 
-my $Config = config($HOOK);
+my $Config = hook_config($HOOK);
 
 # The JIRA connection options are scalars and required
 foreach my $option (qw/jiraurl jirauser jirapass/) {
@@ -186,7 +187,7 @@ COMMIT_MSG {
 
     my $current_branch = 'refs/heads/' . $git->get_current_branch();
     if (my $refs = $Config->{ref}) {
-	return unless $git->is_ref_enabled($refs, $current_branch);
+	return unless is_hook_enabled_for_ref($refs, $current_branch);
     }
 
     my $msg = read_file($commit_msg_file);

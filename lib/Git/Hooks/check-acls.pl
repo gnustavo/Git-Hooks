@@ -19,6 +19,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
+use Git::Hooks;
 use File::Slurp;
 
 my $HOOK = "check-acls";
@@ -26,7 +27,7 @@ my $HOOK = "check-acls";
 #############
 # Grok hook configuration, check it and set defaults.
 
-my $Config = config($HOOK);
+my $Config = hook_config($HOOK);
 
 # Userenv is a scalar and 'USER' is its default.
 $Config->{userenv} //= ['USER'];
