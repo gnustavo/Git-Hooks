@@ -9,9 +9,31 @@ use parent -norequire, 'Git';
 use Error qw(:try);
 use Carp;
 
+=head1 SYNOPSIS
+
+    use Git::More;
+
+    my $git = Git::More->repository();
+
+    my $config  = $git->get_config('section');
+    my $branch  = $git->get_current_branch();
+    my $commits = $git->get_refs_commits();
+    my $message = $git->get_commit_msg('HEAD');
+
+=head1 DESCRIPTION
+
+This is an extension of the Git class implemented by the
+C<App::gh::Git> module. It's meant to implement a few extra methods
+commonly needed by Git hook developers.
+
+In particular, it's used by the standard hooks implemented by the
+C<Git::Hooks> framework.
+
+=head1 METHODS
+
 =head2 get_config
 
-This routine groks the configuration options for the repository. It
+This method groks the configuration options for the repository. It
 returns every option found by invoking C<git config --list>.
 
 The options are returned as a hash-ref pointing to a two-level
@@ -26,16 +48,16 @@ hash. For example, if the config options are these:
 
 Then, it'll return this hash:
 
-{
-    'section1' => {
-        'a' => [1],
-        'b' => [2, 3],
-    },
-    'section2' => {
-        'x.a' => ['A'],
-        'x.b' => ['B', 'C'],
-    },
-}
+    {
+        'section1' => {
+            'a' => [1],
+            'b' => [2, 3],
+        },
+        'section2' => {
+            'x.a' => ['A'],
+            'x.b' => ['B', 'C'],
+        },
+    }
 
 The first level keys are the part of the option names before the first
 dot. The second level keys are everything after the first dot in the
@@ -83,6 +105,14 @@ sub get_config {
 
     return $git->{more}{config};
 }
+
+=head2 get_current_branch
+
+This method returns the repository's current branch name, as indicated
+by the C<git branch> command. Note that its a ref shortname, i.e.,
+it's usually subintended to reside under the 'refs/heads/' ref scope.
+
+=cut
 
 sub get_current_branch {
     my ($git) = @_;
@@ -175,15 +205,5 @@ sub get_commit_msg {
     $body =~ s/^\s+//gm;  # strip blank prefixes from all lines
     return $body;
 }
-
-=head1 SYNOPSIS
-
-=head1 DESCRIPTION
-
-=head1 METHODS
-
-=head2 C<method args...>
-
-=cut
 
 1;
