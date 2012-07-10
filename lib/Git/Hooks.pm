@@ -7,6 +7,9 @@ package Git::Hooks;
 
 use Exporter qw/import/;
 use Data::Util qw(:all);
+use File::Basename;
+use File::Spec::Functions;
+use Git::More;
 
 our $Git;
 our %Hooks;
@@ -34,10 +37,6 @@ BEGIN {
 
     @EXPORT = (@installers, 'hook_config', 'is_hook_enabled_for_ref', 'run_hook');
 }
-
-use File::Basename;
-use File::Spec::Functions;
-use Git::More;
 
 sub hook_config {
     my ($plugin) = @_;
