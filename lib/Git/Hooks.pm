@@ -27,7 +27,7 @@ BEGIN {
 	my $hook = lc $installer;
 	$hook =~ tr/_/-/;
 	install_subroutine(
-	    'Git::Hooks',
+	    __PACKAGE__,
 	    $installer => sub (&) {
 		my ($foo) = @_;
 		$Hooks{$hook}{$foo} ||= sub { $foo->(@_); };
@@ -103,13 +103,13 @@ sub run_hook {
 
 	    my $exit = do $script;
 	    unless ($exit) {
-		die "Git::Hooks: couldn't parse $script: $@\n" if $@;
-		die "Git::Hooks: couldn't do $script: $!\n"    unless defined $exit;
-		die "Git::Hooks: couldn't run $script\n"       unless $exit;
+		die __PACKAGE__, ": couldn't parse $script: $@\n" if $@;
+		die __PACKAGE__, ": couldn't do $script: $!\n"    unless defined $exit;
+		die __PACKAGE__, ": couldn't run $script\n"       unless $exit;
 	    }
 	    $found = 1;
 	}
-	die "Git::Hooks: can't find hook enabled hook $hook.\n" unless $found;
+	die __PACKAGE__, ": can't find hook enabled hook $hook.\n" unless $found;
     }
 
     # Call every hook function installed by the hook scripts before.
