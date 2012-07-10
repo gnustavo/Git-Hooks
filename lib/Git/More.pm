@@ -92,11 +92,6 @@ sub get_current_branch {
     return;
 }
 
-sub set_ref_range {
-    my ($git, $ref, $old_commit, $new_commit) = @_;
-    $git->{more}{refs}{ranges}{$ref} = [$old_commit, $new_commit];
-}
-
 sub get_refs_ranges {
     my ($git) = @_;
 
@@ -111,6 +106,11 @@ sub get_refs_ranges {
     }
 
     return %{$git->{more}{refs}{ranges}};
+}
+
+sub set_ref_range {
+    my ($git, $ref, $old_commit, $new_commit) = @_;
+    $git->{more}{refs}{ranges}{$ref} = [$old_commit, $new_commit];
 }
 
 sub get_refs_commit_ids {
