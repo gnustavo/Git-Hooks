@@ -128,7 +128,7 @@ __END__
 
 =head1 SYNOPSIS
 
-A single script can implement several hooks:
+A single script can implement several Git hooks:
 
 	#!/usr/bin/env perl
 
@@ -230,9 +230,9 @@ which the script was called.
 
 =head1 USAGE
 
-Go to the C<.git/hooks> directory under the directory where the
-repository was created. You should see there the hook samples. Create
-a script there using the Git::Hooks module.
+Go to the C<.git/hooks> directory under the root of your Git
+repository. You should see there a bunch of hook samples. Create a
+script there using the Git::Hooks module.
 
 	$ cd /path/to/repo/.git/hooks
 
@@ -251,15 +251,14 @@ hooked operations, even for those that you may not be interested
 in. Nothing wrong will happen, but the server will be doing extra work
 for nothing.)
 
-	$ ln -s git-hooks.pl start-commit
-	$ ln -s git-hooks.pl prepare-commit-msg
+	$ ln -s git-hooks.pl pre-receive
 	$ ln -s git-hooks.pl commit-msg
 	$ ln -s git-hooks.pl post-commit
 
 As is, the script won't do anything. You have to implement some hooks
-or use some of the existing ones implemented as plugins. Either way,
-the script should end with a call to C<run_hooks> passing to it the
-name with which it was called (C<$0>) and all the arguments it
+in it or use some of the existing ones implemented as plugins. Either
+way, the script should end with a call to C<run_hooks> passing to it
+the name with which it was called (C<$0>) and all the arguments it
 received (C<@ARGV>).
 
 =head2 Implementing Hooks
@@ -309,8 +308,8 @@ L<Git::More> documentation to know how to use it.)
 
 =back
 
-Note that the hook directives resemble function definitions but
-they're not. They are function calls, and as such must end with a
+Note that the hook directives resemble function definitions but they
+aren't. They are function calls, and as such must end with a
 semi-colon.
 
 Most of the hooks are used to check some condition. If the condition
@@ -320,6 +319,24 @@ from finishing its operation.
 
 Also note that each hook directive can be called more than once if you
 need to implement more than one specific hook.
+
+    # Check if every added/updated file is smaller than a fixed limit.
+
+    my $LIMIT = 10 * 1024 * 1024; # 10MB
+
+    PRE_COMMIT {
+        my ($git) = @_;
+
+        my @changed = $git->command(qw/diff --cached --name-only --diff-filter=AM/);
+
+        foreach ($git->command('ls-files' => '-s', @changed)) {
+            chomp;
+            my ($mode, $sha, $n, $name) = split / /;
+            my $size = $git->command('cat-file' => '-s', $sha);
+            $size <= $LIMIT
+                or die "File '$name' has $size bytes, more than our limit of $LIMIT.\n";
+        }
+    };
 
 =head2 Using Plugins
 
@@ -332,15 +349,19 @@ more details.
 
 =item Git::Hooks::check-acls.pl
 
-Allow you to specify who can commit or push to the repository and
-affect which Git refs.
+Allow you to specify Access Control Lists to tell who can commit or
+push to the repository and affect which Git refs.
 
 =item Git::Hooks::check-jira.pl
 
 Integrate Git with the JIRA L<http://www.atlassian.com/software/jira/>
-ticketing system.
+ticketing system by requiring that every commit message cites valid
+JIRA issues.
 
 =back
+
+Each plugin may be used in one or, sometimes, multiple hooks. Their
+documentation is explicit about this.
 
 =head2 Configuration
 
@@ -371,7 +392,7 @@ C<check-jira.pl> plugin in the C<update> hook, you must do this:
 Note that you may enable more than one plugin to the same hook. For
 instance:
 
-    $ git config githooks.update check-acls.pl
+    $ git config --add githooks.update check-acls.pl
 
 And you may enable the same plugin in more than one hook, if it makes
 sense to do so. For instance:
@@ -382,7 +403,8 @@ sense to do so. For instance:
 
 The plugins enabled for a hook are searched for in three places. First
 they're are searched for in the C<hooks.d> directory under the
-repository path (usually in C<.git/hooks.d>).
+repository path (usually in C<.git/hooks.d>), so that you may have
+repository specific hooks (or repository specific versions of a hook).
 
 Then, they are searched for in every directory specified with the
 C<githooks.hooksdir> option.  You may set it more than once if you
@@ -391,31 +413,21 @@ have more than one directory holding your hooks.
 Finally, they are searched for in Git::Hooks installation.
 
 The first match is taken as the desired plugin, which is executed and
-the search stops.
+the search stops. So, you may want to copy one of the standard plugins
+and change it to suit your needs better. (Don't shy away from sending
+your changes back to us, though.)
 
 =back
 
 Please, see the plugins documentation to know about their own
 configuration options.
 
-=head1 PLUGIN DEVELOPER TUTORIAL
-
-Yet to do.
-
 =head1 EXPORT
 
-=head2 config PLUGIN
+=head2 run_hook NAME ARGS...
 
-This function is used by plugin developers, to try to uniformize the
-way plugins grok their own configuration options. It simply invokes
-C<Git::More::get_config>, to grok all configuration options for the
-repository and returns the hash-ref containing the options for the
-section called PLUGIN.
-
-=head2 run_hook
-
-This is responsible to invoke the right plugins depending on the
-context in which it was called.
+This is the main routine responsible to invoke the right hooks
+depending on the context in which it was called.
 
 Its first argument must be the name of the hook that was
 called. Usually you just pass C<$0> to it, since it knows to extract
@@ -425,3 +437,50 @@ The remaining arguments depend on the hook for which it's being
 called. Usually you just pass C<@ARGV> to it. And that's it. Mostly.
 
 	run_hook($0, @ARGV);
+
+=head1 PLUGIN DEVELOPER TUTORIAL
+
+Plugins should start by importing the utility functions from
+Git::Hooks:
+
+    use Git::Hooks qw/:utils/;
+
+There are a few utilities by now.
+
+=over
+
+=item hook_config NAME
+
+This routine returns a hash-ref containing every configuration
+variable for the section NAME. It's usually called with the name of
+the plugin as argument, meaning that the plugin configuration is
+contained in a section by its name.
+
+=item is_ref_enabled SPECS REF
+
+This routine returns a boolean indicating if REF matches one of the
+ref-specs in SPECS. REF is the complete name of a Git ref and SPECS is
+a reference to an array of strings, each one specifying a rule for
+matching ref names.
+
+You may want to use it, for example, in an C<update> or in a
+C<pre-receive> hook which may be enabled depending on the particular
+refs being affected.
+
+Each rule in SPECS may indicate the matching refs as the complete ref
+name (e.g. "refs/heads/master") or by a regular expression starting
+with a caret (C<^>), which is kept as part of the regexp.
+
+=back
+
+Usually at the end, the plugin should use one or more of the hook
+directives defined in the C<Implementing Hooks> section above to
+install its hook routines in the apropriate hooks.
+
+Every hook routine receives a Git::More object as its first
+argument. You should use it to infer all needed information from the
+Git repository.
+
+Please, take a look at the code for the standard plugins under the
+Git::Hooks:: namespace in order to get a better understanding about
+this. Hopefully it's not that hard.
