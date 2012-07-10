@@ -34,17 +34,11 @@ my $Config = hook_config($HOOK);
 
 # The JIRA connection options are scalars and required
 foreach my $option (qw/jiraurl jirauser jirapass/) {
-    exists $Config->{$option}
-	or die "$HOOK: Missing check-jira.$option configuration variable.\n";
-    $Config->{$option} = $Config->{$option}[-1];
+    $Config->{$option} = $Config->{$option}[-1]
+	if defined $Config->{$option};
 }
-$Config->{jiraurl} =~ s/\/+$//;
-
-# Project is an array which we'll convert into a hash to speed up
-# lookups
-if (exists $Config->{project}) {
-    $Config->{project} = {map {($_ => undef)} $Config->{project}};
-}
+$Config->{jiraurl} =~ s/\/+$//
+    if defined $Config->{jiraurl};
 
 # Matchlog and matchkey are scalars which we'll convert into Regexes
 foreach my $option (qw/matchlog matchkey/) {
@@ -61,41 +55,36 @@ foreach my $option (qw/require valid unresolved/) {
     $Config->{$option} = exists $Config->{$option} ? $Config->{$option}[-1] : 1;
 }
 
-# Check_code is an array of code snippets. We'll evaluate each one of
-# them and save them as a sub-refs.
-if (exists $Config->{check_code}) {
-    foreach my $code (@{$Config->{check_code}}) {
-	my $check;
-	if ($code =~ s/^file://) {
-	    $check = do $code;
-	    unless ($check) {
-		die "$HOOK: couldn't parse option check_code ($code): $@\n" if $@;
-		die "$HOOK: couldn't do option check_code ($code): $!\n"    unless defined $check;
-		die "$HOOK: couldn't run option check_code ($code)\n"       unless $check;
-	    }
-	} else {
-	    $check = eval $code;
-	    die "$HOOK: couldn't parse option check_code value:\n$@\n" if $@;
-	}
-	is_code_ref($check)
-	    or die "$HOOK: option check_code must end with a code ref.\n";
-	$code = $check;
-    }
-}
-
 ##########
+
+sub im_admin {
+    my ($git) = @_;
+    state $i_am = do {
+	my $match = 0;
+	foreach my $admin (@{$Config->{admin}}) {
+	    if (match_user($git, $admin)) {
+		$match = 1;
+		last;
+	    }
+	}
+	$match;
+    };
+    return $i_am;
+}
 
 sub grok_msg_jiras {
     my ($msg) = @_;
     # Grok the JIRA issue keys from the commit log
+    state $matchkey = is_rx($Config->{matchkey}) ? $Config->{matchkey} : qr/$Config->{matchkey}/;
     if (exists $Config->{matchlog}) {
-	if (my ($match) = ($msg =~ $Config->{matchlog})) {
-	    return $match =~ /$Config->{matchkey}/g;
+	state $matchlog = is_rx($Config->{matchlog}) ? $Config->{matchlog} : qr/$Config->{matchlog}/;
+	if (my ($match) = ($msg =~ $matchlog)) {
+	    return $match =~ /$matchkey/g;
 	} else {
 	    return ();
 	}
     } else {
-	return $msg =~ /$Config->{matchkey}/g;
+	return $msg =~ /$matchkey/g;
     }
 }
 
@@ -106,6 +95,10 @@ sub get_issue {
 
     # Connect to JIRA if not yet connected
     unless (defined $JIRA) {
+	for my $option (qw/jiraurl jirauser jirapass/) {
+	    exists $Config->{$option}
+		or die "$HOOK: Missing check-jira.$option configuration variable.\n";
+	}
 	my ($jiraurl, $jirauser, $jirapass) = @{$Config}{qw/jiraurl jirauser jirapass/};
 	$JIRA = eval {JIRA::Client->new($jiraurl, $jirauser, $jirapass)};
 	die "$HOOK: cannot connect to the JIRA server at '$jiraurl' as '$jirauser': $@\n" if $@;
@@ -116,7 +109,7 @@ sub get_issue {
     # Try to get the issue from the cache
     unless (exists $issue_cache{$key}) {
 	$issue_cache{$key} = eval {$JIRA->getIssue($key)};
-	die "$HOOK: can't get issue $key: $@\n"	if $@;
+	die "$HOOK: cannot get issue $key: $@\n"	if $@;
     }
 
     return $issue_cache{$key};
@@ -130,27 +123,53 @@ sub ferror {
     return $msg;
 }
 
+sub check_codes {
+    state $codes = undef;
+
+    unless (defined $codes) {
+	if (exists $Config->{'check-code'}) {
+	    foreach my $code (@{$Config->{'check-code'}}) {
+		my $check;
+		if ($code =~ s/^file://) {
+		    $check = do $code;
+		    unless ($check) {
+			die "$HOOK: couldn't parse option check-code ($code): $@\n" if $@;
+			die "$HOOK: couldn't do option check-code ($code): $!\n"    unless defined $check;
+			die "$HOOK: couldn't run option check-code ($code)\n"       unless $check;
+		    }
+		} else {
+		    $check = eval $code;
+		    die "$HOOK: couldn't parse option check-code value:\n$@\n" if $@;
+		}
+		is_code_ref($check)
+		    or die "$HOOK: option check-code must end with a code ref.\n";
+		push @$codes, $check;
+	    }
+	} else {
+	    $codes = [];
+	}
+    }
+
+    return @$codes;
+}
+
 sub check_commit_msg {
     my ($git, $commit, $ref) = @_;
 
     my @keys = uniq(grok_msg_jiras($commit->{body}));
 
-    unless (@keys) {
-	if ($Config->{require}) {
-	    die "$HOOK: commit $commit->{commit} (in $ref) does not cite any JIRA issue.\n";
-	} else {
-	    return;
-	}
+    # Filter out JIRAs not belonging to any of the specific projects,
+    # if any. We don't care about them.
+    if (my $option = $Config->{project}) {
+	state $projects = {map {($_ => undef)} @$option}; # hash it to speed up lookup
+	@keys = grep {/([^-]+)/ && exists $projects->{$1}} @keys;
     }
 
-    # Check if there is a restriction on the project keys allowed
-    if (my $option = $Config->{project}) {
-	state $projects = [map {($_ => undef)} @$option];
-	foreach my $key (@keys) {
-	    my ($pkey, $pnum) = split /-/, $key;
-	    die ferror($key, $commit, $ref,
-		       "doesn't belong to the allowed projects: " . join(', ', sort keys @$projects))
-		unless exists $projects->{$pkey};
+    unless (@keys) {
+	if ($Config->{require}) {
+	    die "$HOOK: commit $commit->{commit} (in $ref) does not cite any valid JIRA.\n";
+	} else {
+	    return;
 	}
     }
 
@@ -164,19 +183,21 @@ sub check_commit_msg {
 	}
 
 	if (my $committer = $Config->{'by-assignee'}) {
-	    if ($ENV{$committer} ne $issue->{assignee}) {
-		die ferror($key, $commit, $ref,
-			   "is currently assigned to '$issue->{assignee}' but should be assigned to you ($ENV{$committer})");
-	    }
+	    $committer = $committer->[-1];
+	    exists $ENV{$committer}
+		or die ferror($key, $commit, $ref,
+			      "the environment variable '$committer' is undefined. Cannot get committer name");
+
+	    $ENV{$committer} eq $issue->{assignee}
+		or die ferror($key, $commit, $ref,
+			      "is currently assigned to '$issue->{assignee}' but should be assigned to you ($ENV{$committer})");
 	}
 
 	push @issues, $issue;
     }
 
-    if (exists $Config->{check_code}) {
-	foreach my $check (@{$Config->{check_code}}) {
-	    $check->($git, $commit, $JIRA, @issues);
-	}
+    foreach my $code (check_codes()) {
+	$code->($git, $commit, $JIRA, @issues);
     }
 
     return;
@@ -184,6 +205,8 @@ sub check_commit_msg {
 
 COMMIT_MSG {
     my ($git, $commit_msg_file) = @_;
+
+    return if im_admin($git);
 
     my $current_branch = 'refs/heads/' . $git->get_current_branch();
     if (my $refs = $Config->{ref}) {
@@ -207,9 +230,9 @@ sub check_ref {
 	return unless is_hook_enabled_for_ref($refs, $ref);
     }
 
-    my $commits = $git->get_affected_commits()->{$ref}{commits};
+    my %commits = $git->get_refs_commits();
 
-    foreach my $commit (@$commits) {
+    foreach my $commit (@{$commits{$ref}}) {
 	check_commit_msg($git, $commit, $ref);
     }
 };
@@ -220,9 +243,9 @@ sub check_affected_refs {
 
     return if im_admin($git);
 
-    my $refs = $git->get_affected_refs();
-    while (my ($refname, $ref) = each %$refs) {
-	check_ref($git, $refname, @{$ref->{range}});
+    my %refs = $git->get_refs_ranges();
+    while (my ($refname, $range) = each %refs) {
+	check_ref($git, $refname, @$range);
     }
 }
 
@@ -298,6 +321,31 @@ The refs can be specified as a complete ref name
 caret (C<^>), which is kept as part of the regexp
 (e.g. "^refs/heads/(master|fix)").
 
+=item check-jira.admin
+
+When this hook is installed, by default no user can commit without
+being subject to the hooks configuration regarding the need to cite
+JIRAs. It may be usefull, however, to give full access to a group of
+admins who shouldn't be subject to the JIRA requirements. You may use
+one or more such options to give admin access to a group of
+people. The value of each option is interpreted in one of these ways:
+
+=over
+
+=item username
+
+A C<username> specifying a single user. The username specification
+must match "/^\w+$/i" and will be compared to the authenticated user's
+name case sensitively.
+
+=item ^regex
+
+A C<regex> which will be matched against the authenticated user's name
+case-insensitively. The caret is part of the regex, meaning that it's
+anchored at the start of the username.
+
+=back
+
 =item check-jira.jiraurl
 
 =item check-jira.jirauser
@@ -351,10 +399,9 @@ option to 0.
 
 By default, the commiter can reference any valid JIRA issue. Setting
 this value to the name of an environment variable, the script will
-check if its value is equal to the referenced JIRA issues assignee.
-FIXME: give a usage example.
+check if its value is equal to the referenced JIRA issue's assignee.
 
-=item check-jira.check_code
+=item check-jira.check-code
 
 If the above checks aren't enough you can use this option to define a
 custom code to check your commits. The code may be specified directly
