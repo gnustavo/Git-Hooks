@@ -64,7 +64,7 @@ sub run_hook {
     $Git = Git::More->repository();
 
     # If there's no githooks options we are disabled.
-    my $config = $Git->get_config->{githooks} or return;
+    my $config = hook_config('githooks') or return;
 
     # Grok the enabled hooks. Return if there is none.
     my $enabled_hooks = $config->{$hook_name} or return;
@@ -72,13 +72,13 @@ sub run_hook {
     # Some hooks affect lists of commits. Let's grok them at once.
     if ($hook_name eq 'update') {
 	my ($ref, $old_commit, $new_commit) = @ARGV;
-	$Git->set_affected_ref($ref, $old_commit, $new_commit);
+	$Git->set_ref_range($ref, $old_commit, $new_commit);
     } elsif ($hook_name eq 'pre-receive') {
 	# pre-receive gets the list of affected commits via STDIN.
 	while (<>) {
 	    chomp;
 	    my ($old_commit, $new_commit, $ref) = split;
-	    $Git->set_affected_ref($ref, $old_commit, $new_commit);
+	    $Git->set_ref_range($ref, $old_commit, $new_commit);
 	}
     }
 
