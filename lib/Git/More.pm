@@ -9,10 +9,6 @@ use parent -norequire, 'Git';
 use Error qw(:try);
 use Carp;
 
-our @EXPORT_OK = qw/get_hook_config
-		    get_current_branch get_branch_from_ref is_ref_enabled
-		    get_commit_list get_commit_msg/;
-
 =head2 get_config
 
 This routine groks the configuration options for the repository. It
