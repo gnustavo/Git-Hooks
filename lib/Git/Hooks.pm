@@ -36,7 +36,7 @@ BEGIN {
     }
 
     @EXPORT      = (@installers, 'run_hook');
-    @EXPORT_OK   = qw/hook_config is_hook_enabled_for_ref/;
+    @EXPORT_OK   = qw/hook_config is_ref_enabled/;
     %EXPORT_TAGS = (utils => \@EXPORT_OK);
 }
 
@@ -45,7 +45,7 @@ sub hook_config {
     return $Git->get_config()->{$plugin};
 }
 
-sub is_hook_enabled_for_ref {
+sub is_ref_enabled {
     my ($specs, $ref) = @_;
     foreach (@$specs) {
 	if (/^\^/) {

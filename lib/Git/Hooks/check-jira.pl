@@ -210,7 +210,7 @@ COMMIT_MSG {
 
     my $current_branch = 'refs/heads/' . $git->get_current_branch();
     if (my $refs = $Config->{ref}) {
-	return unless is_hook_enabled_for_ref($refs, $current_branch);
+	return unless is_ref_enabled($refs, $current_branch);
     }
 
     my $msg = read_file($commit_msg_file);
@@ -227,7 +227,7 @@ sub check_ref {
     my ($git, $ref) = @_;
 
     if (my $refs = $Config->{ref}) {
-	return unless is_hook_enabled_for_ref($refs, $ref);
+	return unless is_ref_enabled($refs, $ref);
     }
 
     my %commits = $git->get_refs_commits();
