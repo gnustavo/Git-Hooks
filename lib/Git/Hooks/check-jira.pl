@@ -19,7 +19,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
-use Git::Hooks;
+use Git::Hooks qw/:utils/;
 use File::Slurp;
 use Data::Util qw(:check);
 use List::MoreUtils qw/uniq/;

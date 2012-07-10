@@ -13,7 +13,7 @@ use Git::More;
 
 our $Git;
 our %Hooks;
-our @EXPORT;
+our (@EXPORT, @EXPORT_OK, %EXPORT_TAGS);
 
 BEGIN {
     my @installers =
@@ -35,7 +35,9 @@ BEGIN {
 	);
     }
 
-    @EXPORT = (@installers, 'hook_config', 'is_hook_enabled_for_ref', 'run_hook');
+    @EXPORT      = (@installers, 'run_hook');
+    @EXPORT_OK   = qw/hook_config is_hook_enabled_for_ref/;
+    %EXPORT_TAGS = (utils => \@EXPORT_OK);
 }
 
 sub hook_config {
