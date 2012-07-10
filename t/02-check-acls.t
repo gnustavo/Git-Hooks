@@ -9,12 +9,15 @@ use Test::More tests => 20;
 require "test-functions.pl";
 
 my ($repo, $file, $clone) = new_repos();
+foreach my $git ($repo, $clone) {
+    install_hooks($git);
+}
 
 sub check_can_push {
     my ($testname, $ref) = @_;
     new_commit($repo, $file);
     test_ok($testname, $repo,
-	    'push', $clone->repo_path(), $ref || 'master');
+	    'push', '--tags', $clone->repo_path(), $ref || 'master');
 }
 
 sub check_cannot_push {

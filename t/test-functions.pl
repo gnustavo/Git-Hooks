@@ -28,42 +28,45 @@ sub newdir {
 }
 
 sub install_hooks {
-    foreach my $git (@_) {
-	my $hooks_dir = catfile($git->repo_path(), 'hooks');
-	my $hook_pl   = catfile($hooks_dir, 'hook.pl');
-	{
-	    open my $fh, '>', $hook_pl or die "Can't create $hook_pl: $!\n";
-	    state $debug = $ENV{DBG} ? '-d' : '';
-	    state $bliblib = catdir('blib', 'lib');
-	    print $fh <<EOF;
+    my ($git, $extra_perl) = @_;
+    my $hooks_dir = catfile($git->repo_path(), 'hooks');
+    my $hook_pl   = catfile($hooks_dir, 'hook.pl');
+    {
+	open my $fh, '>', $hook_pl or die "Can't create $hook_pl: $!\n";
+	state $debug = $ENV{DBG} ? '-d' : '';
+	state $bliblib = catdir('blib', 'lib');
+	print $fh <<EOF;
 #!$Config{perlpath} $debug
 use strict;
 use warnings;
 use lib '$bliblib';
 EOF
 
-	    state $pathsep = $^O eq 'MSWin32' ? ';' : ':';
-	    if (defined $ENV{PERL5LIB} and length $ENV{PERL5LIB}) {
-		foreach my $path (reverse split "$pathsep", $ENV{PERL5LIB}) {
-		    say $fh "use lib '$path';";
-		}
+	state $pathsep = $^O eq 'MSWin32' ? ';' : ':';
+	if (defined $ENV{PERL5LIB} and length $ENV{PERL5LIB}) {
+	    foreach my $path (reverse split "$pathsep", $ENV{PERL5LIB}) {
+		say $fh "use lib '$path';";
 	    }
+	}
 
-	    print $fh <<EOF
+	print $fh <<EOF;
 use Git::Hooks;
+EOF
 
+	print $fh $extra_perl if defined $extra_perl;
+
+	print $fh <<EOF
 run_hook(\$0, \@ARGV);
 EOF
-	}
-	chmod 0755 => $hook_pl;
-	foreach (qw/ applypatch-msg pre-applypatch post-applypatch
-		     pre-commit prepare-commit-msg commit-msg
-		     post-commit pre-rebase post-checkout post-merge
-		     pre-receive update post-receive post-update
-		     pre-auto-gc post-rewrite /) {
-	    symlink 'hook.pl', catfile($hooks_dir, $_)
-		or die "can't symlink '$hooks_dir', '$_': $!\n";
-	}
+    }
+	    chmod 0755 => $hook_pl;
+    foreach (qw/ applypatch-msg pre-applypatch post-applypatch
+		 pre-commit prepare-commit-msg commit-msg
+		 post-commit pre-rebase post-checkout post-merge
+		 pre-receive update post-receive post-update
+		 pre-auto-gc post-rewrite /) {
+	symlink 'hook.pl', catfile($hooks_dir, $_)
+	    or die "can't symlink '$hooks_dir', '$_': $!\n";
     }
 }
 
@@ -90,8 +93,6 @@ sub new_repos {
     Git::command(clone => '-q', '--bare', '--no-hardlinks', $repodir, $clonedir);
 
     my $clone = Git::More->repository(Directory => $clonedir);
-
-    install_hooks($repo, $clone);
 
     return ($repo, $filename, $clone);
 }
@@ -153,10 +154,9 @@ sub test_ok {
 
 sub test_nok {
     my ($testname, @args) = @_;
-    my ($ok, $exit, $stdout) = test_command(@args);
+    my ($ok) = test_command(@args);
     if ($ok) {
 	fail($testname);
-	diag(" stdout=$stdout\n");
     } else {
 	pass($testname);
     }
@@ -168,11 +168,11 @@ sub test_nok_match {
     if ($ok) {
 	fail($testname);
 	diag(" succeeded without intention\n stdout=$stdout\n");
-    } elsif ($stderr =~ $regex) {
+    } elsif ($stdout =~ $regex) {
 	pass($testname);
     } else {
 	fail($testname);
-	diag(" did not match regex ($regex) for stderr\n exit=$exit\n stdout=$stdout\n");
+	diag(" did not match regex ($regex)\n exit=$exit\n stdout=$stdout\n");
     }
 }
 
