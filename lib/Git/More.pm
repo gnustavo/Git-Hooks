@@ -92,15 +92,6 @@ sub get_current_branch {
     return;
 }
 
-sub get_branch_from_ref {
-    my ($git, $ref) = @_;
-    if ($ref =~ m:^refs/heads/(.*):) {
-	return $1;
-    } else {
-	croak "Invalid branch ref: $ref\n";
-    }
-}
-
 sub set_ref_range {
     my ($git, $ref, $old_commit, $new_commit) = @_;
     $git->{more}{refs}{ranges}{$ref} = [$old_commit, $new_commit];
