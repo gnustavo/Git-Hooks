@@ -185,9 +185,9 @@ sub check_affected_refs {
 
     return if im_admin($git);
 
-    my $refs = $git->get_affected_refs();
-    while (my ($refname, $ref) = each %$refs) {
-	check_acls($git, $refname, @{$ref->{range}});
+    my %refs = $git->get_refs_ranges();
+    while (my ($refname, $range) = each %refs) {
+	check_acls($git, $refname, @$range);
     }
 }
 
