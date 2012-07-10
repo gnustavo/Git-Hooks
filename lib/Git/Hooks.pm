@@ -57,6 +57,26 @@ sub is_ref_enabled {
     return 0;
 }
 
+# This is an internal routine used to grok the affected refs of update
+# and pre-receive hooks. They're kept in a common data structure so
+# that those hooks can usually share code.
+
+my %affected_refs;
+sub grok_affected_refs {
+    my ($hook_name) = @_;
+    if ($hook_name eq 'update') {
+	my ($ref, $old_commit, $new_commit) = @ARGV;
+	$affected_refs{$ref}{range} = [$old_commit, $new_commit];
+    } elsif ($hook_name eq 'pre-receive') {
+	# pre-receive gets the list of affected commits via STDIN.
+	while (<>) {
+	    chomp;
+	    my ($old_commit, $new_commit, $ref) = split;
+	    $affected_refs{$ref}{range} = [$old_commit, $new_commit];
+	}
+    }
+}
+
 sub run_hook {
     my ($hook_name, @args) = @_;
 
@@ -71,20 +91,9 @@ sub run_hook {
     my $enabled_hooks = $config->{$hook_name} or return;
 
     # Some hooks affect lists of commits. Let's grok them at once.
-    if ($hook_name eq 'update') {
-	my ($ref, $old_commit, $new_commit) = @ARGV;
-	$Git->set_ref_range($ref, $old_commit, $new_commit);
-    } elsif ($hook_name eq 'pre-receive') {
-	# pre-receive gets the list of affected commits via STDIN.
-	while (<>) {
-	    chomp;
-	    my ($old_commit, $new_commit, $ref) = split;
-	    $Git->set_ref_range($ref, $old_commit, $new_commit);
-	}
-    }
+    grok_affected_refs($hook_name);
 
     # Grok the directories where we'll look for the hook scripts.
-
     my @hooksdir;
     # First the local directory 'hooks.d' under the repository path
     push @hooksdir, 'hooks.d';
@@ -124,7 +133,7 @@ sub run_hook {
 1; # End of Git::Hooks
 __END__
 
-=for Pod::Coverage applypatch_msg pre_applypatch post_applypatch pre_commit prepare_commit_msg commit_msg post_commit pre_rebase post_checkout post_merge pre_receive update post_receive post_update pre_auto_gc post_rewrite
+=for Pod::Coverage applypatch_msg pre_applypatch post_applypatch pre_commit prepare_commit_msg commit_msg post_commit pre_rebase post_checkout post_merge pre_receive update post_receive post_update pre_auto_gc post_rewrite grok_affected_refs
 
 =head1 SYNOPSIS
 
