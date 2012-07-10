@@ -138,7 +138,7 @@ sub check_codes {
 			die "$HOOK: couldn't run option check-code ($code)\n"       unless $check;
 		    }
 		} else {
-		    $check = eval $code;
+		    $check = eval $code; ## no critic (BuiltinFunctions::ProhibitStringyEval)
 		    die "$HOOK: couldn't parse option check-code value:\n$@\n" if $@;
 		}
 		is_code_ref($check)
