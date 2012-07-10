@@ -94,8 +94,9 @@ sub run_hook {
     push @hooksdir, catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks');
 
     # Execute every enabled script found in the @hooksdir directories
-    foreach my $dir (grep {-d} @hooksdir) {
-	foreach my $hook (@$enabled_hooks) {
+    foreach my $hook (@$enabled_hooks) {
+	my $found = 0;
+	foreach my $dir (grep {-d} @hooksdir) {
 	    my $script = catfile($dir, $hook);
 	    next unless -f $script;
 
@@ -105,7 +106,9 @@ sub run_hook {
 		die "Git::Hooks: couldn't do $script: $!\n"    unless defined $exit;
 		die "Git::Hooks: couldn't run $script\n"       unless $exit;
 	    }
+	    $found = 1;
 	}
+	die "Git::Hooks: can't find hook enabled hook $hook.\n" unless $found;
     }
 
     # Call every hook function installed by the hook scripts before.
