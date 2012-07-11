@@ -128,8 +128,8 @@ sub run_hook {
 
     # Grok the directories where we'll look for the hook scripts.
     my @hooksdir;
-    # First the local directory 'hooks.d' under the repository path
-    push @hooksdir, 'hooks.d';
+    # First the local directory 'githooks' under the repository path
+    push @hooksdir, 'githooks';
     # Then, the optional list of directories specified by the hooksdir
     # config option
     push @hooksdir, @{$config->{hooksdir}} if exists $config->{hooksdir};
@@ -416,8 +416,8 @@ sense to do so. For instance:
 =item githooks.hooksdir
 
 The plugins enabled for a hook are searched for in three places. First
-they're are searched for in the C<hooks.d> directory under the
-repository path (usually in C<.git/hooks.d>), so that you may have
+they're are searched for in the C<githooks> directory under the
+repository path (usually in C<.git/githooks>), so that you may have
 repository specific hooks (or repository specific versions of a hook).
 
 Then, they are searched for in every directory specified with the
