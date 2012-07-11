@@ -572,3 +572,7 @@ REF's NEWCOMMIT to OLDCOMMIT.
 This routine returns the list of commits leading from the affected
 REF's NEWCOMMIT to OLDCOMMIT. The commits are represented by hashes,
 as returned by C<Git::More::get_commits>.
+
+=head1 SEE ALSO
+
+C<Git::More>.
