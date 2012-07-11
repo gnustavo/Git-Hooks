@@ -110,6 +110,42 @@ sub get_affected_ref_commits {
     return $affected_refs{$ref}{commits};
 }
 
+# This is an internal routine used to invoke external hooks, feed them
+# the needed input and wait for them.
+
+sub spawn_external_file {
+    my ($file, $hook, @args) = @_;
+
+    my $exit;
+    if ($hook ne 'pre-receive') {
+	$exit = system {$file} ($hook, @args);
+    } else {
+	my $pid = open my $pipe, '|-';
+	if (! defined $pid) {
+	    die __PACKAGE__, ": can't fork: $!\n";
+	} elsif ($pid) {
+	    # parent
+	    foreach my $ref (get_affected_refs()) {
+		my ($old, $new) = get_affected_ref_range($ref);
+		say $pipe "$old $new $ref";
+	    }
+	    $exit = close $pipe;
+	} else {
+	    # child
+	    exec {$file} ($hook, @args);
+	    die __PACKAGE__, ": can't exec: $!\n";
+	}
+    }
+    unless ($exit == 0) {
+	die __PACKAGE__, ": failed to execute '$file': $!\n"
+	    if $? == -1;
+	die sprintf(__PACKAGE__, ": '$file' died with signal %d, %s coredump\n",
+		    ($? & 127), ($? & 128) ? 'with' : 'without')
+	    if $? & 127;
+	die sprintf(__PACKAGE__, ": '$file' exited abnormally with value %d\n", $? >> 8);
+    }
+}
+
 sub run_hook {
     my ($hook_name, @args) = @_;
 
@@ -117,56 +153,65 @@ sub run_hook {
 
     $Git = Git::More->repository();
 
-    # If there's no githooks options we are disabled.
-    my $config = hook_config('githooks') or return;
+    my $config = hook_config('githooks');
 
-    # Grok the enabled hooks. Return if there is none.
-    my $enabled_hooks = $config->{$hook_name} or return;
-
-    # Some hooks affect lists of commits. Let's grok them at once.
+    # Some hooks (pre-receive and update) affect refs and associated
+    # commit ranges. Let's grok them at once.
     grok_affected_refs($hook_name);
 
-    # Grok the directories where we'll look for the hook plugins.
-    my @plugin_dirs;
-    # First the local directory 'githooks' under the repository path
-    push @plugin_dirs, 'githooks';
-    # Then, the optional list of directories specified by the plugins
-    # config option
-    push @plugin_dirs, @{$config->{plugins}} if exists $config->{plugins};
-    # And finally, the Git::Hooks standard hooks directory
-    push @plugin_dirs, catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks');
+    # Invoke enabled plugins
+    if (my $enabled_hooks = $config->{$hook_name}) {
+	# Define the list of directories where we'll look for the hook
+	# plugins. First the local directory 'githooks' under the
+	# repository path, then the optional list of directories
+	# specified by the githooks.plugins config option, and,
+	# finally, the Git::Hooks standard hooks directory.
+	unshift @{$config->{plugins}}, 'githooks';
+	push    @{$config->{plugins}}, catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks');
 
-    # Execute every enabled script found in the @plugin_dirs directories
-    foreach my $hook (@$enabled_hooks) {
-	my $found = 0;
-	foreach my $dir (grep {-d} @plugin_dirs) {
-	    my $script = catfile($dir, $hook);
-	    next unless -f $script;
+	foreach my $hook (@$enabled_hooks) {
+	    my $found = 0;
+	    foreach my $dir (grep {-d} @{$config->{plugins}}) {
+		my $script = catfile($dir, $hook);
+		next unless -f $script;
 
-	    my $exit = do $script;
-	    unless ($exit) {
-		die __PACKAGE__, ": couldn't parse $script: $@\n" if $@;
-		die __PACKAGE__, ": couldn't do $script: $!\n"    unless defined $exit;
-		die __PACKAGE__, ": couldn't run $script\n"       unless $exit;
+		my $exit = do $script;
+		unless ($exit) {
+		    die __PACKAGE__, ": couldn't parse $script: $@\n" if $@;
+		    die __PACKAGE__, ": couldn't do $script: $!\n"    unless defined $exit;
+		    die __PACKAGE__, ": couldn't run $script\n"       unless $exit;
+		}
+		$found = 1;
 	    }
-	    $found = 1;
+	    die __PACKAGE__, ": can't find hook enabled hook $hook.\n" unless $found;
 	}
-	die __PACKAGE__, ": can't find hook enabled hook $hook.\n" unless $found;
+
+	# Call every hook function installed by the hook scripts before.
+	foreach my $hook (values %{$Hooks{$hook_name}}) {
+	    $hook->($Git, @args);
+	}
     }
 
-    # Call every hook function installed by the hook scripts before.
-    foreach my $hook (values %{$Hooks{$hook_name}}) {
-	$hook->($Git, @args);
-    }
+    # Invoked enabled external hooks
+    unless (exists $config->{externals} && ! $config->{externals}[-1]) {
+	# By default, start looking for external hooks in the
+	# '.git/hooks.d' directory.
+	unshift @{$config->{hooks}}, catfile($Git->repo_path(), 'hooks.d');
 
-    return;
+	foreach my $dir (grep {-e} map {catfile($_, $hook_name)} @{$config->{hooks}}) {
+	    opendir my $dh, $dir or die __PACKAGE__, ": cannot opendir $dir: $!\n";
+	    foreach my $file (grep {-f && -x} map {catfile($dir, $_)} readdir $dh) {
+		spawn_external_file($file, $hook_name, @args);
+	    }
+	}
+    }
 }
 
 
 1; # End of Git::Hooks
 __END__
 
-=for Pod::Coverage applypatch_msg pre_applypatch post_applypatch pre_commit prepare_commit_msg commit_msg post_commit pre_rebase post_checkout post_merge pre_receive update post_receive post_update pre_auto_gc post_rewrite grok_affected_refs
+=for Pod::Coverage grok_affected_refs spawn_external_file
 
 =head1 SYNOPSIS
 
@@ -188,11 +233,9 @@ A single script can implement several Git hooks:
 
 	run_hook($0, @ARGV);
 
-Or you can use already implemented hooks which are installed in the
-Git/Hooks directory, in the Git/Hooks.pm installation. These hooks are
-enabled by Git configuration options. (More on this later.) If you're
-only using Git::Hooks standard hooks, all you need is the following
-script:
+Or you can use Git::Hooks plugins or external hooks, driven by the
+single script below. These hooks are enabled by Git configuration
+options. (More on this later.)
 
 	#!/usr/bin/env perl
 
@@ -259,8 +302,8 @@ command, which spawns yet another process.
 
 =back
 
-Git::Hooks is a framework for implementing Git hooks that tries to
-solve these problems.
+Git::Hooks is a framework for implementing Git and driving existing
+external hooks in a way that tries to solve these problems.
 
 Instead of having separate scripts implementing different
 functionality you may have a single script implementing all the
@@ -269,6 +312,9 @@ plugins, which are implemented by Perl scripts in the Git::Hooks::
 namespace. This single script can be used to implement all standard
 hooks, because each hook knows when to perform based on the context in
 which the script was called.
+
+If you already have some handy hooks and want to keep using them,
+don't worry. Git::Hooks can drive external hooks very easily.
 
 =head1 USAGE
 
@@ -298,10 +344,10 @@ for nothing.)
 	$ ln -s git-hooks.pl post-commit
 
 As is, the script won't do anything. You have to implement some hooks
-in it or use some of the existing ones implemented as plugins. Either
-way, the script should end with a call to C<run_hooks> passing to it
-the name with which it was called (C<$0>) and all the arguments it
-received (C<@ARGV>).
+in it, use some of the existing plugins, or set up some external
+plugins to be invoked properly. Either way, the script should end with
+a call to C<run_hooks> passing to it the name with which it was called
+(C<$0>) and all the arguments it received (C<@ARGV>).
 
 =head2 Implementing Hooks
 
@@ -377,7 +423,40 @@ JIRA issues.
 Each plugin may be used in one or, sometimes, multiple hooks. Their
 documentation is explicit about this.
 
-=head2 Configuration
+=head2 Invoking external hooks
+
+Since the default Git hook scripts are taken by the Git::Hooks driver
+script, you must install your external hooks somewhere else. By
+default, the external plugin will look for external hook scripts in
+the directory C<.git/hooks.d> (which you must create) under the
+repository. Below this directory you should have another level of
+directories, named after the default hook names, under which you can
+drop your external hooks.
+
+For example, let's say you want to use some of the hooks in the
+standard Git package
+(L<https://github.com/gitster/git/blob/b12905140a8239ac687450ad43f18b5f0bcfb62e/contrib/hooks/update-paranoid>). You
+should copy each of those scripts to a file under the appropriate hook
+directory, like this:
+
+=over
+
+=item C<.git/hooks.d/pre-auto-gc/pre-auto-gc-battery>
+
+=item C<.git/hooks.d/pre-commit/setgitperms.perl>
+
+=item C<.git/hooks.d/post-receive/post-receive-email>
+
+=item C<.git/hooks.d/update/update-paranoid>
+
+=back
+
+Note that you may install more than one script under the same
+hook-named directory. The driver will execute all of them in a
+non-specified order. If any of them exits abnormally, the driver will
+exit with an appropriate error message.
+
+=head1 CONFIGURATION
 
 Git::Hooks is configured via Git's own configuration
 infrastructure. The framework defines a few options which are
@@ -393,15 +472,43 @@ repository. Note that this will fetch all C<--system>, C<--global>,
 and C<--local> options, in this order. You may use this mechanism to
 define configuration global to a user or local to a repository.
 
-=over
+=head2 githooks.applypatch-msg     PLUGIN
 
-=item githooks.HOOK
+=head2 githooks.pre-applypatch     PLUGIN
 
-To enable a plugin you must register it with the appropriate
-C<githooks.HOOK> option. For instance, if you want to enable the
-C<check-jira.pl> plugin in the C<update> hook, you must do this:
+=head2 githooks.post-applypatch    PLUGIN
 
-    $ git config githooks.update check-jira.pl
+=head2 githooks.pre-commit         PLUGIN
+
+=head2 githooks.prepare-commit-msg PLUGIN
+
+=head2 githooks.commit-msg  	   PLUGIN
+
+=head2 githooks.post-commit 	   PLUGIN
+
+=head2 githooks.pre-rebase  	   PLUGIN
+
+=head2 githooks.post-checkout      PLUGIN
+
+=head2 githooks.post-merge         PLUGIN
+
+=head2 githooks.pre-receive        PLUGIN
+
+=head2 githooks.update             PLUGIN
+
+=head2 githooks.post-receive       PLUGIN
+
+=head2 githooks.post-update        PLUGIN
+
+=head2 githooks.pre-auto-gc        PLUGIN
+
+=head2 githooks.post-rewrite       PLUGIN
+
+To enable a plugin you must register it with one of the above
+options. For instance, if you want to enable the C<check-jira.pl>
+plugin in the C<update> hook, you must do this:
+
+    $ git config --add githooks.update check-jira.pl
 
 Note that you may enable more than one plugin to the same hook. For
 instance:
@@ -411,9 +518,9 @@ instance:
 And you may enable the same plugin in more than one hook, if it makes
 sense to do so. For instance:
 
-    $ git config githooks.commit-msg check-jira.pl
+    $ git config --add githooks.commit-msg check-jira.pl
 
-=item githooks.plugins
+=head2 githooks.plugins DIR
 
 The plugins enabled for a hook are searched for in three places. First
 they're are searched for in the C<githooks> directory under the
@@ -431,7 +538,19 @@ the search stops. So, you may want to copy one of the standard plugins
 and change it to suit your needs better. (Don't shy away from sending
 your changes back to us, though.)
 
-=back
+=head2 githooks.externals [01]
+
+By default the driver script will look for external hooks after
+executing every enabled plugins. You may disable external hooks
+invokation by setting this option to 0.
+
+=head2 githooks.hooks DIR
+
+You can tell this plugin to look for external hooks in other
+directories by specifying them with this option. The directories
+specified here will be looked for after the default directory
+C<.git/hooks.d>, so that you can use this option to have some global
+external hooks shared by all of your repositories.
 
 Please, see the plugins documentation to know about their own
 configuration options.
