@@ -1,3 +1,6 @@
 * Transform the hooks in modulinos.
 
+* Devise and implement a way for the plugins to register their
+  configuration options and a suitable routine in Git::Hooks to grok
+  them all. This would simplify plugin option processing.
 
