@@ -1,6 +1,6 @@
 Git::Hooks - A framework for implementing Git hooks.
 
-(THIS IS IN ALPHA STATUS.)
+WARNING: THIS IS IN BETA STATUS!!!
 
 Instead of having separate scripts implementing different
 functionality you may have a single script implementing all the
