@@ -199,56 +199,54 @@ PRE_RECEIVE \&check_affected_refs;
 
 
 __END__
-=head1 SYNOPSIS
+=head1 NAME
 
-  check-acls.pl [--verbose] [--hook=update]      REF OLD_COMMIT NEW_COMMIT
-  check-acls.pl [--verbose] [--hook=pre-receive]
+check-acls.pl - Git::Hooks plugin for branch/tag access control.
 
 =head1 DESCRIPTION
 
-This script can act as one of two different Git hooks to guarantee
-that only allowed users can push commits and tags to all or specific
+This Git::Hooks plugin can act as any of the below hooks to guarantee
+that only allowed users can push commits and tags to specific
 branches.
-
-To install it you must copy (or link) it to one of the two hook files
-under C<.git/hooks> in your Git repository: C<pre-receive> and
-C<update>. In this way, Git will call it with proper name and
-arguments. For each hook it acts as follows:
 
 =over
 
 =item C<update>
 
 This hook is invoked multiple times in the remote repository during
-C<git push>, once per branch being updated. The script checks every
-commit being updated for the branch.
+C<git push>, once per branch being updated, checking if the user
+performing the push can update the branch in question.
 
 =item C<pre-receive>
 
-This hook is invoked once in the remote repository during C<git
-push>. The script checks every commit being updated for every branch.
+This hook is invoked once in the remote repository during C<git push>,
+checking if the user performing the push can update every affected
+branch.
 
 =back
 
-It is configured by the following git options, which can be set via
-the C<git config> command. Note that you may have options set in any
-of the system, global, or local scopes. The script will use the most
-restricted one.
+To enable it you should define the appropriate Git configuration
+option:
 
-=over
+    git config --add githooks.update      check-acls.pl
+    git config --add githooks.pre-receive check-acls.pl
 
-=item check-acls.userenv
+=head1 CONFIGURATION
+
+The plugin is configured by the following git options.
+
+=head2 check-acls.userenv STRING
 
 When Git is performing its chores in the server to serve a push
 request it's usually invoked via the SSH or a web service, which take
 care of the authentication procedure. These services normally make the
 autenticated user name available in an environment variable. You may
-tell this hook which environment variabla it is by setting this option
+tell this hook which environment variable it is by setting this option
 to the variable's name. If not set, the hook will try to get the
 user's name from the C<USER> environment variable and die if it's not
 set.
 
-=item check-acls.groups
+=head2 check-acls.groups GROUPSPEC
 
 You can define user groups in order to make it easier to configure
 general acls. Use this option to tell where to find group
@@ -260,11 +258,11 @@ definitions in one of these ways:
 
 As a text file named by PATH/TO/FILE, which may be absolute or
 relative to the hooks current directory, which is usually the
-repository's root in the server. It's sintax is very simple. Blank
+repository's root in the server. It's syntax is very simple. Blank
 lines are skipped. The hash (#) character starts a comment that goes
 to the end of the current line. Group definitions are lines like this:
 
-    groupname = userA userB @othergroupname userC
+    groupA = userA userB @groupB userC
 
 Each group must be defined in a single line. Spaces are significant
 only between users and group references.
@@ -280,7 +278,7 @@ must contain the group definitions itself.
 
 =back
 
-=item check-acls.admin
+=head2 check-acls.admin USERSPEC
 
 When this hook is installed, by default no user can change any
 reference in the repository, unless she has an explicit allowance
@@ -311,14 +309,14 @@ anchored at the start of the username.
 
 =back
 
-=item check-acls.acl
+=head2 check-acls.acl ACL
 
 The authorization specification for a repository is defined by the set
 of ACLs defined by this option. Each ACL specify 'who' has 'what' kind
 of access to which refs, by means of a string with three components
 separated by spaces:
 
-    who what refname
+    who what refs
 
 By default, nobody has access to anything, except the above-specified
 admins. During an update, all the ACLs matching the authenticated
@@ -352,16 +350,14 @@ Delete an existing ref.
 
 =back
 
-The 'refname' component specifies which refs this ACL applies to. It
-can be specified as the complete ref name (e.g. "refs/heads/master")
-or by a regular expression starting with a caret (C<^>), which is kept
-as part of the regexp.
-
-=back
+The 'refs' component specifies which refs this ACL applies to. It can
+be specified as the complete ref name (e.g. "refs/heads/master") or by
+a regular expression starting with a caret (C<^>), which is kept as
+part of the regexp (e.g. "^refs/heads/fix", meaning any branch which
+name starts with "fix").
 
 =head1 REFERENCES
 
-This script is heavily inspired (and sometimes derived) from the
-update-paranoid example hook which comes with the Git distribution
+This script is heavily inspired (and, in some places, derived) from
+the update-paranoid example hook which comes with the Git distribution
 (L<https://github.com/gitster/git/blob/b12905140a8239ac687450ad43f18b5f0bcfb62e/contrib/hooks/update-paranoid>).
-

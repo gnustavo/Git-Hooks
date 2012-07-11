@@ -240,18 +240,37 @@ PRE_RECEIVE \&check_affected_refs;
 
 
 __END__
-=head1 SYNOPSIS
+=head1 NAME
 
-  check-jira.pl [--verbose] [--hook=commit-msg]  COMMIT_MSG_FILE
-  check-jira.pl [--verbose] [--hook=update]      REF OLD_COMMIT NEW_COMMIT
-  check-jira.pl [--verbose] [--hook=pre-receive]
+check-jira.pl - Git::Hooks plugin which requires citation of JIRA
+issues in commit messages.
 
 =head1 DESCRIPTION
 
-This script can act as one of three different Git hooks to guarantee
+This Git::Hooks plugin can act as any of the below hooks to guarantee
 that every commit message cites at least one valid JIRA issue key in
 its log message, so that you can be certain that every change has a
 proper change request (a.k.a. ticket) open.
+
+=over
+
+=item C<commit-msg>
+
+This hook is invoked during the commit, to check if the commit message
+cites valid JIRA issues.
+
+=item C<update>
+
+This hook is invoked multiple times in the remote repository during
+C<git push>, once per branch being updated, to check if the commit
+message cites valid JIRA issues.
+
+=item C<pre-receive>
+
+This hook is invoked once in the remote repository during C<git push>,
+to check if the commit message cites valid JIRA issues.
+
+=back
 
 It requires that any Git commits affecting all or some branches must
 make reference to valid JIRA issues in the commit log message. JIRA
@@ -259,40 +278,18 @@ issues are cited by their keys which, by default, consist of a
 sequence of uppercase letters separated by an hyfen from a sequence of
 digits. E.g., C<CDS-123>, C<RT-1>, and C<GIT-97>.
 
-To install it you must copy (or link) it to one of the three hook
-files under C<.git/hooks> in your Git repository: C<commit-msg>,
-C<pre-receive>, and C<update>. In this way, Git will call it with
-proper name and arguments. For each hook it acts as follows:
+To enable it you should define the appropriate Git configuration
+option:
 
-=over
+    git config --add githooks.commit-msg  check-jira.pl
+    git config --add githooks.update      check-jira.pl
+    git config --add githooks.pre-receive check-jira.pl
 
-=item C<commit-msg>
+=head1 CONFIGURATION
 
-This hook is invoked locally during C<git commit> before it's
-completed. The script reads the proposed commit message and checks if
-it cites valid JIRA issue keys, aborting the commit otherwise.
+The plugin is configured by the following git options.
 
-=item C<update>
-
-This hook is invoked multiple times in the remote repository during
-C<git push>, once per branch being updated. The script checks every
-commit being updated for the branch.
-
-=item C<pre-receive>
-
-This hook is invoked once in the remote repository during C<git
-push>. The script checks every commit being updated for every branch.
-
-=back
-
-It is configured by the following git options, which can be set via
-the C<git config> command. Note that you may have options set in any
-of the system, global, or local scopes. The script will use the most
-restricted one.
-
-=over
-
-=item check-jira.ref
+=head2 check-jira.ref REFSPEC
 
 By default, the message of every commit is checked. If you want to
 have them checked only for some refs (usually some branch under
@@ -304,7 +301,7 @@ The refs can be specified as a complete ref name
 caret (C<^>), which is kept as part of the regexp
 (e.g. "^refs/heads/(master|fix)").
 
-=item check-jira.admin
+=head2 check-jira.admin USERSPEC
 
 When this hook is installed, by default no user can commit without
 being subject to the hooks configuration regarding the need to cite
@@ -329,17 +326,17 @@ anchored at the start of the username.
 
 =back
 
-=item check-jira.jiraurl
+=head2 check-jira.jiraurl URL
 
-=item check-jira.jirauser
+=head2 check-jira.jirauser USERNAME
 
-=item check-jira.jirapass
+=head2 check-jira.jirapass PASSWORD
 
 These options are required and are used to construct the
 C<JIRA::Client> object which is used to interact with your JIRA
 server. Please, see the JIRA::Client documentation to know about them.
 
-=item check-jira.matchkey
+=head2 check-jira.matchkey REGEXP
 
 By default, JIRA keys are matched with the regex
 C</\b[A-Z][A-Z]+-\d+\b/>, meaning, a sequence of two or more capital
@@ -349,7 +346,7 @@ you customized your JIRA project keys
 you may need to customize how this hook is going to match them. Set
 this option to a suitable regex to match a complete JIRA issue key.
 
-=item check-jira.matchlog
+=head2 check-jira.matchlog REGEXP
 
 By default, JIRA keys are looked for in all of the commit
 message. However, this can lead to some false positives, since the
@@ -357,34 +354,34 @@ default issue pattern can match other things besides JIRA issue
 keys. You may use this option to restrict the places inside the commit
 message where the keys are going to be looked for.
 
-For example, set it to "C<\[([^]]+)\]>" to require that JIRA keys be
+For example, set it to C<\[([^]]+)\]> to require that JIRA keys be
 cited inside the first pair of brackets found in the message.
 
-=item check-jira.project
+=head2 check-jira.project STRING
 
 By default, the commiter can reference any JIRA issue in the commit
 log. You can restrict the allowed keys to a set of JIRA projects by
 specifying a JIRA project key to this option. You can enable more than
 one project by specifying more than one value to this option.
 
-=item check-jira.require => [01]
+=head2 check-jira.require [01]
 
 By default, the log must reference at least one JIRA issue. You can
 make the reference optional by setting this option to 0.
 
-=item check-jira.unresolved => [01]
+=head2 check-jira.unresolved [01]
 
 By default, every issue referenced must be unresolved, i.e., it must
 not have a resolution. You can relax this requirement by setting this
 option to 0.
 
-=item check-jira.by-assignee
+=head2 check-jira.by-assignee STRING
 
 By default, the commiter can reference any valid JIRA issue. Setting
 this value to the name of an environment variable, the script will
 check if its value is equal to the referenced JIRA issue's assignee.
 
-=item check-jira.check-code
+=head2 check-jira.check-code CODESPEC
 
 If the above checks aren't enough you can use this option to define a
 custom code to check your commits. The code may be specified directly
@@ -398,15 +395,22 @@ arguments:
 
 =over
 
-=item the Git repository object used to grok information about the
-commit.
+=item GIT
 
-=item the SHA-1 id of the Git commit. It is undef in the C<commit-msg>
-hook, because there is no commit yet.
+The Git repository object used to grok information about the commit.
 
-=item the JIRA::Client object used to talk to the JIRA server.
+=item COMMITID
 
-=item the remaining arguments are RemoteIssue objects representing the
+The SHA-1 id of the Git commit. It is undef in the C<commit-msg> hook,
+because there is no commit yet.
+
+=item JIRA
+
+The JIRA::Client object used to talk to the JIRA server.
+
+=item ISSUES...
+
+The remaining arguments are RemoteIssue objects representing the
 issues being cited by the commit's message.
 
 =back
@@ -414,10 +418,11 @@ issues being cited by the commit's message.
 The subroutine must simply return with no value to indicate success
 and must die to indicate failure.
 
-Please, read the C<JIRA::Client> and C<Git::More> modules
-documentation to understand how to use these objects.
+=head1 SEE ALSO
 
-=back
+C<Git::More>
+
+C<JIRA::Client>
 
 =head1 REFERENCES
 
