@@ -305,62 +305,8 @@ received (C<@ARGV>).
 
 =head2 Implementing Hooks
 
-Implement hooks using one of the hook I<directives> below. Each one of
-them gets a single block (anonymous function) as argument. The block
-will be called by C<run_hook> with proper arguments, as indicated
-below. These arguments are the ones gotten from @ARGV, with the
-exception of the ones identified by C<Git>. These are Git::More
-objects which can be used to grok detailed information about the
-repository and the current transaction. (Please, refer to the
-L<Git::More> documentation to know how to use it.)
-
-=over
-
-=item * APPLYPATCH_MSG(Git, commit-msg-file)
-
-=item * PRE_APPLYPATCH(Git)
-
-=item * POST_APPLYPATCH(Git)
-
-=item * PRE_COMMIT(Git)
-
-=item * PREPARE_COMMIT_MSG(Git, commit-msg-file [, msg-src [, SHA1]])
-
-=item * COMMIT_MSG(Git, commit-msg-file)
-
-=item * POST_COMMIT(Git)
-
-=item * PRE_REBASE(Git)
-
-=item * POST_CHECKOUT(Git, prev-head-ref, new-head-ref, is-branch-checkout)
-
-=item * POST_MERGE(Git, is-squash-merge)
-
-=item * PRE_RECEIVE(Git)
-
-=item * UPDATE(Git, updated-ref-name, old-object-name, new-object-name)
-
-=item * POST_RECEIVE(Git)
-
-=item * POST_UPDATE(Git, updated-ref-name, ...)
-
-=item * PRE_AUTO_GC(Git)
-
-=item * POST_REWRITE(Git, command)
-
-=back
-
-Note that the hook directives resemble function definitions but they
-aren't. They are function calls, and as such must end with a
-semi-colon.
-
-Most of the hooks are used to check some condition. If the condition
-holds, they must simply end without returning anything. Otherwise,
-they must C<die> with a suitable error message. This will prevent Git
-from finishing its operation.
-
-Also note that each hook directive can be called more than once if you
-need to implement more than one specific hook. For example:
+Implement hooks using one of the hook I<directives> described in the
+MAIN METHODS section. For example:
 
     # Check if every added/updated file is smaller than a fixed limit.
 
@@ -490,9 +436,9 @@ your changes back to us, though.)
 Please, see the plugins documentation to know about their own
 configuration options.
 
-=head1 EXPORT
+=head1 MAIN METHOD
 
-=head2 run_hook NAME ARGS...
+=head2 run_hook(NAME, ARGS...)
 
 This is the main routine responsible to invoke the right hooks
 depending on the context in which it was called.
@@ -506,7 +452,63 @@ called. Usually you just pass C<@ARGV> to it. And that's it. Mostly.
 
 	run_hook($0, @ARGV);
 
-=head1 PLUGIN DEVELOPER TUTORIAL
+=head1 HOOK DIRECTIVES
+
+Hook directives are routines you use to register routines as hooks.
+Each one of the hook directives gets a routine-ref or a single block
+(anonymous routine) as argument. The routine/block will be called by
+C<run_hook> with proper arguments, as indicated below. These arguments
+are the ones gotten from @ARGV, with the exception of the ones
+identified by GIT. These are C<Git::More> objects which can be used to
+grok detailed information about the repository and the current
+transaction. (Please, refer to the L<Git::More> documentation to know
+how to use them.)
+
+Note that the hook directives resemble function definitions but they
+aren't. They are function calls, and as such must end with a
+semi-colon.
+
+Most of the hooks are used to check some condition. If the condition
+holds, they must simply end without returning anything. Otherwise,
+they must C<die> with a suitable error message. On some hooks, this
+will prevent Git from finishing its operation.
+
+Also note that each hook directive can be called more than once if you
+need to implement more than one specific hook.
+
+=head2 APPLYPATCH_MSG(GIT, commit-msg-file)
+
+=head2 PRE_APPLYPATCH(GIT)
+
+=head2 POST_APPLYPATCH(GIT)
+
+=head2 PRE_COMMIT(GIT)
+
+=head2 PREPARE_COMMIT_MSG(GIT, commit-msg-file [, msg-src [, SHA1]])
+
+=head2 COMMIT_MSG(GIT, commit-msg-file)
+
+=head2 POST_COMMIT(GIT)
+
+=head2 PRE_REBASE(GIT)
+
+=head2 POST_CHECKOUT(GIT, prev-head-ref, new-head-ref, is-branch-checkout)
+
+=head2 POST_MERGE(GIT, is-squash-merge)
+
+=head2 PRE_RECEIVE(GIT)
+
+=head2 UPDATE(GIT, updated-ref-name, old-object-name, new-object-name)
+
+=head2 POST_RECEIVE(GIT)
+
+=head2 POST_UPDATE(GIT, updated-ref-name, ...)
+
+=head2 PRE_AUTO_GC(GIT)
+
+=head2 POST_REWRITE(GIT, command)
+
+=head1 METHODS FOR PLUGIN DEVELOPERS
 
 Plugins should start by importing the utility routines from
 Git::Hooks:
@@ -514,8 +516,8 @@ Git::Hooks:
     use Git::Hooks qw/:utils/;
 
 Usually at the end, the plugin should use one or more of the hook
-directives defined in the C<Implementing Hooks> section above to
-install its hook routines in the apropriate hooks.
+directives defined above to install its hook routines in the
+apropriate hooks.
 
 Every hook routine receives a Git::More object as its first
 argument. You should use it to infer all needed information from the
@@ -527,14 +529,14 @@ this. Hopefully it's not that hard.
 
 The utility routines implemented by Git::Hooks are the following:
 
-=head2 hook_config NAME
+=head2 hook_config(NAME)
 
 This routine returns a hash-ref containing every configuration
 variable for the section NAME. It's usually called with the name of
 the plugin as argument, meaning that the plugin configuration is
 contained in a section by its name.
 
-=head2 is_ref_enabled SPECS REF
+=head2 is_ref_enabled(SPECS, REF)
 
 This routine returns a boolean indicating if REF matches one of the
 ref-specs in SPECS. REF is the complete name of a Git ref and SPECS is
@@ -549,7 +551,7 @@ Each rule in SPECS may indicate the matching refs as the complete ref
 name (e.g. "refs/heads/master") or by a regular expression starting
 with a caret (C<^>), which is kept as part of the regexp.
 
-=head2 get_affected_refs
+=head2 get_affected_refs()
 
 This routine returns a list of all the Git refs affected by the
 current operation. During the C<update> hook it returns the single ref
@@ -557,17 +559,17 @@ passed via the command line. During the C<pre-receive> hook it returns
 the list of refs passed via STDIN. During any other hook it returns
 the empty list.
 
-=head2 get_affected_ref_range REF
+=head2 get_affected_ref_range(REF)
 
 This routine returns the two-element list of commit ids representing
 the OLDCOMMIT and the NEWCOMMIT of the affected REF.
 
-=head2 get_affected_ref_commit_ids REF
+=head2 get_affected_ref_commit_ids(REF)
 
 This routine returns the list of commit ids leading from the affected
 REF's NEWCOMMIT to OLDCOMMIT.
 
-=head2 get_affected_ref_commits REF
+=head2 get_affected_ref_commits(REF)
 
 This routine returns the list of commits leading from the affected
 REF's NEWCOMMIT to OLDCOMMIT. The commits are represented by hashes,
