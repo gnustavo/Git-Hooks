@@ -360,7 +360,7 @@ they must C<die> with a suitable error message. This will prevent Git
 from finishing its operation.
 
 Also note that each hook directive can be called more than once if you
-need to implement more than one specific hook.
+need to implement more than one specific hook. For example:
 
     # Check if every added/updated file is smaller than a fixed limit.
 
@@ -377,6 +377,32 @@ need to implement more than one specific hook.
             my $size = $git->command('cat-file' => '-s', $sha);
             $size <= $LIMIT
                 or die "File '$name' has $size bytes, more than our limit of $LIMIT.\n";
+        }
+    };
+
+    # Check if every added/changed Perl file respects Perl::Critic's code
+    # standards.
+
+    PRE_COMMIT {
+        my ($git) = @_;
+        my %violations;
+
+        my @changed = grep {/\.p[lm]$/} $git->command(qw/diff --cached --name-only --diff-filter=AM/);
+
+        foreach ($git->command('ls-files' => '-s', @changed)) {
+            chomp;
+            my ($mode, $sha, $n, $name) = split / /;
+            require Perl::Critic;
+            state $critic = Perl::Critic->new(-severity => 'stern', -top => 10);
+            my $contents = $git->command('cat-file' => $sha);
+            my @violations = $critic->critique(\$contents);
+            $violations{$name} = \@violations if @violations;
+        }
+
+        if (%violations) {
+            # FIXME: this is a lame way to format the output.
+            require Data::Dumper;
+            die "Perl::Critic Violations:\n", Data::Dumper::Dumper(\%violations), "\n";
         }
     };
 
@@ -482,23 +508,33 @@ called. Usually you just pass C<@ARGV> to it. And that's it. Mostly.
 
 =head1 PLUGIN DEVELOPER TUTORIAL
 
-Plugins should start by importing the utility functions from
+Plugins should start by importing the utility routines from
 Git::Hooks:
 
     use Git::Hooks qw/:utils/;
 
-There are a few utilities by now.
+Usually at the end, the plugin should use one or more of the hook
+directives defined in the C<Implementing Hooks> section above to
+install its hook routines in the apropriate hooks.
 
-=over
+Every hook routine receives a Git::More object as its first
+argument. You should use it to infer all needed information from the
+Git repository.
 
-=item hook_config NAME
+Please, take a look at the code for the standard plugins under the
+Git::Hooks:: namespace in order to get a better understanding about
+this. Hopefully it's not that hard.
+
+The utility routines implemented by Git::Hooks are the following:
+
+=head2 hook_config NAME
 
 This routine returns a hash-ref containing every configuration
 variable for the section NAME. It's usually called with the name of
 the plugin as argument, meaning that the plugin configuration is
 contained in a section by its name.
 
-=item is_ref_enabled SPECS REF
+=head2 is_ref_enabled SPECS REF
 
 This routine returns a boolean indicating if REF matches one of the
 ref-specs in SPECS. REF is the complete name of a Git ref and SPECS is
@@ -513,7 +549,7 @@ Each rule in SPECS may indicate the matching refs as the complete ref
 name (e.g. "refs/heads/master") or by a regular expression starting
 with a caret (C<^>), which is kept as part of the regexp.
 
-=item get_affected_refs
+=head2 get_affected_refs
 
 This routine returns a list of all the Git refs affected by the
 current operation. During the C<update> hook it returns the single ref
@@ -521,32 +557,18 @@ passed via the command line. During the C<pre-receive> hook it returns
 the list of refs passed via STDIN. During any other hook it returns
 the empty list.
 
-=item get_affected_ref_range REF
+=head2 get_affected_ref_range REF
 
 This routine returns the two-element list of commit ids representing
 the OLDCOMMIT and the NEWCOMMIT of the affected REF.
 
-=item get_affected_ref_commit_ids REF
+=head2 get_affected_ref_commit_ids REF
 
 This routine returns the list of commit ids leading from the affected
 REF's NEWCOMMIT to OLDCOMMIT.
 
-=item get_affected_ref_commits REF
+=head2 get_affected_ref_commits REF
 
 This routine returns the list of commits leading from the affected
 REF's NEWCOMMIT to OLDCOMMIT. The commits are represented by hashes,
 as returned by C<Git::More::get_commits>.
-
-=back
-
-Usually at the end, the plugin should use one or more of the hook
-directives defined in the C<Implementing Hooks> section above to
-install its hook routines in the apropriate hooks.
-
-Every hook routine receives a Git::More object as its first
-argument. You should use it to infer all needed information from the
-Git repository.
-
-Please, take a look at the code for the standard plugins under the
-Git::Hooks:: namespace in order to get a better understanding about
-this. Hopefully it's not that hard.
