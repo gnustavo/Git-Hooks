@@ -183,4 +183,10 @@ sub get_commit_msg {
     return $body;
 }
 
+=head1 SEE ALSO
+
+    C<App::gh::Git>.
+
+=cut
+
 1;
