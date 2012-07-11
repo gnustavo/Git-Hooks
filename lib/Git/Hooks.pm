@@ -77,6 +77,39 @@ sub grok_affected_refs {
     }
 }
 
+sub get_affected_refs {
+    return keys %affected_refs;
+}
+
+sub get_affected_ref_range {
+    my ($ref) = @_;
+
+    exists $affected_refs{$ref}
+	or die __PACKAGE__, ": internal error: no such affected ref ($ref)";
+    return @{$affected_refs{$ref}{range}};
+}
+
+sub get_affected_ref_commit_ids {
+    my ($ref) = @_;
+
+    unless (exists $affected_refs{$ref}{ids}) {
+	my $range = get_affected_ref_range($ref);
+	$affected_refs{$ref}{ids} = [$Git->command('rev-list' => join('..', @$range))];
+    }
+
+    return $affected_refs{$ref}{ids};
+}
+
+sub get_affected_ref_commits {
+    my ($ref) = @_;
+
+    unless (exists $affected_refs{$ref}{commits}) {
+	$affected_refs{$ref}{commits} = $Git->get_commits(get_affected_ref_range($ref));
+    }
+
+    return $affected_refs{$ref}{commits};
+}
+
 sub run_hook {
     my ($hook_name, @args) = @_;
 
@@ -479,6 +512,30 @@ refs being affected.
 Each rule in SPECS may indicate the matching refs as the complete ref
 name (e.g. "refs/heads/master") or by a regular expression starting
 with a caret (C<^>), which is kept as part of the regexp.
+
+=item get_affected_refs
+
+This routine returns a list of all the Git refs affected by the
+current operation. During the C<update> hook it returns the single ref
+passed via the command line. During the C<pre-receive> hook it returns
+the list of refs passed via STDIN. During any other hook it returns
+the empty list.
+
+=item get_affected_ref_range REF
+
+This routine returns the two-element list of commit ids representing
+the OLDCOMMIT and the NEWCOMMIT of the affected REF.
+
+=item get_affected_ref_commit_ids REF
+
+This routine returns the list of commit ids leading from the affected
+REF's NEWCOMMIT to OLDCOMMIT.
+
+=item get_affected_ref_commits REF
+
+This routine returns the list of commits leading from the affected
+REF's NEWCOMMIT to OLDCOMMIT. The commits are represented by hashes,
+as returned by C<Git::More::get_commits>.
 
 =back
 

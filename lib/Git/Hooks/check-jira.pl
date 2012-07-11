@@ -230,9 +230,7 @@ sub check_ref {
 	return unless is_ref_enabled($refs, $ref);
     }
 
-    my %commits = $git->get_refs_commits();
-
-    foreach my $commit (@{$commits{$ref}}) {
+    foreach my $commit (@{get_affected_ref_commits($ref)}) {
 	check_commit_msg($git, $commit, $ref);
     }
 };
@@ -243,9 +241,8 @@ sub check_affected_refs {
 
     return if im_admin($git);
 
-    my %refs = $git->get_refs_ranges();
-    while (my ($refname, $range) = each %refs) {
-	check_ref($git, $refname, @$range);
+    foreach my $ref (get_affected_refs()) {
+	check_ref($git, $ref);
     }
 }
 

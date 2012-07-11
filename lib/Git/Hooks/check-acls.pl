@@ -150,8 +150,10 @@ sub im_admin {
     return $i_am;
 }
 
-sub check_acls {
-    my ($git, $ref, $old_commit, $new_commit) = @_;
+sub check_ref {
+    my ($git, $ref) = @_;
+
+    my ($old_commit, $new_commit) = get_affected_ref_range($ref);
 
     my $acls = grok_acls($git);
 
@@ -185,9 +187,8 @@ sub check_affected_refs {
 
     return if im_admin($git);
 
-    my %refs = $git->get_refs_ranges();
-    while (my ($refname, $range) = each %refs) {
-	check_acls($git, $refname, @$range);
+    foreach my $ref (get_affected_refs()) {
+	check_ref($git, $ref);
     }
 }
 

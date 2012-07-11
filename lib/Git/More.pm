@@ -122,51 +122,38 @@ sub get_current_branch {
     return;
 }
 
-sub get_refs_ranges {
-    my ($git) = @_;
+=head2 get_commits OLDCOMMIT NEWCOMMIT
 
-    unless (exists $git->{more}{refs}{ranges}) {
-	my %refs;
-	while (<>) {
-	    chomp;
-	    my ($old_commit, $new_commit, $ref) = split;
-	    $refs{$ref} = [$old_commit, $new_commit];
-	}
-	$git->{more}{refs}{ranges} = \%refs;
+This method returns a list of hashes representing every commit
+reachable from NEWCOMMIT but not from OLDCOMMIT. It obtains this
+information by invoking C<git rev-list OLDCOMIT..NEWCOMMIT>.
+
+Each commit is represented by a hash with the following structure (the
+codes are explained in the C<git help rev-list> document):
+
+    {
+        commit          => %H:  commit hash
+        tree            => %T:  tree hash
+        parent          => %P:  parent hashes (space separated)
+        author_name     => %aN: author name
+        author_email    => %aE: author email
+        author_date     => %ai: author date in ISO8601 format
+        commmitter_name => %cN: committer name
+        committer_email => %cE: committer email
+        committer_date  => %ci: committer date in ISO8601 format
+        body            => %B:  raw body (aka commit message)
     }
 
-    return %{$git->{more}{refs}{ranges}};
-}
+=cut
 
-sub set_ref_range {
-    my ($git, $ref, $old_commit, $new_commit) = @_;
-    $git->{more}{refs}{ranges}{$ref} = [$old_commit, $new_commit];
-}
-
-sub get_refs_commit_ids {
-    my ($git) = @_;
-
-    unless (exists $git->{more}{refs}{ids}) {
-	my %ranges = $git->get_refs_ranges();
-
-	my %refs;
-	while (my ($ref, $range) = each %ranges) {
-	    $refs{$ref} = [$git->command('rev-list' => join('..', @$range))];
-	}
-	$git->{more}{refs}{ids} = \%refs;
-    }
-
-    return %{$git->{more}{refs}{ids}};
-}
-
-sub grok_commits {
-    my ($git, $start, $end) = @_;
+sub get_commits {
+    my ($git, $old_commit, $new_commit) = @_;
     my @commits;
     my ($pipe, $ctx) = $git->command_output_pipe(
 	'rev-list',
 	# See 'git help rev-list' to understand the --pretty argument
 	'--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%B%x00',
-	"$start..$end");
+	"$old_commit..$new_commit");
     {
 	local $/ = "\x00\n";
 	while (<$pipe>) {
@@ -182,27 +169,17 @@ sub grok_commits {
     return \@commits;
 }
 
-sub get_refs_commits {
-    my ($git) = @_;
+=head2 get_commit_msg COMMIT_ID
 
-    unless (exists $git->{more}{refs}{commits}) {
-	my %ranges = $git->get_refs_ranges();
+This method returns the commit message (aka body) of the commit
+identified by COMMIT_ID. The result is a string.
 
-	my %refs;
-	while (my ($ref, $range) = each %ranges) {
-	    $refs{$ref} = $git->grok_commits(@$range);
-	}
-	$git->{more}{refs}{commits} = \%refs;
-    }
-
-    return %{$git->{more}{refs}{commits}};
-}
+=cut
 
 sub get_commit_msg {
     my ($git, $commit) = @_;
     my $body = $git->command('rev-list' => '--format=%B', '--max-count=1', $commit);
     $body =~ s/^.*//m;    # strip first line, which contains the commit id
-    $body =~ s/^\s+//gm;  # strip blank prefixes from all lines
     return $body;
 }
 
