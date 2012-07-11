@@ -32,26 +32,11 @@ my $HOOK = "check-jira";
 
 my $Config = hook_config($HOOK);
 
-# The JIRA connection options are scalars and required
-foreach my $option (qw/jiraurl jirauser jirapass/) {
-    $Config->{$option} = $Config->{$option}[-1]
-	if defined $Config->{$option};
-}
-$Config->{jiraurl} =~ s/\/+$//
-    if defined $Config->{jiraurl};
-
-# Matchlog and matchkey are scalars which we'll convert into Regexes
-foreach my $option (qw/matchlog matchkey/) {
-    if (defined $Config->{$option}) {
-	my $regex = eval {qr/$Config->{$option}[-1]/};
-	die "$HOOK: Invalid $option regex ($Config->{$option}[-1]).\n$@\n" if $@;
-	$Config->{$option} = $regex;
-    }
-}
-$Config->{matchkey} //= qr/\b[A-Z][A-Z]+-\d+\b/;
+# Default matchkey for matching default JIRA keys.
+$Config->{matchkey} //= ['\b[A-Z][A-Z]+-\d+\b'];
 
 # The check options are scalars with defaults
-foreach my $option (qw/require valid unresolved/) {
+foreach my $option (qw/require unresolved/) {
     $Config->{$option} = exists $Config->{$option} ? $Config->{$option}[-1] : 1;
 }
 
@@ -75,7 +60,7 @@ sub im_admin {
 sub grok_msg_jiras {
     my ($msg) = @_;
     # Grok the JIRA issue keys from the commit log
-    state $matchkey = is_rx($Config->{matchkey}) ? $Config->{matchkey} : qr/$Config->{matchkey}/;
+    state $matchkey = qr/$Config->{matchkey}[-1]/;
     if (exists $Config->{matchlog}) {
 	state $matchlog = is_rx($Config->{matchlog}) ? $Config->{matchlog} : qr/$Config->{matchlog}/;
 	if (my ($match) = ($msg =~ $matchlog)) {
@@ -98,10 +83,11 @@ sub get_issue {
 	for my $option (qw/jiraurl jirauser jirapass/) {
 	    exists $Config->{$option}
 		or die "$HOOK: Missing check-jira.$option configuration variable.\n";
+	    $Config->{$option} = $Config->{$option}[-1];
 	}
-	my ($jiraurl, $jirauser, $jirapass) = @{$Config}{qw/jiraurl jirauser jirapass/};
-	$JIRA = eval {JIRA::Client->new($jiraurl, $jirauser, $jirapass)};
-	die "$HOOK: cannot connect to the JIRA server at '$jiraurl' as '$jirauser': $@\n" if $@;
+	$Config->{jiraurl} =~ s:/+$::; # trim trailing slashes from the URL
+	$JIRA = eval {JIRA::Client->new($Config->{jiraurl}, $Config->{jirauser}, $Config->{jirapass})};
+	die "$HOOK: cannot connect to the JIRA server at '$Config->{jiraurl}' as '$Config->{jirauser}': $@\n" if $@;
     }
 
     state %issue_cache;

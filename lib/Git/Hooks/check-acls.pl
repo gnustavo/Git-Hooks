@@ -25,18 +25,14 @@ use File::Slurp;
 my $HOOK = "check-acls";
 
 #############
-# Grok hook configuration, check it and set defaults.
+# Grok hook configuration and set defaults.
 
 my $Config = hook_config($HOOK);
 
-# Userenv is a scalar and 'USER' is its default.
 $Config->{userenv} //= ['USER'];
-my $myself = $ENV{$Config->{userenv}[-1]}
-    or die "$HOOK: opttion userenv environment variable ($Config->{userenv}[-1]) is not defined.\n";
+$Config->{admin}   //= [];
 
-# Admin is an array. We create an empty one if absent, to make it
-# easier to check later on
-$Config->{admin} //= [];
+my $myself;
 
 ##########
 
@@ -184,6 +180,9 @@ sub check_ref {
 # This routine can act both as an update or a pre-receive hook.
 sub check_affected_refs {
     my ($git) = @_;
+
+    $myself = $ENV{$Config->{userenv}[-1]}
+	or die "$HOOK: option userenv environment variable ($Config->{userenv}[-1]) is not defined.\n";
 
     return if im_admin($git);
 
