@@ -126,20 +126,20 @@ sub run_hook {
     # Some hooks affect lists of commits. Let's grok them at once.
     grok_affected_refs($hook_name);
 
-    # Grok the directories where we'll look for the hook scripts.
-    my @hooksdir;
+    # Grok the directories where we'll look for the hook plugins.
+    my @plugin_dirs;
     # First the local directory 'githooks' under the repository path
-    push @hooksdir, 'githooks';
-    # Then, the optional list of directories specified by the hooksdir
+    push @plugin_dirs, 'githooks';
+    # Then, the optional list of directories specified by the plugins
     # config option
-    push @hooksdir, @{$config->{hooksdir}} if exists $config->{hooksdir};
+    push @plugin_dirs, @{$config->{plugins}} if exists $config->{plugins};
     # And finally, the Git::Hooks standard hooks directory
-    push @hooksdir, catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks');
+    push @plugin_dirs, catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks');
 
-    # Execute every enabled script found in the @hooksdir directories
+    # Execute every enabled script found in the @plugin_dirs directories
     foreach my $hook (@$enabled_hooks) {
 	my $found = 0;
-	foreach my $dir (grep {-d} @hooksdir) {
+	foreach my $dir (grep {-d} @plugin_dirs) {
 	    my $script = catfile($dir, $hook);
 	    next unless -f $script;
 
@@ -413,7 +413,7 @@ sense to do so. For instance:
 
     $ git config githooks.commit-msg check-jira.pl
 
-=item githooks.hooksdir
+=item githooks.plugins
 
 The plugins enabled for a hook are searched for in three places. First
 they're are searched for in the C<githooks> directory under the
@@ -421,7 +421,7 @@ repository path (usually in C<.git/githooks>), so that you may have
 repository specific hooks (or repository specific versions of a hook).
 
 Then, they are searched for in every directory specified with the
-C<githooks.hooksdir> option.  You may set it more than once if you
+C<githooks.plugins> option.  You may set it more than once if you
 have more than one directory holding your hooks.
 
 Finally, they are searched for in Git::Hooks installation.
