@@ -2,6 +2,20 @@ Revision history for Git-Hooks. -*- text -*-
 
 \{\{$NEXT\}\}
 
+Implement support for driving external hooks.
+
+Rename option githooks.hookdir to githooks.plugins.
+
+Rename default local plugin directory from .git/hooks.d to
+.git/githooks.
+
+Add option githooks.externals to disable external hooks processing.
+
+Add option githooks.hooks to specify extra directories to look for
+external hooks.
+
+0.0001      2012-07-10 America/Sao_Paulo
+
 First release, with two hooks passing tests: check-acls.pl and
 check-jira.pl.
 
