@@ -170,8 +170,8 @@ sub run_hook {
 	push    @{$config->{plugins}}, catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks');
 	my @plugin_dirs = grep {-d} @{$config->{plugins}};
 
+      HOOK:
 	foreach my $hook (@$enabled_hooks) {
-	    my $found = 0;
 	    foreach my $dir (@plugin_dirs) {
 		my $script = catfile($dir, $hook);
 		next unless -f $script;
@@ -182,9 +182,9 @@ sub run_hook {
 		    die __PACKAGE__, ": couldn't do $script: $!\n"    unless defined $exit;
 		    die __PACKAGE__, ": couldn't run $script\n"       unless $exit;
 		}
-		$found = 1;
+		next HOOK;
 	    }
-	    die __PACKAGE__, ": can't find hook enabled hook $hook.\n" unless $found;
+	    die __PACKAGE__, ": can't find hook enabled hook $hook.\n";
 	}
 
 	# Call every hook function installed by the hook scripts before.
