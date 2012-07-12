@@ -347,13 +347,13 @@ for nothing.)
 As is, the script won't do anything. You have to implement some hooks
 in it, use some of the existing plugins, or set up some external
 plugins to be invoked properly. Either way, the script should end with
-a call to C<run_hooks> passing to it the name with which it was called
+a call to C<run_hook> passing to it the name with which it was called
 (C<$0>) and all the arguments it received (C<@ARGV>).
 
 =head2 Implementing Hooks
 
 Implement hooks using one of the hook I<directives> described in the
-MAIN METHODS section. For example:
+HOOK DIRECTIVES section. For example:
 
     # Check if every added/updated file is smaller than a fixed limit.
 
@@ -428,8 +428,8 @@ documentation is explicit about this.
 
 Since the default Git hook scripts are taken by the Git::Hooks driver
 script, you must install your external hooks somewhere else. By
-default, the external plugin will look for external hook scripts in
-the directory C<.git/hooks.d> (which you must create) under the
+default, the C<run_hook> routine will look for external hook scripts
+in the directory C<.git/hooks.d> (which you must create) under the
 repository. Below this directory you should have another level of
 directories, named after the default hook names, under which you can
 drop your external hooks.

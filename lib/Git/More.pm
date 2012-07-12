@@ -185,7 +185,7 @@ sub get_commit_msg {
 
 =head1 SEE ALSO
 
-    C<App::gh::Git>.
+C<App::gh::Git>
 
 =cut
 
