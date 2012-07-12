@@ -168,10 +168,11 @@ sub run_hook {
 	# finally, the Git::Hooks standard hooks directory.
 	unshift @{$config->{plugins}}, 'githooks';
 	push    @{$config->{plugins}}, catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks');
+	my @plugin_dirs = grep {-d} @{$config->{plugins}};
 
 	foreach my $hook (@$enabled_hooks) {
 	    my $found = 0;
-	    foreach my $dir (grep {-d} @{$config->{plugins}}) {
+	    foreach my $dir (@plugin_dirs) {
 		my $script = catfile($dir, $hook);
 		next unless -f $script;
 
