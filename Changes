@@ -1,26 +1,30 @@
 Revision history for Git-Hooks. -*- text -*-
 
-\{\{$NEXT\}\}
+{{$NEXT}}
 
-Implement support for driving external hooks.
+	Fix dependency on App::gh::Git.
 
-Rename option githooks.hookdir to githooks.plugins.
+0.002      2012-07-11 America/Sao_Paulo
 
-Rename default local plugin directory from .git/hooks.d to
-.git/githooks.
+	Implement support for driving external hooks.
 
-Add option githooks.externals to disable external hooks processing.
+	Rename option githooks.hookdir to githooks.plugins.
 
-Add option githooks.hooks to specify extra directories to look for
-external hooks.
+	Rename default local plugin directory from .git/hooks.d to
+	.git/githooks.
+
+	Add option githooks.externals to disable external hooks processing.
+
+	Add option githooks.hooks to specify extra directories to look for
+	external hooks.
 
 0.0001      2012-07-10 America/Sao_Paulo
 
-First release, with two hooks passing tests: check-acls.pl and
-check-jira.pl.
+	First release, with two hooks passing tests: check-acls.pl and
+	check-jira.pl.
 
-I decided to incorporate Git::More in this distribution instead of
-making it a separate module.
+	I decided to incorporate Git::More in this distribution instead of
+	making it a separate module.
 
-The documentation is lacking and the functionality needs to be
-expanded.
+	The documentation is lacking and the functionality needs to be
+	expanded.
