@@ -2,9 +2,8 @@ use strict;
 use warnings;
 
 package Git::More;
-# ABSTRACT: An extension of Git with some goodies for hook developers.
-use App::gh::Git;
-use parent -norequire, 'Git';
+# ABSTRACT: An extension of App::gh::Git with some goodies for hook developers.
+use parent 'App::gh::Git';
 
 use Error qw(:try);
 use Carp;
@@ -22,9 +21,8 @@ use Carp;
 
 =head1 DESCRIPTION
 
-This is an extension of the Git class implemented by the
-C<App::gh::Git> module. It's meant to implement a few extra methods
-commonly needed by Git hook developers.
+This is an extension of the C<App::gh::Git> class. It's meant to
+implement a few extra methods commonly needed by Git hook developers.
 
 In particular, it's used by the standard hooks implemented by the
 C<Git::Hooks> framework.

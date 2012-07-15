@@ -84,13 +84,13 @@ sub new_repos {
 	say $fh "first line";
     }
 
-    Git::command(init => '-q', $repodir);
+    App::gh::Git::command(init => '-q', $repodir);
 
     my $repo = Git::More->repository(Directory => $repodir);
     $repo->command(add => $filename);
     $repo->command(commit => '-mx');
 
-    Git::command(clone => '-q', '--bare', '--no-hardlinks', $repodir, $clonedir);
+    App::gh::Git::command(clone => '-q', '--bare', '--no-hardlinks', $repodir, $clonedir);
 
     my $clone = Git::More->repository(Directory => $clonedir);
 
