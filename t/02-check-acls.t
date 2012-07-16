@@ -31,6 +31,7 @@ sub check_cannot_push {
 $clone->command(config => 'githooks.update', 'check-acls.pl');
 
 # Without any specific configuration all pushes are denied
+$ENV{USER} //= 'someone';	# guarantee that the user is known, at least.
 check_cannot_push('deny by default');
 
 # Configure admin environment variable
