@@ -32,7 +32,7 @@ sub install_hooks {
     my $hooks_dir = catfile($git->repo_path(), 'hooks');
     my $hook_pl   = catfile($hooks_dir, 'hook.pl');
     {
-	open my $fh, '>', $hook_pl or die "Can't create $hook_pl: $!\n";
+	open my $fh, '>', $hook_pl or BAIL_OUT("Can't create $hook_pl: $!");
 	state $debug = $ENV{DBG} ? '-d' : '';
 	state $bliblib = catdir('blib', 'lib');
 	print $fh <<EOF;
@@ -66,7 +66,7 @@ EOF
 		 pre-receive update post-receive post-update
 		 pre-auto-gc post-rewrite /) {
 	symlink 'hook.pl', catfile($hooks_dir, $_)
-	    or die "can't symlink '$hooks_dir', '$_': $!\n";
+	    or BAIL_OUT("can't symlink '$hooks_dir', '$_': $!");
     }
 }
 
@@ -78,9 +78,9 @@ sub new_repos {
     my $filename = catfile($repodir, 'file.txt');
     my $clonedir = catfile($T, 'clone');
 
-    mkdir $repodir, 0777 or die "can't mkdir $repodir: $!";
+    mkdir $repodir, 0777 or BAIL_OUT("can't mkdir $repodir: $!");
     {
-	open my $fh, '>', $filename or die "can't open $filename: $!";
+	open my $fh, '>', $filename or die BAIL_OUT("can't open $filename: $!");
 	say $fh "first line";
     }
 
@@ -136,8 +136,8 @@ sub test_command {
 	}
 	close STDERR;
 	open STDERR, '>&', \*STDOUT;
-	exec git => $cmd, @args;
-	die "Can't exec git $cmd: $!\n";
+	exec(git => $cmd, @args)
+	    or BAIL_OUT("Can't exec git $cmd: $!\n");
     }
 }
 
