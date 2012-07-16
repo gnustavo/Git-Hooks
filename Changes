@@ -2,6 +2,11 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.005     2012-07-16 10:17:16 America/Sao_Paulo
+
+	Fix some errors detected by
+	http://cpantesters.org/distro/G/Git-Hooks.html.
+
 0.004     2012-07-15 22:01:36 America/Sao_Paulo
 
 	Fix missing required dependency.
