@@ -153,7 +153,7 @@ sub check_commit_msg {
 
     unless (@keys) {
 	if ($Config->{require}) {
-	    die "$HOOK: commit $commit->{commit} (in $ref) does not cite any valid JIRA.\n";
+	    die "$HOOK: commit $commit->{commit} (in $ref) does not cite any valid JIRA:\n$commit->{body}\n";
 	} else {
 	    return;
 	}
