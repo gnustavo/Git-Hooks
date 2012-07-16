@@ -2,6 +2,10 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.004     2012-07-15 22:01:36 America/Sao_Paulo
+
+	Fix missing required dependency.
+
 0.003     2012-07-15 18:33:20 America/Sao_Paulo
 
 	Fix dependency on App::gh::Git.
