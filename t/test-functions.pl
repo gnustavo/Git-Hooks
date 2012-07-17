@@ -84,13 +84,24 @@ sub new_repos {
 	say $fh "first line";
     }
 
-    App::gh::Git::command(init => '-q', $repodir);
+    try {
+	App::gh::Git::command(init => '-q', $repodir);
+    } otherwise {
+	my $E = shift;
+	BAIL_OUT("Got error while executing 'git init': $E\n");
+    };
 
     my $repo = Git::More->repository(Directory => $repodir);
     $repo->command(add => $filename);
     $repo->command(commit => '-mx');
 
-    App::gh::Git::command(clone => '-q', '--bare', '--no-hardlinks', $repodir, $clonedir);
+    try {
+	App::gh::Git::command(clone => '-q', '--bare', '--no-hardlinks', $repodir, $clonedir);
+    } otherwise {
+	my $E = shift;
+	BAIL_OUT("Got error while executing 'git clone': $E\n");
+    };
+
 
     my $clone = Git::More->repository(Directory => $clonedir);
 
