@@ -45,7 +45,7 @@ EOF
 	state $pathsep = $^O eq 'MSWin32' ? ';' : ':';
 	if (defined $ENV{PERL5LIB} and length $ENV{PERL5LIB}) {
 	    foreach my $path (reverse split "$pathsep", $ENV{PERL5LIB}) {
-		say $fh "use lib '$path';";
+		say $fh "use lib '$path';" if $path;
 	    }
 	}
 
