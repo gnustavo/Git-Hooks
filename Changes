@@ -2,6 +2,11 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.007     2012-07-17 08:59:31 America/Sao_Paulo
+
+	Fix still more errors detected by
+	http://cpantesters.org/distro/G/Git-Hooks.html.
+
 0.006     2012-07-16 17:29:12 America/Sao_Paulo
 
 	Enable pre 1.7.2 gits by using old-fashioned rev-list --pretty
@@ -34,7 +39,7 @@ Revision history for Git-Hooks. -*- text -*-
 	Add option githooks.hooks to specify extra directories to look for
 	external hooks.
 
-0.0001      2012-07-10 America/Sao_Paulo
+0.001      2012-07-10 America/Sao_Paulo
 
 	First release, with two hooks passing tests: check-acls.pl and
 	check-jira.pl.
