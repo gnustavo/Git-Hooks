@@ -21,6 +21,7 @@ use strict;
 use warnings;
 use Git::Hooks qw/:utils/;
 use File::Slurp;
+use Error qw(:try);
 
 my $HOOK = "check-acls";
 
@@ -163,8 +164,13 @@ sub check_ref {
 	$op = 'R';		# rewrite a non-branch
     } else {
 	# This is an U if "merge-base(old, new) == old". Otherwise it's an R.
-	chomp(my $merge_base = $git->command('merge-base' => $old_commit, $new_commit));
-	$op = ($merge_base eq $old_commit) ? 'U' : 'R';
+	try {
+	    chomp(my $merge_base = $git->command('merge-base' => $old_commit, $new_commit));
+	    $op = ($merge_base eq $old_commit) ? 'U' : 'R';
+	} otherwise {
+	    # Probably $old_commit and $new_commit do not have a common ancestor.
+	    $op = 'R';
+	};
     }
 
     foreach my $acl (@$acls) {
