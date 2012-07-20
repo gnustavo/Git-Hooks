@@ -2,6 +2,11 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.008     2012-07-20 17:19:17 America/Sao_Paulo
+
+	Fix check-acls.pl to detect ref rewrites to non-related
+	commits.
+
 0.007     2012-07-17 08:59:31 America/Sao_Paulo
 
 	Fix still more errors detected by
