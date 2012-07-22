@@ -2,6 +2,10 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.009     2012-07-22 11:21:18 America/Sao_Paulo
+
+	Show git version upon test failure.
+
 0.008     2012-07-20 17:19:17 America/Sao_Paulo
 
 	Fix check-acls.pl to detect ref rewrites to non-related
