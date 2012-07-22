@@ -20,6 +20,13 @@ $ENV{LC_MESSAGES} = 'C';
 our $T;
 our $HooksDir = catfile(rel2abs(curdir()), 'hooks');
 
+our $git_version;
+try {
+    $git_version = App::gh::Git::command_oneline('version');
+} otherwise {
+    $git_version = 'unknown';
+};
+
 sub newdir {
     my $num = 1 + Test::Builder->new()->current_test();
     my $dir = catdir($T, $num);
@@ -148,7 +155,7 @@ sub test_command {
 	close STDERR;
 	open STDERR, '>&', \*STDOUT;
 	exec(git => $cmd, @args)
-	    or BAIL_OUT("Can't exec git $cmd: $!\n");
+	    or BAIL_OUT("Can't exec git (version=$git_version) $cmd: $!\n");
     }
 }
 
@@ -159,15 +166,16 @@ sub test_ok {
 	pass($testname);
     } else {
 	fail($testname);
-	diag(" exit=$exit\n stdout=$stdout\n");
+	diag(" exit=$exit\n stdout=$stdout\n git-version=$git_version\n");
     }
 }
 
 sub test_nok {
     my ($testname, @args) = @_;
-    my ($ok) = test_command(@args);
+    my ($ok, $exit, $stdout) = test_command(@args);
     if ($ok) {
 	fail($testname);
+	diag(" succeeded without intention\n stdout=$stdout\n git-version=$git_version\n");
     } else {
 	pass($testname);
     }
@@ -178,12 +186,12 @@ sub test_nok_match {
     my ($ok, $exit, $stdout) = test_command(@args);
     if ($ok) {
 	fail($testname);
-	diag(" succeeded without intention\n stdout=$stdout\n");
+	diag(" succeeded without intention\n stdout=$stdout\n git-version=$git_version\n");
     } elsif ($stdout =~ $regex) {
 	pass($testname);
     } else {
 	fail($testname);
-	diag(" did not match regex ($regex)\n exit=$exit\n stdout=$stdout\n");
+	diag(" did not match regex ($regex)\n exit=$exit\n stdout=$stdout\n git-version=$git_version\n");
     }
 }
 
