@@ -122,7 +122,7 @@ sub test_command {
 
     my $pid = open my $pipe, '-|';
     if (! defined $pid) {
-	return (0, undef, undef, "Can't fork: $!\n");
+	return (0, undef, "Can't fork: $!\n");
     } elsif ($pid) {
 	# parent
 	local $/ = undef;
