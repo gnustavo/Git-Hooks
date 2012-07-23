@@ -2,6 +2,12 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.010     2012-07-23 11:25:09 America/Sao_Paulo
+
+	Check if we have git installed before generating Makefile from
+	Makefile.PL so that we avoid producing bogus cpantesters.org
+	reports.
+
 0.009     2012-07-22 11:21:18 America/Sao_Paulo
 
 	Show git version upon test failure.
