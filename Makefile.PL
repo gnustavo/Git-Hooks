@@ -3,6 +3,12 @@ use warnings;
 
 ##{ $perl_prereq ? qq[use $perl_prereq;] : ''; ##}
 
+# Check if we have Git installed
+unless (system(qw/git version/) == 0) {
+    warn "Can't find git in PATH.\n";
+    exit 0;
+}
+
 use ExtUtils::MakeMaker ##{ $eumm_version ##};
 
 ##{ $share_dir_code{preamble} || '' ##}
