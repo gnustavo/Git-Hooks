@@ -93,26 +93,20 @@ sub new_repos {
 
     try {
 	App::gh::Git::command(init => '-q', $repodir);
-    } otherwise {
-	my $E = shift;
-	BAIL_OUT("Got error while executing 'git init': $E\n");
-    };
+	my $repo = Git::More->repository(Directory => $repodir);
+	$repo->command(add => $filename);
+	$repo->command(commit => '-mx');
 
-    my $repo = Git::More->repository(Directory => $repodir);
-    $repo->command(add => $filename);
-    $repo->command(commit => '-mx');
-
-    try {
 	App::gh::Git::command(clone => '-q', '--bare', '--no-hardlinks', $repodir, $clonedir);
+	my $clone = Git::More->repository(Directory => $clonedir);
+
+	return ($repo, $filename, $clone);
     } otherwise {
 	my $E = shift;
-	BAIL_OUT("Got error while executing 'git clone': $E\n");
+	my $ls = `find $T -ls`;	# FIXME: this is non-portable.
+	diag("Error setting up repos for test: $E\nRepos parent directory listing:\n$ls\n");
+	BAIL_OUT('Cannot setup repos for testing');
     };
-
-
-    my $clone = Git::More->repository(Directory => $clonedir);
-
-    return ($repo, $filename, $clone);
 }
 
 sub new_commit {
