@@ -2,6 +2,10 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.011     2012-07-25 11:12:01 America/Sao_Paulo
+
+	Improve testing framework.
+
 0.010     2012-07-23 11:25:09 America/Sao_Paulo
 
 	Check if we have git installed before generating Makefile from
