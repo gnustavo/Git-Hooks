@@ -9,12 +9,18 @@ use File::Slurp;
 
 require "test-functions.pl";
 
-my ($repo, $file, $clone) = new_repos();
-foreach my $git ($repo, $clone) {
-    # Inject a fake JIRA::Client class definition in order to be able
-    # to test this without a real JIRA server.
+my ($repo, $file, $clone);
 
-    install_hooks($git, <<'EOF');
+sub setup_repos_for {
+    my ($reporef, $hook) = @_;
+
+    ($repo, $file, $clone) = new_repos();
+
+    foreach my $git ($repo, $clone) {
+	# Inject a fake JIRA::Client class definition in order to be able
+	# to test this without a real JIRA server.
+
+	install_hooks($git, <<'EOF');
 package JIRA::Client;
 
 sub new {
@@ -41,6 +47,12 @@ sub getIssue {
 package main;
 $INC{'JIRA/Client.pm'} = 'fake';
 EOF
+    }
+
+    $$reporef->command(config => "githooks.$hook", 'check-jira.pl');
+    $$reporef->command(config => 'check-jira.jiraurl', 'fake://url/');
+    $$reporef->command(config => 'check-jira.jirauser', 'user');
+    $$reporef->command(config => 'check-jira.jirapass', 'valid');
 }
 
 sub check_can_commit {
@@ -75,18 +87,8 @@ sub check_cannot_push {
 		   'push', $clone->repo_path(), $ref || 'master');
 }
 
-new_commit($repo, $file, 'mark a valid commit to rewind here later [GIT-2]');
-$repo->command(tag => 'v0');
-
 
-# Enable in commit hook
-$repo->command(config => 'githooks.commit-msg', 'check-jira.pl');
-
-foreach my $git ($repo, $clone) {
-    $git->command(config => 'check-jira.jiraurl', 'fake://url/');
-    $git->command(config => 'check-jira.jirauser', 'user');
-    $git->command(config => 'check-jira.jirapass', 'invalid');
-}
+setup_repos_for(\$repo, 'commit-msg');
 
 check_cannot_commit('deny commit by default without JIRAs');
 
@@ -108,12 +110,11 @@ check_can_commit('allow commit if JIRA is not required');
 $repo->command(config => '--unset-all', 'check-jira.require');
 
 $repo->command(config => '--replace-all', 'check-jira.project', 'GIT');
+
+$repo->command(config => '--replace-all', 'check-jira.jirapass', 'invalid');
 check_cannot_commit('deny commit if cannot connect to JIRA [GIT-0]',
 		    qr/cannot connect to the JIRA server/);
-
-foreach my $git ($repo, $clone) {
-    $git->command(config => '--replace-all', 'check-jira.jirapass', 'valid');
-}
+$repo->command(config => '--replace-all', 'check-jira.jirapass', 'valid');
 
 check_cannot_commit('deny commit if cannot get issue [GIT-0]',
 		    qr/cannot get issue/);
@@ -152,29 +153,23 @@ check_can_commit('allow commit if check_code does pass [GIT-2 GIT-3]');
 
 $repo->command(config => '--unset-all', 'check-jira.check-code');
 
-$repo->command(config => '--unset-all', 'githooks.commit-msg');
 
-# Enable in update hook
-$repo->command(reset => '--hard', 'v0'); # rewind to original valid state
-
-$clone->command(config => 'githooks.update', 'check-jira.pl');
+setup_repos_for(\$clone, 'update');
 
 check_cannot_push('deny push by update by default without JIRAs',
 		  qr/does not cite any valid JIRA/);
 
-$repo->command(reset => '--hard', 'v0');
+setup_repos_for(\$clone, 'update');
 
 check_can_push('allow push by update if valid issue cited [GIT-2]');
 
 
-# Enable in pre-receive hook
-$clone->command(config => '--unset-all', 'githooks.update');
-$clone->command(config => 'githooks.pre-receive', 'check-jira.pl');
+setup_repos_for(\$clone, 'pre-receive');
 
 check_cannot_push('deny push by pre-receive by default without JIRAs',
 		  qr/does not cite any valid JIRA/);
 
-$repo->command(reset => '--hard', 'HEAD~1');
+setup_repos_for(\$clone, 'pre-receive');
 
 check_can_push('allow push by pre-receive if valid issue cited [GIT-2]');
 

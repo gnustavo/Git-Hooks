@@ -34,6 +34,19 @@ sub newdir {
     $dir;
 }
 
+sub debug_test {
+    my ($git, $debug) = @_;
+    $debug //= 1;
+    my $hook_pl = catfile($git->repo_path(), 'hooks', 'hook.pl');
+    my $pl = read_file($hook_pl);
+    if (
+	   ! $debug && $pl =~ s/^([^\n]+) -d\n/$1\n/s
+	||   $debug && $pl =~ s/^([^\n]+)(?!-d)\n/$1 -d\n/s
+    ) {
+	write_file($hook_pl, $pl);
+    }
+}
+
 sub install_hooks {
     my ($git, $extra_perl) = @_;
     my $hooks_dir = catfile($git->repo_path(), 'hooks');
