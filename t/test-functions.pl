@@ -105,19 +105,26 @@ sub new_repos {
     }
 
     try {
-	App::gh::Git::command(init => '-q', $repodir);
+	my ($ok, $exit, $stdout) = test_command(undef, 'init', '-q', $repodir);
+	unless ($ok) {
+	    throw Error::Simple("'git init -q $repodir': exit=$exit, stdout=\n$stdout\n");
+	}
+
 	my $repo = Git::More->repository(Directory => $repodir);
 	$repo->command(add => $filename);
 	$repo->command(commit => '-mx');
 
-	App::gh::Git::command(clone => '-q', '--bare', '--no-hardlinks', $repodir, $clonedir);
+	($ok, $exit, $stdout) = test_command(undef, 'clone', '-q', '--bare', '--no-hardlinks', $repodir, $clonedir);
+	unless ($ok) {
+	    throw Error::Simple("'git clone -q --bare --no-hardlinks $repodir $clonedir': exit=$exit, stdout=\n$stdout\n");
+	}
 	my $clone = Git::More->repository(Directory => $clonedir);
 
 	return ($repo, $filename, $clone);
     } otherwise {
 	my $E = shift;
 	my $ls = `find $T -ls`;	# FIXME: this is non-portable.
-	diag("Error setting up repos for test: $E\nRepos parent directory listing:\n$ls\n");
+	diag("Error setting up repos for test: $E\nRepos parent directory listing:\n$ls\ngit-version=$git_version\n");
 	BAIL_OUT('Cannot setup repos for testing');
     };
 }
@@ -149,7 +156,7 @@ sub test_command {
 	}
     } else {
 	# child
-	if ($git->repo_path()) {
+	if (defined $git && $git->repo_path()) {
 	    local $ENV{'GIT_DIR'} = $git->repo_path();
 	    if ($git->wc_path()) {
 		local $ENV{'GIT_WORK_TREE'} = $git->wc_path();
