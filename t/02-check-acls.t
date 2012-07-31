@@ -23,7 +23,7 @@ sub check_can_push {
 sub check_cannot_push {
     my ($testname, $ref) = @_;
     new_commit($repo, $file);
-    test_nok_match($testname, qr/cannot change/, $repo,
+    test_nok_match($testname, qr/\) cannot \S+ ref /, $repo,
 		   'push', '--tags', $clone->repo_path(), $ref || 'master');
 }
 

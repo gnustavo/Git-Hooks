@@ -180,7 +180,15 @@ sub check_ref {
 	return if index($what, $op) != -1;
     }
 
-    die "$HOOK: you ($myself) cannot change ($op) ref $ref.\n";
+    # Assign meaningful names to op codes.
+    my %op = (
+	C => 'create',
+	R => 'rewind/rebase',
+	U => 'update',
+	D => 'delete',
+    );
+
+    die "$HOOK: you ($myself) cannot $op{$op} ref $ref.\n";
 }
 
 # This routine can act both as an update or a pre-receive hook.
