@@ -4,3 +4,4 @@
   configuration options and a suitable routine in Git::Hooks to grok
   them all. This would simplify plugin option processing.
 
+* Implement the examples in https://github.com/schacon/githooks.
