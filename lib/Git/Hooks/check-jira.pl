@@ -143,6 +143,7 @@ sub check_commit_msg {
     my ($git, $commit, $ref) = @_;
 
     my @keys = uniq(grok_msg_jiras($commit->{body}));
+    my $nkeys = @keys;
 
     # Filter out JIRAs not belonging to any of the specific projects,
     # if any. We don't care about them.
@@ -153,7 +154,20 @@ sub check_commit_msg {
 
     unless (@keys) {
 	if ($Config->{require}) {
-	    die "$HOOK: commit $commit->{commit} (in $ref) does not cite any valid JIRA:\n$commit->{body}\n";
+	    my $shortid = substr $commit->{commit}, 0, 8;
+	    if (@keys == $nkeys) {
+		die <<EOF;
+$HOOK: commit $shortid (in $ref) does not cite any JIRA in the message:
+$commit->{body}
+EOF
+	    } else {
+		my $projects = join(' ', @{$Config->{project}});
+		die <<EOF;
+$HOOK: commit $shortid (in $ref) does not cite any JIRA from the expected
+$HOOK: projects ($projects) in the message:
+$commit->{body}
+EOF
+	    }
 	} else {
 	    return;
 	}
