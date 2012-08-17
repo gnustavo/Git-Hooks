@@ -216,6 +216,9 @@ COMMIT_MSG {
     my $msg = read_file($commit_msg_file);
     defined $msg or die "$HOOK: Can't open file '$commit_msg_file' for reading: $!\n";
 
+    # Remove comment lines from the message file contents.
+    $msg =~ s/\n#[^\n]*//sg;
+
     check_commit_msg(
 	$git,
 	{ commit => '', body => $msg },	# fake a commit hash to simplify check_commit_msg
