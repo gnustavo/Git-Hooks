@@ -177,6 +177,7 @@ sub check_ref {
 	my ($who, $what, $refspec) = @$acl;
 	next unless match_user($git, $who);
 	next unless match_ref($ref, $refspec);
+	$what =~ /[^CRUD-]/ and die "$HOOK: invalid acl 'what' component ($what).\n";
 	return if index($what, $op) != -1;
     }
 
