@@ -5,3 +5,6 @@
   them all. This would simplify plugin option processing.
 
 * Implement the examples in https://github.com/schacon/githooks.
+
+* Implement a git-hooks.groups configuration variable to centralize
+  the group definitions for all plugins.
