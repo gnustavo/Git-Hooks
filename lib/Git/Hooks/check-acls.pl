@@ -334,9 +334,11 @@ separated by spaces:
     who what refs
 
 By default, nobody has access to anything, except the above-specified
-admins. During an update, all the ACLs matching the authenticated
-user's name are checked to see if she has authorization to do what she
-wants to specific branches and tags.
+admins. During an update, all the ACLs are processed in the order
+defined by the C<git config --list> command. The first ACL matching
+the authenticated username and the affected reference name (usually a
+branch) defines what operations are allowed. If no ACL matches
+username and reference name, then the operation is denied.
 
 The 'who' component specifies to which users this ACL gives access. It
 can be specified in the same three ways as was explained to the
@@ -364,6 +366,9 @@ Update an existing ref. (A fast-forward with no commit loss.)
 Delete an existing ref.
 
 =back
+
+You may specify that the user has B<no> access whatsoever to the
+references by using a single hifen (C<->) as the what component.
 
 The 'refs' component specifies which refs this ACL applies to. It can
 be specified as the complete ref name (e.g. "refs/heads/master") or by
