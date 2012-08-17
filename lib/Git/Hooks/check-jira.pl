@@ -62,7 +62,7 @@ sub grok_msg_jiras {
     # Grok the JIRA issue keys from the commit log
     state $matchkey = qr/$Config->{matchkey}[-1]/;
     if (exists $Config->{matchlog}) {
-	state $matchlog = is_rx($Config->{matchlog}) ? $Config->{matchlog} : qr/$Config->{matchlog}/;
+	state $matchlog = is_rx($Config->{matchlog}[-1]) ? $Config->{matchlog}[-1] : qr/$Config->{matchlog}[-1]/;
 	if (my ($match) = ($msg =~ $matchlog)) {
 	    return $match =~ /$matchkey/g;
 	} else {
