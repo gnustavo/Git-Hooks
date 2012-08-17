@@ -126,6 +126,8 @@ sub match_ref {
     my ($ref, $spec) = @_;
     if ($spec =~ /^\^/) {
 	return 1 if $ref =~ $spec;
+    } elsif ($spec =~ /^!(.*)/) {
+	return 1 if $ref !~ $1;
     } else {
 	return 1 if $ref eq $spec;
     }
@@ -371,10 +373,25 @@ You may specify that the user has B<no> access whatsoever to the
 references by using a single hifen (C<->) as the what component.
 
 The 'refs' component specifies which refs this ACL applies to. It can
-be specified as the complete ref name (e.g. "refs/heads/master") or by
-a regular expression starting with a caret (C<^>), which is kept as
-part of the regexp (e.g. "^refs/heads/fix", meaning any branch which
-name starts with "fix").
+be specified in one of these formats:
+
+=over
+
+=item ^REGEXP
+
+A regular expression anchored at the beginning of the reference name.
+For example, "^refs/heads", meaning every branch.
+
+=item !REGEXP
+
+A negated regular expression. For example, "!^refs/heads/master",
+meaning everything but the master branch.
+
+=item STRING
+
+The complete name of a reference. For example, "refs/heads/master".
+
+=back
 
 =head1 REFERENCES
 

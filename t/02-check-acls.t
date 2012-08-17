@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 20;
+use Test::More tests => 21;
 
 require "test-functions.pl";
 
@@ -69,6 +69,9 @@ check_cannot_push('deny ACL other ref');
 
 $clone->command(config => '--replace-all', 'check-acls.acl', 'admin U ^.*/master');
 check_can_push('allow ACL regex ref');
+
+$clone->command(config => '--replace-all', 'check-acls.acl', 'admin U !master');
+check_cannot_push('deny ACL negated regex ref');
 
 $clone->command(config => '--replace-all', 'check-acls.acl', '^adm U refs/heads/master');
 check_can_push('allow ACL regex user');
