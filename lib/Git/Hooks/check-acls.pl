@@ -124,6 +124,10 @@ sub match_user {
 
 sub match_ref {
     my ($ref, $spec) = @_;
+
+    # Interpolate environment variables embedded as "{VAR}".
+    $spec =~ s/{(\w+)}/$ENV{$1}/ige;
+
     if ($spec =~ /^\^/) {
 	return 1 if $ref =~ $spec;
     } elsif ($spec =~ /^!(.*)/) {
@@ -392,6 +396,23 @@ meaning everything but the master branch.
 The complete name of a reference. For example, "refs/heads/master".
 
 =back
+
+The refs component can embed strings in the format C<{VAR}>. These
+strings are substituted by the corresponding environment's variable
+VAR value. This interpolation ocurrs before the refs component is
+matched agains the reference name.
+
+This is useful, for instance, if you want developers to be restricted
+in what they can do to oficial branches but to have complete control
+with their own branch namespace.
+
+    git config check-acls.acl '^. CRUD ^refs/heads/{USER}/'
+    git config check-acls.acl '^. U    ^refs/heads'
+
+In this example, every user (^.) has complete control (CRUD) to the
+branches below "refs/heads/{USER}". Supposing the environment variable
+USER contains the user's login name during a "pre-receive" hook. For
+all other branches (^refs/heads) the users have only update (U) rights.
 
 =head1 REFERENCES
 

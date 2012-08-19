@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 21;
+use Test::More tests => 23;
 
 require "test-functions.pl";
 
@@ -75,6 +75,14 @@ check_cannot_push('deny ACL negated regex ref');
 
 $clone->command(config => '--replace-all', 'check-acls.acl', '^adm U refs/heads/master');
 check_can_push('allow ACL regex user');
+
+delete $ENV{VAR};
+$clone->command(config => '--replace-all', 'check-acls.acl', '^adm U refs/heads/{VAR}');
+check_cannot_push('deny ACL non-interpolated ref');
+
+$ENV{VAR} = 'master';
+$clone->command(config => '--replace-all', 'check-acls.acl', '^adm U refs/heads/{VAR}');
+check_can_push('allow ACL interpolated ref');
 
 $clone->command(config => '--replace-all', 'check-acls.acl', '@admins U refs/heads/master');
 check_can_push('allow ACL user in group ');
