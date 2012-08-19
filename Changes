@@ -2,6 +2,11 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.015     2012-08-19 18:20:07 America/Sao_Paulo
+
+	ACLs in check-acls.pl can have environment variables
+	interpolated in their refs components.
+
 0.014     2012-08-16 23:00:38 America/Sao_Paulo
 
 	Implement reference specification by negated regexes in ACLs.
