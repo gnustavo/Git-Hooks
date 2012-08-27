@@ -49,7 +49,7 @@ $INC{'JIRA/Client.pm'} = 'fake';
 EOF
     }
 
-    $$reporef->command(config => "githooks.$hook", 'check-jira.pl');
+    $$reporef->command(config => "githooks.$hook", 'check-jira');
     $$reporef->command(config => 'check-jira.jiraurl', 'fake://url/');
     $$reporef->command(config => 'check-jira.jirauser', 'user');
     $$reporef->command(config => 'check-jira.jirapass', 'valid');

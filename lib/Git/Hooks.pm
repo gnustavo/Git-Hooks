@@ -172,6 +172,7 @@ sub run_hook {
 
       HOOK:
 	foreach my $hook (@$enabled_hooks) {
+	    $hook .= '.pl' if $hook !~ /\.pl$/;
 	    foreach my $dir (@plugin_dirs) {
 		my $script = catfile($dir, $hook);
 		next unless -f $script;
@@ -509,17 +510,19 @@ To enable a plugin you must register it with one of the above
 options. For instance, if you want to enable the C<check-jira.pl>
 plugin in the C<update> hook, you must do this:
 
-    $ git config --add githooks.update check-jira.pl
+    $ git config --add githooks.update check-jira
+
+(The '.pl' extension in the plugin name is optional.)
 
 Note that you may enable more than one plugin to the same hook. For
 instance:
 
-    $ git config --add githooks.update check-acls.pl
+    $ git config --add githooks.update check-acls
 
 And you may enable the same plugin in more than one hook, if it makes
 sense to do so. For instance:
 
-    $ git config --add githooks.commit-msg check-jira.pl
+    $ git config --add githooks.commit-msg check-jira
 
 =head2 githooks.plugins DIR
 
