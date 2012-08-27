@@ -43,6 +43,8 @@ sub grok_acls {
 	my @acls;		# This will hold the ACL specs
 	my $option = $Config->{acl} || [];
 	foreach my $acl (@$option) {
+	    # Interpolate environment variables embedded as "{VAR}".
+	    $acl =~ s/{(\w+)}/$ENV{$1}/ige;
 	    push @acls, [split / /, $acl, 3];
 	}
 	\@acls;
@@ -124,9 +126,6 @@ sub match_user {
 
 sub match_ref {
     my ($ref, $spec) = @_;
-
-    # Interpolate environment variables embedded as "{VAR}".
-    $spec =~ s/{(\w+)}/$ENV{$1}/ige;
 
     if ($spec =~ /^\^/) {
 	return 1 if $ref =~ $spec;
@@ -397,10 +396,10 @@ The complete name of a reference. For example, "refs/heads/master".
 
 =back
 
-The refs component can embed strings in the format C<{VAR}>. These
+The ACL specification can embed strings in the format C<{VAR}>. These
 strings are substituted by the corresponding environment's variable
-VAR value. This interpolation ocurrs before the refs component is
-matched agains the reference name.
+VAR value. This interpolation ocurrs before the components are split
+and processed.
 
 This is useful, for instance, if you want developers to be restricted
 in what they can do to oficial branches but to have complete control
