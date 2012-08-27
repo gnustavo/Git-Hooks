@@ -8,3 +8,7 @@
 
 * Implement a git-hooks.groups configuration variable to centralize
   the group definitions for all plugins.
+
+* Perhaps implement a kind of DENY for ACL operations, along the lines
+  of NFSv4 ACLs (http://tools.ietf.org/html/rfc5661#section-6). I'm
+  thinking about prefixing the what component with a '!'.
