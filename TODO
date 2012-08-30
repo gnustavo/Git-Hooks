@@ -15,3 +15,7 @@
 
 * Use tidyall
   (http://www.openswartz.com/2012/08/21/one-tidier-to-rule-them-all/).
+
+* Implement equivalents for the following SVN::Hooks
+  (http://search.cpan.org/dist/SVN-Hooks/) plugins: CheckStructure,
+  CheckLog, DenyFilenames, UpdateConfFile.
