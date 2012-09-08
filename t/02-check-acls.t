@@ -48,7 +48,7 @@ $clone->command(config => '--replace-all', 'check-acls.admin', '^adm');
 check_can_push('allow if admin matches regex');
 
 # Configure groups
-$clone->command(config => 'check-acls.groups', <<'EOF');
+$clone->command(config => 'githooks.groups', <<'EOF');
 admins1 = admin
 admins = @admins1
 EOF

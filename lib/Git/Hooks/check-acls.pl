@@ -52,72 +52,12 @@ sub grok_acls {
     return $acls;
 }
 
-sub grok_groups_spec {
-    my ($git, $specs, $source) = @_;
-    my %groups;
-    foreach (@$specs) {
-	s/\#.*//;		# strip comments
-	next unless /\S/;	# skip blank lines
-	/^\s*(\w+)\s*=\s*(.+?)\s*$/
-	    or die "$HOOK: invalid line in '$source': $_\n";
-	my ($groupname, $members) = ($1, $2);
-	exists $groups{"\@$groupname"}
-	    and die "$HOOK: redefinition of group ($groupname) in '$source': $_\n";
-	foreach my $member (split / /, $members) {
-	    if ($member =~ /^\@/) {
-		# group member
-		$groups{"\@$groupname"}{$member} = $groups{$member}
-		    or die "HOOK: unknown group ($member) cited in '$source': $_\n";
-	    } else {
-		# user member
-		$groups{"\@$groupname"}{$member} = undef;
-	    }
-	}
-    }
-    return \%groups;
-}
-
-sub grok_groups {
-    my ($git) = @_;
-    state $groups = do {
-	my $option = $Config->{groups}
-	    or die "$HOOK: you have to define the check-acls.groups option to use groups.\n";
-
-	if (my ($groupfile) = ($option->[-1] =~ /^file:(.*)/)) {
-	    my @groupspecs = read_file($groupfile);
-	    defined $groupspecs[0]
-		or die "$HOOK: can't open groups file ($groupfile): $!\n";
-	    grok_groups_spec($git, \@groupspecs, $groupfile);
-	} else {
-	    my @groupspecs = split /\n/, $option->[-1];
-	    grok_groups_spec($git, \@groupspecs, "$HOOK.groups");
-	}
-    };
-    return $groups;
-}
-
-sub im_memberof {
-    my ($git, $groupname) = @_;
-
-    state $groups = grok_groups($git);
-
-    return 0 unless exists $groups->{$groupname};
-
-    my $group = $groups->{$groupname};
-    return 1 if exists $group->{$myself};
-    while (my ($member, $subgroup) = each %$group) {
-	next     unless defined $subgroup;
-	return 1 if     im_memberof($git, $member);
-    }
-    return 0;
-}
-
 sub match_user {
     my ($git, $spec) = @_;
     if ($spec =~ /^\^/) {
 	return 1 if $myself =~ $spec;
     } elsif ($spec =~ /^@/) {
-	return 1 if im_memberof($git, $spec);
+	return 1 if im_memberof($git, $myself, $spec);
     } else {
 	return 1 if $myself eq $spec;
     }
@@ -266,38 +206,6 @@ to the variable's name. If not set, the hook will try to get the
 user's name from the C<USER> environment variable and die if it's not
 set.
 
-=head2 check-acls.groups GROUPSPEC
-
-You can define user groups in order to make it easier to configure
-general acls. Use this option to tell where to find group
-definitions in one of these ways:
-
-=over
-
-=item file:PATH/TO/FILE
-
-As a text file named by PATH/TO/FILE, which may be absolute or
-relative to the hooks current directory, which is usually the
-repository's root in the server. It's syntax is very simple. Blank
-lines are skipped. The hash (#) character starts a comment that goes
-to the end of the current line. Group definitions are lines like this:
-
-    groupA = userA userB @groupB userC
-
-Each group must be defined in a single line. Spaces are significant
-only between users and group references.
-
-Note that a group can reference other groups by name. To make a group
-reference, simple prefix its name with an at sign (@). Group
-references must reference groups previously defined in the file.
-
-=item GROUPS
-
-If the option's value doesn't start with any of the above prefixes, it
-must contain the group definitions itself.
-
-=back
-
 =head2 check-acls.admin USERSPEC
 
 When this hook is installed, by default no user can change any
@@ -319,7 +227,9 @@ name case sensitively.
 =item @groupname
 
 A C<groupname> specifying a single group. The groupname specification
-must follow the same rules as the username above.
+must follow the same rules as the username above. (Groups are
+specified by the C<githooks.groups> configuration variable. See the
+C<Git::Hooks> documentation to know how to specify them.)
 
 =item ^regex
 
