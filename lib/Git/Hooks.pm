@@ -36,7 +36,7 @@ BEGIN {
     }
 
     @EXPORT      = (@installers, 'run_hook');
-    @EXPORT_OK   = qw/hook_config is_ref_enabled im_memberof/;
+    @EXPORT_OK   = qw/hook_config is_ref_enabled im_memberof eval_gitconfig/;
     %EXPORT_TAGS = (utils => \@EXPORT_OK);
 }
 
@@ -213,6 +213,28 @@ sub im_memberof {
 	return 1 if     im_memberof($git, $myself, $member);
     }
     return 0;
+}
+
+sub eval_gitconfig {
+    my ($config) = @_;
+
+    my $value;
+
+    if ($config =~ s/^file://) {
+	$value = do $config;
+	unless ($value) {
+	    die "couldn't parse '$config': $@\n" if $@;
+	    die "couldn't do '$config': $!\n"    unless defined $value;
+	    die "couldn't run '$config'\n"       unless $value;
+	}
+    } elsif ($config =~ s/^eval://) {
+	$value = eval $config; ## no critic (BuiltinFunctions::ProhibitStringyEval)
+	die "couldn't parse '$config':\n$@\n" if $@;
+    } else {
+	$value = $config;
+    }
+
+    return $value;
 }
 
 sub run_hook {
@@ -804,6 +826,16 @@ as returned by C<Git::More::get_commits>.
 This routine tells if USER belongs to GROUPNAME. The groupname is
 looked for in the specification given by the C<githooks.groups>
 configuration variable.
+
+=head2 eval_gitconfig(VALUE)
+
+This routine makes it easier to grok config values as Perl code. If
+C<VALUE> is a string beginning with C<eval:>, the remaining of it is
+evaluated as a Perl expression and the resulting value is returned. If
+C<VALUE> is a string beginning with C<file:>, the remaining of it is
+treated as a file name which contents are evaluated as Perl code and
+the resulting value is returned. Otherwise, C<VALUE> itself is
+returned.
 
 =head1 SEE ALSO
 
