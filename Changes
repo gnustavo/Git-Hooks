@@ -2,6 +2,26 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.016     2012-09-13 22:34:05 America/Sao_Paulo
+
+	Interpolate environment variables in the whole ACL
+	specification for check-acls.
+
+	Make the .pl extension optional in configuring plugins.
+
+	Make im_memberof an exported routine of Git::Hooks.
+
+	The group specification is now given by the githooks.groups
+	variable. This is an incompatible change, since previously it
+	was given by the check-acls.groups variable.
+
+	Implement Git::More::get_affected_files. This routine returns
+	a hash mapping every affected file in a sequence of commits to
+	a letter telling its affected status.
+
+	Allow check-acls.userenv be given by a code snippet to be
+	evaluated.
+
 0.015     2012-08-19 18:20:07 America/Sao_Paulo
 
 	ACLs in check-acls.pl can have environment variables
