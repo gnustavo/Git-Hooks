@@ -144,7 +144,7 @@ sub check_affected_refs {
     my $userenv = $Config->{userenv}[-1];
 
     if ($userenv =~ /^eval:(.*)/) {
-	$myself = eval $1;
+	$myself = eval $1; ## no critic (BuiltinFunctions::ProhibitStringyEval)
 	die "$HOOK: error evaluating userenv value ($userenv): $@\n"
 	    if $@;
     } elsif (exists $ENV{$userenv}) {
