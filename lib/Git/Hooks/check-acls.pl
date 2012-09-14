@@ -141,8 +141,17 @@ sub check_ref {
 sub check_affected_refs {
     my ($git) = @_;
 
-    $myself = $ENV{$Config->{userenv}[-1]}
-	or die "$HOOK: option userenv environment variable ($Config->{userenv}[-1]) is not defined.\n";
+    my $userenv = $Config->{userenv}[-1];
+
+    if ($userenv =~ /^eval:(.*)/) {
+	$myself = eval $1;
+	die "$HOOK: error evaluating userenv value ($userenv): $@\n"
+	    if $@;
+    } elsif (exists $ENV{$userenv}) {
+	$myself = $ENV{$userenv};
+    } else {
+	die "$HOOK: option userenv environment variable ($Config->{userenv}[-1]) is not defined.\n";
+    }
 
     return if im_admin($git);
 
@@ -200,11 +209,28 @@ The plugin is configured by the following git options.
 When Git is performing its chores in the server to serve a push
 request it's usually invoked via the SSH or a web service, which take
 care of the authentication procedure. These services normally make the
-autenticated user name available in an environment variable. You may
+authenticated user name available in an environment variable. You may
 tell this hook which environment variable it is by setting this option
 to the variable's name. If not set, the hook will try to get the
 user's name from the C<USER> environment variable and die if it's not
 set.
+
+If the user name is not directly available in an environment variable
+you may set this option to a code snippet by prefixing it with
+C<eval:>. The code will be evaluated and its value will be used as the
+user name. For example, RhodeCode's (L<http://rhodecode.org/>) up to
+version 1.3.6 used to pass the authenticated user name in the
+C<RHODECODE_USER> environment variable. From version 1.4.0 on it
+stopped using this variable and started to use another variable with
+more information in it. Like this:
+
+    RHODECODE_EXTRAS='{"username": "rcadmin", "scm": "git", "repository": "git_intro/hooktest", "make_lock": null, "ip": "172.16.2.251", "locked_by": [null, null], "action": "push"}'
+
+To grok the user name from this variable, one may set this option like
+this:
+
+    git config check-acls.userenv \
+      'eval:(exists $ENV{RHODECODE_EXTRAS} && $ENV{RHODECODE_EXTRAS} =~ /"username":\s*"([^"]+)"/) ? $1 : undef'
 
 =head2 check-acls.admin USERSPEC
 
