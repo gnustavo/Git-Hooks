@@ -143,11 +143,11 @@ sub spawn_external_file {
     }
     unless ($exit == 0) {
 	die __PACKAGE__, ": failed to execute '$file': $!\n"
-	    if $? == -1;
-	die sprintf(__PACKAGE__, ": '$file' died with signal %d, %s coredump\n",
-		    ($? & 127), ($? & 128) ? 'with' : 'without')
-	    if $? & 127;
-	die sprintf(__PACKAGE__, ": '$file' exited abnormally with value %d\n", $? >> 8);
+	    if $exit == -1;
+	die sprintf("%s: '$file' died with signal %d, %s coredump\n",
+		    __PACKAGE__, ($exit & 127), ($exit & 128) ? 'with' : 'without')
+	    if $exit & 127;
+	die sprintf("%s: '$file' exited abnormally with value %d\n", __PACKAGE__, $exit >> 8);
     }
 }
 
