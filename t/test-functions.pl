@@ -76,6 +76,7 @@ EOF
 	print $fh $extra_perl if defined $extra_perl;
 
 	print $fh <<EOF
+\$ENV{GIT_CONFIG} = "\$ENV{GIT_DIR}/config";
 run_hook(\$0, \@ARGV);
 EOF
     }
