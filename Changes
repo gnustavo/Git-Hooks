@@ -2,6 +2,10 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.017     2012-10-31 10:45:10 America/Sao_Paulo
+
+	Just a bunch of fixes.
+
 0.016     2012-09-13 22:34:05 America/Sao_Paulo
 
 	Interpolate environment variables in the whole ACL
