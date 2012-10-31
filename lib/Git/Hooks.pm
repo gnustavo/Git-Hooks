@@ -202,7 +202,8 @@ sub im_memberof {
 
     state $groups = grok_groups($git);
 
-    return 0 unless exists $groups->{$groupname};
+    exists $groups->{$groupname}
+	or die __PACKAGE__, ": group $groupname is not defined.\n";
 
     my $group = $groups->{$groupname};
     return 1 if exists $group->{$myself};
