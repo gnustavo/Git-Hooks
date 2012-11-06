@@ -2,6 +2,12 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.018     2012-11-06 21:49:20 America/Sao_Paulo
+
+	Fix a bug that prevented installed hooks to be invoked in the
+	absense of any configured plugins. This was reported to me by
+	Mike South. Thanks!
+
 0.017     2012-10-31 10:45:10 America/Sao_Paulo
 
 	Just a bunch of fixes.
