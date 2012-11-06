@@ -255,11 +255,11 @@ sub run_hook {
 	    }
 	    die __PACKAGE__, ": can't find hook enabled hook $hook.\n";
 	}
+    }
 
-	# Call every hook function installed by the hook scripts before.
-	foreach my $hook (values %{$Hooks{$hook_name}}) {
-	    $hook->($Git, @args);
-	}
+    # Call every hook function installed by the hook scripts before.
+    foreach my $hook (values %{$Hooks{$hook_name}}) {
+	$hook->($Git, @args);
     }
 
     # Invoked enabled external hooks
