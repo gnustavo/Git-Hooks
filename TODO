@@ -16,3 +16,12 @@
 * Implement equivalents for the following SVN::Hooks
   (http://search.cpan.org/dist/SVN-Hooks/) plugins: CheckStructure,
   CheckLog, DenyFilenames, UpdateConfFile.
+
+* Let the user tell which configuration files Git::Hooks should
+  consider. Currently it considers the three default ones (system,
+  global, and local), without knowing which one sets what. Perhaps we
+  could have a new option "githooks.extra_config" that could be set
+  with an array of filenames to invoke "git config --file" with in
+  succession. This option, if set in the default configuration files,
+  could tell Git::Hooks to grok an extra set of configuration from
+  specific files.
