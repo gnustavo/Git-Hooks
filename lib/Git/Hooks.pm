@@ -228,7 +228,7 @@ sub run_hook {
     grok_affected_refs($hook_name);
 
     # Invoke enabled plugins
-    if (my $enabled_hooks = $config->{$hook_name}) {
+    if (my $enabled_plugins = $config->{$hook_name}) {
 	# Define the list of directories where we'll look for the hook
 	# plugins. First the local directory 'githooks' under the
 	# repository path, then the optional list of directories
@@ -239,7 +239,7 @@ sub run_hook {
 	my @plugin_dirs = grep {-d} @{$config->{plugins}};
 
       HOOK:
-	foreach my $hook (@$enabled_hooks) {
+	foreach my $hook (@$enabled_plugins) {
 	    $hook .= '.pl' if $hook !~ /\.pl$/;
 	    foreach my $dir (@plugin_dirs) {
 		my $script = catfile($dir, $hook);
