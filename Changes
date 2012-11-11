@@ -2,6 +2,12 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.019     2012-11-10 23:56:44 America/Sao_Paulo
+
+	Fix the post-receive hook which now gets the same input as
+	pre-receive. This was reported to me by Mike South. Thanks
+	again!
+
 0.018     2012-11-06 21:49:20 America/Sao_Paulo
 
 	Fix a bug that prevented installed hooks to be invoked in the
