@@ -2,6 +2,13 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.020     2012-11-20 21:56:51 America/Sao_Paulo
+
+	Implement routine Git::Hooks::eval_gitconfig to make it easier
+	to grok Perl expressions in config values.
+
+	Fix some problems in the test infrastructure.
+
 0.019     2012-11-10 23:56:44 America/Sao_Paulo
 
 	Fix the post-receive hook which now gets the same input as
