@@ -112,7 +112,9 @@ sub new_repos {
 	}
 
 	my $repo = Git::More->repository(Directory => $repodir);
-	$repo->command(add => $filename);
+	$repo->command(config => 'user.mail', 'myself@example.com');
+	$repo->command(config => 'user.name', 'My Self');
+	$repo->command(add    => $filename);
 	$repo->command(commit => '-mx');
 
 	($ok, $exit, $stdout) = test_command(undef, 'clone', '-q', '--bare', '--no-hardlinks', $repodir, $clonedir);
