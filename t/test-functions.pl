@@ -127,7 +127,7 @@ sub new_repos {
     } otherwise {
 	my $E = shift;
 	my $ls = `find $T -ls`;	# FIXME: this is non-portable.
-	diag("Error setting up repos for test: $E\nRepos parent directory listing:\n$ls\ngit-version=$git_version\n");
+	diag("Error setting up repos for test: $E\nRepos parent directory listing:\n$ls\ngit-version=$git_version\n\@INC=@INC\n");
 	BAIL_OUT('Cannot setup repos for testing');
     };
 }
