@@ -153,7 +153,7 @@ sub spawn_external_file {
 }
 
 sub grok_groups_spec {
-    my ($git, $specs, $source) = @_;
+    my ($specs, $source) = @_;
     my %groups;
     foreach (@$specs) {
 	s/\#.*//;		# strip comments
@@ -178,7 +178,6 @@ sub grok_groups_spec {
 }
 
 sub grok_groups {
-    my ($git) = @_;
     state $groups = do {
 	my $config = config();
 	exists $config->{githooks}{groups}
@@ -189,19 +188,19 @@ sub grok_groups {
 	    my @groupspecs = read_file($groupfile);
 	    defined $groupspecs[0]
 		or die __PACKAGE__, ": can't open groups file ($groupfile): $!\n";
-	    grok_groups_spec($git, \@groupspecs, $groupfile);
+	    grok_groups_spec(\@groupspecs, $groupfile);
 	} else {
 	    my @groupspecs = split /\n/, $option->[-1];
-	    grok_groups_spec($git, \@groupspecs, "githooks.groups");
+	    grok_groups_spec(\@groupspecs, "githooks.groups");
 	}
     };
     return $groups;
 }
 
 sub im_memberof {
-    my ($git, $myself, $groupname) = @_;
+    my ($myself, $groupname) = @_;
 
-    state $groups = grok_groups($git);
+    state $groups = grok_groups();
 
     exists $groups->{$groupname}
 	or die __PACKAGE__, ": group $groupname is not defined.\n";
@@ -853,7 +852,7 @@ This routine returns the list of commits leading from the affected
 REF's NEWCOMMIT to OLDCOMMIT. The commits are represented by hashes,
 as returned by C<Git::More::get_commits>.
 
-=head2 im_memberof(GIT, USER, GROUPNAME)
+=head2 im_memberof(USER, GROUPNAME)
 
 This routine tells if USER belongs to GROUPNAME. The groupname is
 looked for in the specification given by the C<githooks.groups>
