@@ -36,7 +36,7 @@ BEGIN {
     }
 
     @EXPORT      = (@installers, 'run_hook');
-    @EXPORT_OK   = qw/hook_config is_ref_enabled im_memberof eval_gitconfig/;
+    @EXPORT_OK   = qw/hook_config is_ref_enabled im_memberof grok_userenv match_user im_admin eval_gitconfig/;
     %EXPORT_TAGS = (utils => \@EXPORT_OK);
 }
 
@@ -209,7 +209,54 @@ sub im_memberof {
     return 1 if exists $group->{$myself};
     while (my ($member, $subgroup) = each %$group) {
 	next     unless defined $subgroup;
-	return 1 if     im_memberof($git, $myself, $member);
+	return 1 if     im_memberof($myself, $member);
+    }
+    return 0;
+}
+
+my $myself;
+sub grok_userenv {
+    my $userenv = config()->{githooks}{userenv}
+	or return;
+
+    $userenv = $userenv->[-1] if is_array_ref($userenv);
+
+    if ($userenv =~ /^eval:(.*)/) {
+	$myself = eval $1; ## no critic (BuiltinFunctions::ProhibitStringyEval)
+	die __PACKAGE__, ": error evaluating userenv value ($userenv): $@\n"
+	    if $@;
+    } elsif (exists $ENV{$userenv}) {
+	$myself = $ENV{$userenv};
+    } else {
+	die __PACKAGE__, ": option userenv environment variable ($userenv) is not defined.\n";
+    }
+
+    return $myself;
+}
+
+sub match_user {
+    my ($spec) = @_;
+
+    grok_userenv() unless defined $myself;
+    return 0       unless defined $myself;
+
+    if ($spec =~ /^\^/) {
+	return 1 if $myself =~ $spec;
+    } elsif ($spec =~ /^@/) {
+	return 1 if im_memberof($myself, $spec);
+    } else {
+	return 1 if $myself eq $spec;
+    }
+    return 0;
+}
+
+sub im_admin {
+    my $config = hook_config('githooks');
+    return 0 unless defined $config and exists $config->{admin};
+    foreach my $admin (@{$config->{admin}}) {
+	if (match_user($admin)) {
+	    return 1;
+	}
     }
     return 0;
 }
@@ -713,6 +760,69 @@ must contain the group definitions itself.
 
 =back
 
+=head2 githooks.userenv STRING
+
+When Git is performing its chores in the server to serve a push
+request it's usually invoked via the SSH or a web service, which take
+care of the authentication procedure. These services normally make the
+authenticated user name available in an environment variable. You may
+tell this hook which environment variable it is by setting this option
+to the variable's name. If not set, the hook will try to get the
+user's name from the C<USER> environment variable and let it undefined
+if it can't figure it out.
+
+If the user name is not directly available in an environment variable
+you may set this option to a code snippet by prefixing it with
+C<eval:>. The code will be evaluated and its value will be used as the
+user name. For example, RhodeCode's (L<http://rhodecode.org/>) up to
+version 1.3.6 used to pass the authenticated user name in the
+C<RHODECODE_USER> environment variable. From version 1.4.0 on it
+stopped using this variable and started to use another variable with
+more information in it. Like this:
+
+    RHODECODE_EXTRAS='{"username": "rcadmin", "scm": "git", "repository": "git_intro/hooktest", "make_lock": null, "ip": "172.16.2.251", "locked_by": [null, null], "action": "push"}'
+
+To grok the user name from this variable, one may set this option like
+this:
+
+    git config check-acls.userenv \
+      'eval:(exists $ENV{RHODECODE_EXTRAS} && $ENV{RHODECODE_EXTRAS} =~ /"username":\s*"([^"]+)"/) ? $1 : undef'
+
+This variable is useful for any hook that need to authenticate the
+user performing the git action.
+
+=head2 githooks.admin USERSPEC
+
+There are several hooks that perform access control checks before
+allowing a git action, such as the ones installed by the C<check-acls>
+and the C<check-jira> plugins. It's useful to allow some people (the
+"administrators") to bypass those checks. These hooks usually allow
+the users specified by this variable to do whatever they want to the
+repository. You may want to set it to a group of "super users" in your
+team so that they can "fix" things more easily.
+
+The value of each option is interpreted in one of these ways:
+
+=over
+
+=item username
+
+A C<username> specifying a single user. The username specification
+must match "/^\w+$/i" and will be compared to the authenticated user's
+name case sensitively.
+
+=item @groupname
+
+A C<groupname> specifying a single group.
+
+=item ^regex
+
+A C<regex> which will be matched against the authenticated user's name
+case-insensitively. The caret is part of the regex, meaning that it's
+anchored at the start of the username.
+
+=back
+
 =head1 MAIN METHOD
 
 =head2 run_hook(NAME, ARGS...)
@@ -857,6 +967,26 @@ as returned by C<Git::More::get_commits>.
 This routine tells if USER belongs to GROUPNAME. The groupname is
 looked for in the specification given by the C<githooks.groups>
 configuration variable.
+
+=head2 grok_userenv()
+
+This routine returns the username of the authenticated user performing
+the Git action. It groks it from the C<githooks.userenv> configuration
+variable specification, which is described above.
+
+=head2 match_user(SPEC)
+
+This routine checks if the authenticated user (as returned by the
+C<grok_userenv> routine above) matches the specification, which may be
+given in one of the three different forms acceptable for the
+C<githooks.admin> configuration variable above, i.e., as a username,
+as a @group, or as a ^regex.
+
+=head2 im_admin()
+
+This routine checks if the authenticated user (again, as returned by
+the C<grok_userenv> routine above) matches the specifications given by
+the C<githooks.admin> configuration variable.
 
 =head2 eval_gitconfig(VALUE)
 

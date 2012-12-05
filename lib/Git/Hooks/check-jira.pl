@@ -40,22 +40,20 @@ foreach my $option (qw/require unresolved/) {
     $Config->{$option} = exists $Config->{$option} ? $Config->{$option}[-1] : 1;
 }
 
-##########
-
-sub im_admin {
-    my ($git) = @_;
-    state $i_am = do {
-	my $match = 0;
-	foreach my $admin (@{$Config->{admin}}) {
-	    if (match_user($git, $admin)) {
-		$match = 1;
-		last;
-	    }
-	}
-	$match;
-    };
-    return $i_am;
+# Up to version 0.020 the configuration variables 'admin' and
+# 'userenv' were defined for the check-jira plugin. In version 0.021
+# they were both "promoted" to the Git::Hooks module, so that they can
+# be used by any access control plugin. In order to maintain
+# compatibility with their previous usage, here we virtually "inject"
+# the variables in the "githooks" configuration section if they
+# undefined there and are defined in the "check-jira" section.
+foreach my $var (qw/admin userenv/) {
+    if (exists $Config->{$var} && ! exists hook_config('githooks')->{$var}) {
+	hook_config('githooks')->{$var} = $Config->{$var};
+    }
 }
+
+##########
 
 sub grok_msg_jiras {
     my ($msg) = @_;
@@ -206,7 +204,7 @@ EOF
 COMMIT_MSG {
     my ($git, $commit_msg_file) = @_;
 
-    return if im_admin($git);
+    return if im_admin();
 
     my $current_branch = 'refs/heads/' . $git->get_current_branch();
     if (my $refs = $Config->{ref}) {
@@ -242,7 +240,7 @@ sub check_ref {
 sub check_affected_refs {
     my ($git) = @_;
 
-    return if im_admin($git);
+    return if im_admin();
 
     foreach my $ref (get_affected_refs()) {
 	check_ref($git, $ref);
@@ -318,30 +316,17 @@ The refs can be specified as a complete ref name
 caret (C<^>), which is kept as part of the regexp
 (e.g. "^refs/heads/(master|fix)").
 
+=head2 check-acls.userenv STRING
+
+This variable is deprecated. Please, use the C<githooks.userenv>
+variable, which is defined in the Git::Hooks module. Please, see its
+documentation to understand it.
+
 =head2 check-jira.admin USERSPEC
 
-When this hook is installed, by default no user can commit without
-being subject to the hooks configuration regarding the need to cite
-JIRAs. It may be usefull, however, to give full access to a group of
-admins who shouldn't be subject to the JIRA requirements. You may use
-one or more such options to give admin access to a group of
-people. The value of each option is interpreted in one of these ways:
-
-=over
-
-=item username
-
-A C<username> specifying a single user. The username specification
-must match "/^\w+$/i" and will be compared to the authenticated user's
-name case sensitively.
-
-=item ^regex
-
-A C<regex> which will be matched against the authenticated user's name
-case-insensitively. The caret is part of the regex, meaning that it's
-anchored at the start of the username.
-
-=back
+This variable is deprecated. Please, use the C<githooks.admin>
+variable, which is defined in the Git::Hooks module. Please, see its
+documentation to understand it.
 
 =head2 check-jira.jiraurl URL
 

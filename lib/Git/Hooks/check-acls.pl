@@ -30,10 +30,18 @@ my $HOOK = "check-acls";
 
 my $Config = hook_config($HOOK);
 
-$Config->{userenv} //= ['USER'];
-$Config->{admin}   //= [];
-
-my $myself;
+# Up to version 0.020 the configuration variables 'admin' and
+# 'userenv' were defined for the check-acls plugin. In version 0.021
+# they were both "promoted" to the Git::Hooks module, so that they can
+# be used by any access control plugin. In order to maintain
+# compatibility with their previous usage, here we virtually "inject"
+# the variables in the "githooks" configuration section if they
+# undefined there and are defined in the "check-acls" section.
+foreach my $var (qw/admin userenv/) {
+    if (exists $Config->{$var} && ! exists hook_config('githooks')->{$var}) {
+	hook_config('githooks')->{$var} = $Config->{$var};
+    }
+}
 
 ##########
 
@@ -52,18 +60,6 @@ sub grok_acls {
     return $acls;
 }
 
-sub match_user {
-    my ($git, $spec) = @_;
-    if ($spec =~ /^\^/) {
-	return 1 if $myself =~ $spec;
-    } elsif ($spec =~ /^@/) {
-	return 1 if im_memberof($git, $myself, $spec);
-    } else {
-	return 1 if $myself eq $spec;
-    }
-    return 0;
-}
-
 sub match_ref {
     my ($ref, $spec) = @_;
 
@@ -75,21 +71,6 @@ sub match_ref {
 	return 1 if $ref eq $spec;
     }
     return 0;
-}
-
-sub im_admin {
-    my ($git) = @_;
-    state $i_am = do {
-	my $match = 0;
-	foreach my $admin (@{$Config->{admin}}) {
-	    if (match_user($git, $admin)) {
-		$match = 1;
-		last;
-	    }
-	}
-	$match;
-    };
-    return $i_am;
 }
 
 sub check_ref {
@@ -120,7 +101,7 @@ sub check_ref {
 
     foreach my $acl (@$acls) {
 	my ($who, $what, $refspec) = @$acl;
-	next unless match_user($git, $who);
+	next unless match_user($who);
 	next unless match_ref($ref, $refspec);
 	$what =~ /[^CRUD-]/ and die "$HOOK: invalid acl 'what' component ($what).\n";
 	return if index($what, $op) != -1;
@@ -134,6 +115,8 @@ sub check_ref {
 	D => 'delete',
     );
 
+    my $myself = grok_userenv();
+
     die "$HOOK: you ($myself) cannot $op{$op} ref $ref.\n";
 }
 
@@ -141,19 +124,7 @@ sub check_ref {
 sub check_affected_refs {
     my ($git) = @_;
 
-    my $userenv = $Config->{userenv}[-1];
-
-    if ($userenv =~ /^eval:(.*)/) {
-	$myself = eval $1; ## no critic (BuiltinFunctions::ProhibitStringyEval)
-	die "$HOOK: error evaluating userenv value ($userenv): $@\n"
-	    if $@;
-    } elsif (exists $ENV{$userenv}) {
-	$myself = $ENV{$userenv};
-    } else {
-	die "$HOOK: option userenv environment variable ($Config->{userenv}[-1]) is not defined.\n";
-    }
-
-    return if im_admin($git);
+    return if im_admin();
 
     foreach my $ref (get_affected_refs()) {
 	check_ref($git, $ref);
@@ -206,64 +177,15 @@ The plugin is configured by the following git options.
 
 =head2 check-acls.userenv STRING
 
-When Git is performing its chores in the server to serve a push
-request it's usually invoked via the SSH or a web service, which take
-care of the authentication procedure. These services normally make the
-authenticated user name available in an environment variable. You may
-tell this hook which environment variable it is by setting this option
-to the variable's name. If not set, the hook will try to get the
-user's name from the C<USER> environment variable and die if it's not
-set.
-
-If the user name is not directly available in an environment variable
-you may set this option to a code snippet by prefixing it with
-C<eval:>. The code will be evaluated and its value will be used as the
-user name. For example, RhodeCode's (L<http://rhodecode.org/>) up to
-version 1.3.6 used to pass the authenticated user name in the
-C<RHODECODE_USER> environment variable. From version 1.4.0 on it
-stopped using this variable and started to use another variable with
-more information in it. Like this:
-
-    RHODECODE_EXTRAS='{"username": "rcadmin", "scm": "git", "repository": "git_intro/hooktest", "make_lock": null, "ip": "172.16.2.251", "locked_by": [null, null], "action": "push"}'
-
-To grok the user name from this variable, one may set this option like
-this:
-
-    git config check-acls.userenv \
-      'eval:(exists $ENV{RHODECODE_EXTRAS} && $ENV{RHODECODE_EXTRAS} =~ /"username":\s*"([^"]+)"/) ? $1 : undef'
+This variable is deprecated. Please, use the C<githooks.userenv>
+variable, which is defined in the Git::Hooks module. Please, see its
+documentation to understand it.
 
 =head2 check-acls.admin USERSPEC
 
-When this hook is installed, by default no user can change any
-reference in the repository, unless she has an explicit allowance
-given by one ACL (se the check-acls.acl option below). It may be
-usefull to give full access to a group of admins who shouldn't be
-subject to the ACL specifications. You may use one or more such
-options to give admin access to a group of people. The value of each
-option is interpreted in one of these ways:
-
-=over
-
-=item username
-
-A C<username> specifying a single user. The username specification
-must match "/^\w+$/i" and will be compared to the authenticated user's
-name case sensitively.
-
-=item @groupname
-
-A C<groupname> specifying a single group. The groupname specification
-must follow the same rules as the username above. (Groups are
-specified by the C<githooks.groups> configuration variable. See the
-C<Git::Hooks> documentation to know how to specify them.)
-
-=item ^regex
-
-A C<regex> which will be matched against the authenticated user's name
-case-insensitively. The caret is part of the regex, meaning that it's
-anchored at the start of the username.
-
-=back
+This variable is deprecated. Please, use the C<githooks.admin>
+variable, which is defined in the Git::Hooks module. Please, see its
+documentation to understand it.
 
 =head2 check-acls.acl ACL
 
