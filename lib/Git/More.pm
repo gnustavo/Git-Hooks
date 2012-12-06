@@ -181,26 +181,31 @@ sub get_commit_msg {
     return $body;
 }
 
-=head2 get_affected_files OLDCOMMIT NEWCOMMIT [FILTER]
+=head2 get_diff_files DIFFARGS...
 
-This method returns a reference to a hash mapping every affected files
-between OLDCOMMIT and NEWCOMMIT to their affecting status. The list is
-grokked with the command C<git diff --cached --name-status>.
+This method invokes the command C<git diff --name-status> with extra
+options and arguments as passed to it. It returns a reference to a
+hash mapping every affected files their affecting status. Its purpose
+is to make it easy to grok the names of files affected by a commit or
+a sequence of commits. Please, read C<git help diff> to know
 
-The optional FILTER parameter must be a valid value for the
-C<--diff-filter> option of the C<git diff> command. You can use it to
-C<AM>, for instance, to request only files that have been Added or
-Modified.
+A common usage is to grok every file added or modified in a pre-commit
+hook:
+
+    $git->get_diff_files('--diff-filter=AM', '--cached');
+
+Another one is to grok every file added or modified in a pre-receive
+hook:
+
+    $git->get_diff_files('--diff-filter=AM', $old_commit, $new_commit);
 
 =cut
 
-sub get_affected_files {
-    my ($git, $old_commit, $new_commit, $filter) = @_;
-    my @cmd = qw/diff --cached --name-status/;
-    push @cmd, "--diff-filter=$filter" if $filter;
+sub get_diff_files {
+    my ($git, @args) = @_;
     my %affected;
-    foreach ($git->command(@cmd)) {
-	my ($status, $name) = split / /, $_, 2;
+    foreach ($git->command(diff => '--name-status', @args)) {
+	my ($status, $name) = split ' ', $_, 2;
 	$affected{$name} = $status;
     }
     return \%affected;
