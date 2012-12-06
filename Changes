@@ -2,6 +2,19 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.021     2012-12-06 08:52:34 America/Sao_Paulo
+
+	The configuration variables userenv and admin, which were
+	available in the check-acls and check-jira plugins were
+	promoted to the "githooks" configuration section. Along with
+	them, the functions grok_userenv, match_user, and im_admin
+	were also migrated to the Git::Hooks module so that they can
+	be used by any access control plugin.  The old configuration
+	variables in the plugins are still supported but are now
+	documented as deprecated.
+
+	Also improved the documentation slightly.
+
 0.020     2012-11-20 21:56:51 America/Sao_Paulo
 
 	Implement routine Git::Hooks::eval_gitconfig to make it easier
