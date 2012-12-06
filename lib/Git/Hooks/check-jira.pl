@@ -290,7 +290,7 @@ to check if the commit message cites valid JIRA issues.
 It requires that any Git commits affecting all or some branches must
 make reference to valid JIRA issues in the commit log message. JIRA
 issues are cited by their keys which, by default, consist of a
-sequence of uppercase letters separated by an hyfen from a sequence of
+sequence of uppercase letters separated by an hyphen from a sequence of
 digits. E.g., C<CDS-123>, C<RT-1>, and C<GIT-97>.
 
 To enable it you should define the appropriate Git configuration
@@ -316,7 +316,7 @@ The refs can be specified as a complete ref name
 caret (C<^>), which is kept as part of the regexp
 (e.g. "^refs/heads/(master|fix)").
 
-=head2 check-acls.userenv STRING
+=head2 check-jira.userenv STRING
 
 This variable is deprecated. Please, use the C<githooks.userenv>
 variable, which is defined in the Git::Hooks module. Please, see its
@@ -342,7 +342,7 @@ server. Please, see the JIRA::Client documentation to know about them.
 
 By default, JIRA keys are matched with the regex
 C</\b[A-Z][A-Z]+-\d+\b/>, meaning, a sequence of two or more capital
-letters, followed by an hyfen, followed by a sequence of digits. If
+letters, followed by an hyphen, followed by a sequence of digits. If
 you customized your JIRA project keys
 (L<https://confluence.atlassian.com/display/JIRA/Configuring+Project+Keys>),
 you may need to customize how this hook is going to match them. Set
@@ -361,7 +361,7 @@ cited inside the first pair of brackets found in the message.
 
 =head2 check-jira.project STRING
 
-By default, the commiter can reference any JIRA issue in the commit
+By default, the committer can reference any JIRA issue in the commit
 log. You can restrict the allowed keys to a set of JIRA projects by
 specifying a JIRA project key to this option. You can enable more than
 one project by specifying more than one value to this option.
@@ -379,7 +379,7 @@ option to 0.
 
 =head2 check-jira.by-assignee STRING
 
-By default, the commiter can reference any valid JIRA issue. Setting
+By default, the committer can reference any valid JIRA issue. Setting
 this value to the name of an environment variable, the script will
 check if its value is equal to the referenced JIRA issue's assignee.
 

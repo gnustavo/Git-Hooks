@@ -231,7 +231,7 @@ Delete an existing ref.
 =back
 
 You may specify that the user has B<no> access whatsoever to the
-references by using a single hifen (C<->) as the what component.
+references by using a single hyphen (C<->) as the what component.
 
 The 'refs' component specifies which refs this ACL applies to. It can
 be specified in one of these formats:
@@ -256,11 +256,11 @@ The complete name of a reference. For example, "refs/heads/master".
 
 The ACL specification can embed strings in the format C<{VAR}>. These
 strings are substituted by the corresponding environment's variable
-VAR value. This interpolation ocurrs before the components are split
+VAR value. This interpolation occurs before the components are split
 and processed.
 
 This is useful, for instance, if you want developers to be restricted
-in what they can do to oficial branches but to have complete control
+in what they can do to official branches but to have complete control
 with their own branch namespace.
 
     git config check-acls.acl '^. CRUD ^refs/heads/{USER}/'

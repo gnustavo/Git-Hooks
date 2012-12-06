@@ -107,8 +107,8 @@ sub get_config {
 =head2 get_current_branch
 
 This method returns the repository's current branch name, as indicated
-by the C<git branch> command. Note that its a ref shortname, i.e.,
-it's usually subintended to reside under the 'refs/heads/' ref scope.
+by the C<git branch> command. Note that its a ref short name, i.e.,
+it's usually sub-intended to reside under the 'refs/heads/' ref scope.
 
 =cut
 
