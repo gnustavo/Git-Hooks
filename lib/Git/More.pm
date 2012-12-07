@@ -8,6 +8,84 @@ use parent 'App::gh::Git';
 use Error qw(:try);
 use Carp;
 
+sub get_config {
+    my ($git) = @_;
+
+    unless (exists $git->{more}{config}) {
+	my %config;
+	my ($fh, $ctx) = $git->command_output_pipe(config => '--null', '--list');
+	{
+	    local $/ = "\x0";
+	    while (<$fh>) {
+		chop;		# final \x0
+		my ($option, $value) = split /\n/, $_, 2;
+		my ($section, $key)  = split /\./, $option, 2;
+		push @{$config{$section}{$key}}, $value;
+	    }
+	}
+	try {
+	    $git->command_close_pipe($fh, $ctx);
+	} otherwise {
+	    # No config option found. That's ok.
+	};
+	$git->{more}{config} = \%config;
+    }
+
+    return $git->{more}{config};
+}
+
+sub get_current_branch {
+    my ($git) = @_;
+    foreach ($git->command(branch => '--no-color')) {
+	return $1 if /^\* (.*)/;
+    }
+    return;
+}
+
+sub get_commits {
+    my ($git, $old_commit, $new_commit) = @_;
+    my @commits;
+    my ($pipe, $ctx) = $git->command_output_pipe(
+	'rev-list',
+	# See 'git help rev-list' to understand the --pretty argument
+	'--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%s%n%n%b%x00',
+	"$old_commit..$new_commit");
+    {
+	local $/ = "\x00\n";
+	while (<$pipe>) {
+	    my %commit;
+	    @commit{qw/header commit tree parent
+		       author_name author_email author_date
+		       commmitter_name committer_email committer_date
+		       body/} = split /\n/, $_, 11;
+	    push @commits, \%commit;
+	}
+    }
+    $git->command_close_pipe($pipe, $ctx);
+    return \@commits;
+}
+
+sub get_commit_msg {
+    my ($git, $commit) = @_;
+    my $body = $git->command('rev-list' => '--format=%B', '--max-count=1', $commit);
+    $body =~ s/^.*//m;    # strip first line, which contains the commit id
+    return $body;
+}
+
+sub get_diff_files {
+    my ($git, @args) = @_;
+    my %affected;
+    foreach ($git->command(diff => '--name-status', @args)) {
+	my ($status, $name) = split ' ', $_, 2;
+	$affected{$name} = $status;
+    }
+    return \%affected;
+}
+
+
+1; # End of Git::More
+__END__
+
 =head1 SYNOPSIS
 
     use Git::More;
@@ -16,8 +94,11 @@ use Carp;
 
     my $config  = $git->get_config('section');
     my $branch  = $git->get_current_branch();
-    my $commits = $git->get_refs_commits();
+    my $commits = $git->get_commits($oldcommit, $newcommit);
     my $message = $git->get_commit_msg('HEAD');
+
+    my $files_modified_by_commit = $git->get_diff_files('--diff-filter=AM', '--cached');
+    my $files_modified_by_push   = $git->get_diff_files('--diff-filter=AM', $oldcommit, $newcommit);
 
 =head1 DESCRIPTION
 
@@ -76,49 +157,16 @@ it like this:
      $h->{section1}{a}[-1]
      $h->{section2}{'x.a'}[-1]
 
-=cut
-
-sub get_config {
-    my ($git) = @_;
-
-    unless (exists $git->{more}{config}) {
-	my %config;
-	my ($fh, $ctx) = $git->command_output_pipe(config => '--null', '--list');
-	{
-	    local $/ = "\x0";
-	    while (<$fh>) {
-		chop;		# final \x0
-		my ($option, $value) = split /\n/, $_, 2;
-		my ($section, $key)  = split /\./, $option, 2;
-		push @{$config{$section}{$key}}, $value;
-	    }
-	}
-	try {
-	    $git->command_close_pipe($fh, $ctx);
-	} otherwise {
-	    # No config option found. That's ok.
-	};
-	$git->{more}{config} = \%config;
-    }
-
-    return $git->{more}{config};
-}
-
 =head2 get_current_branch
 
 This method returns the repository's current branch name, as indicated
 by the C<git branch> command. Note that its a ref short name, i.e.,
 it's usually sub-intended to reside under the 'refs/heads/' ref scope.
 
-=cut
+=head2 get_commit_msg COMMIT_ID
 
-sub get_current_branch {
-    my ($git) = @_;
-    foreach ($git->command(branch => '--no-color')) {
-	return $1 if /^\* (.*)/;
-    }
-    return;
-}
+This method returns the commit message (aka body) of the commit
+identified by COMMIT_ID. The result is a string.
 
 =head2 get_commits OLDCOMMIT NEWCOMMIT
 
@@ -142,45 +190,6 @@ codes are explained in the C<git help rev-list> document):
         body            => %B:  raw body (aka commit message)
     }
 
-=cut
-
-sub get_commits {
-    my ($git, $old_commit, $new_commit) = @_;
-    my @commits;
-    my ($pipe, $ctx) = $git->command_output_pipe(
-	'rev-list',
-	# See 'git help rev-list' to understand the --pretty argument
-	'--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%s%n%n%b%x00',
-	"$old_commit..$new_commit");
-    {
-	local $/ = "\x00\n";
-	while (<$pipe>) {
-	    my %commit;
-	    @commit{qw/header commit tree parent
-		       author_name author_email author_date
-		       commmitter_name committer_email committer_date
-		       body/} = split /\n/, $_, 11;
-	    push @commits, \%commit;
-	}
-    }
-    $git->command_close_pipe($pipe, $ctx);
-    return \@commits;
-}
-
-=head2 get_commit_msg COMMIT_ID
-
-This method returns the commit message (aka body) of the commit
-identified by COMMIT_ID. The result is a string.
-
-=cut
-
-sub get_commit_msg {
-    my ($git, $commit) = @_;
-    my $body = $git->command('rev-list' => '--format=%B', '--max-count=1', $commit);
-    $body =~ s/^.*//m;    # strip first line, which contains the commit id
-    return $body;
-}
-
 =head2 get_diff_files DIFFARGS...
 
 This method invokes the command C<git diff --name-status> with extra
@@ -199,22 +208,6 @@ hook:
 
     $git->get_diff_files('--diff-filter=AM', $old_commit, $new_commit);
 
-=cut
-
-sub get_diff_files {
-    my ($git, @args) = @_;
-    my %affected;
-    foreach ($git->command(diff => '--name-status', @args)) {
-	my ($status, $name) = split ' ', $_, 2;
-	$affected{$name} = $status;
-    }
-    return \%affected;
-}
-
 =head1 SEE ALSO
 
 C<App::gh::Git>
-
-=cut
-
-1;
