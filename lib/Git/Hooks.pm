@@ -582,6 +582,12 @@ Integrate Git with the JIRA L<http://www.atlassian.com/software/jira/>phase
 ticketing system by requiring that every commit message cites valid
 JIRA issues.
 
+=item Git::Hooks::check-structure.pl
+
+Check if newly added files and references (branches and tags) comply
+with specified policies, so that you can impose a strict structure to
+the repository's file and reference hierarchies.
+
 =back
 
 Each plugin may be used in one or, sometimes, multiple hooks. Their
