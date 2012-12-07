@@ -6,7 +6,6 @@ use warnings;
 use Cwd;
 use File::Temp qw/tempdir/;
 use File::Spec::Functions ':ALL';
-use File::Path;
 use File::Copy;
 use File::Slurp;
 use URI::file;
