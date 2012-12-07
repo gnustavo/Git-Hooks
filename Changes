@@ -2,6 +2,11 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.022     2012-12-06 23:13:44 America/Sao_Paulo
+
+	Implement a new plugin called check-structure.pl which
+	enforces the repository's file and reference structure.
+
 0.021     2012-12-06 08:52:34 America/Sao_Paulo
 
 	The configuration variables userenv and admin, which were
