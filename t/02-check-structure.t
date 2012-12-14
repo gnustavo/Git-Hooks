@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use lib 't';
 use Test::More tests => 19;
-use File::Path qw'make_path';
+use File::Path 2.08 qw'make_path';
 use File::Slurp;
 
 require "test-functions.pl";
