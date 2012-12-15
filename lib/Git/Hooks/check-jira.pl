@@ -19,13 +19,17 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
-use Git::Hooks qw/:utils/;
+
+package Git::Hooks::CheckJira;
+# ABSTRACT: Git::Hooks plugin which requires citation of JIRA issues in commit messages.
+
+use Git::Hooks qw/:DEFAULT :utils/;
 use File::Slurp;
 use Data::Util qw(:check);
 use List::MoreUtils qw/uniq/;
 use JIRA::Client;
 
-my $HOOK = "check-jira";
+my $HOOK = flatten_plugin_name(__PACKAGE__);
 
 #############
 # Grok hook configuration, check it and set defaults.

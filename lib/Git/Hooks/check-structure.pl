@@ -19,12 +19,16 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
-use Git::Hooks qw/:utils/;
+
+package Git::Hooks::CheckStructure;
+# ABSTRACT: Git::Hooks plugin for ref/file structure validation.
+
+use Git::Hooks qw/:DEFAULT :utils/;
 use Data::Util qw(:check);
 use File::Slurp;
 use Error qw(:try);
 
-my $HOOK = "check-structure";
+my $HOOK = flatten_plugin_name(__PACKAGE__);
 
 #############
 # Grok hook configuration and set defaults.

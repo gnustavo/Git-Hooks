@@ -36,7 +36,13 @@ BEGIN {
     }
 
     @EXPORT      = (@installers, 'run_hook');
-    @EXPORT_OK   = qw/hook_config is_ref_enabled im_memberof grok_userenv match_user im_admin eval_gitconfig/;
+
+    @EXPORT_OK = qw/hook_config is_ref_enabled get_affected_refs
+		    get_affected_ref_commits get_affected_ref_range
+		    im_memberof grok_userenv match_user im_admin
+		    eval_gitconfig flatten_plugin_name
+		    unflatten_plugin_name/;
+
     %EXPORT_TAGS = (utils => \@EXPORT_OK);
 }
 
@@ -281,6 +287,22 @@ sub eval_gitconfig {
     }
 
     return $value;
+}
+
+sub flatten_plugin_name {
+    my ($name) = @_;
+
+    $name =~ s/.*:://;
+    $name =~ s/([a-z])([A-Z])/$1-$2/g;
+    return lc $name;
+}
+
+sub unflatten_plugin_name {
+    my ($name) = @_;
+
+    $name =~ s/-([a-z])/\U$1\E/g;
+    $name =~ s/\.p[lm]$//i;
+    return ucfirst "$name.pm";
 }
 
 sub run_hook {
@@ -1003,6 +1025,19 @@ C<VALUE> is a string beginning with C<file:>, the remaining of it is
 treated as a file name which contents are evaluated as Perl code and
 the resulting value is returned. Otherwise, C<VALUE> itself is
 returned.
+
+=head2 flatten_plugin_name(PACKAGENAME)
+
+This routine takes a name like C<Git::Hooks::CheckJira> and returns
+C<check-jira>. It takes the PACKAGENAME's basename, inserts hyphens
+between the CamelCased words and lowercase everything.
+
+=head2 unflatten_plugin_name(PLUGINNAME)
+
+This routine takes a name like C<check-jira.pl> and returns
+C<Git::Hooks::CheckJira>. It takes the PLUGINNAME, upcase the
+characteres following hyphens, removes the hyphens, and upcase the
+first line. It also strips a trailing C<.pl>, if present.
 
 =head1 SEE ALSO
 

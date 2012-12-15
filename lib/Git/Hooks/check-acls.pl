@@ -19,11 +19,15 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
-use Git::Hooks qw/:utils/;
+
+package Git::Hooks::CheckAcls;
+# ABSTRACT: Git::Hooks plugin for branch/tag access control.
+
 use File::Slurp;
 use Error qw(:try);
+use Git::Hooks qw/:DEFAULT :utils/;
 
-my $HOOK = "check-acls";
+my $HOOK = flatten_plugin_name(__PACKAGE__);
 
 #############
 # Grok hook configuration and set defaults.
