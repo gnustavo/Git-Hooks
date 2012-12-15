@@ -322,7 +322,7 @@ sub run_hook {
 		}
 		next HOOK;
 	    }
-	    die __PACKAGE__, ": can't find hook enabled hook $hook.\n";
+	    die __PACKAGE__, ": can't find enabled hook $hook.\n";
 	}
     }
 
