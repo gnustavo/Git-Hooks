@@ -53,7 +53,7 @@ sub config {
 
 sub hook_config {
     my ($plugin) = @_;
-    return config()->{$plugin};
+    return config()->{$plugin} || config()->{flatten_plugin_name($plugin)};
 }
 
 sub is_ref_enabled {
@@ -331,9 +331,9 @@ sub run_hook {
 
       HOOK:
 	foreach my $hook (@$enabled_plugins) {
-	    $hook .= '.pl' if $hook !~ /\.pl$/;
+	    my $name = unflatten_plugin_name($hook);
 	    foreach my $dir (@plugin_dirs) {
-		my $script = catfile($dir, $hook);
+		my $script = catfile($dir, $name);
 		next unless -f $script;
 
 		my $exit = do $script;
@@ -344,7 +344,7 @@ sub run_hook {
 		}
 		next HOOK;
 	    }
-	    die __PACKAGE__, ": can't find enabled hook $hook.\n";
+	    die __PACKAGE__, ": can't find enabled hook $hook (a.k.a. $name).\n";
 	}
     }
 
@@ -593,18 +593,18 @@ more details.
 
 =over
 
-=item Git::Hooks::check-acls.pl
+=item Git::Hooks::CheckAcls
 
 Allow you to specify Access Control Lists to tell who can commit or
 push to the repository and affect which Git refs.
 
-=item Git::Hooks::check-jira.pl
+=item Git::Hooks::CheckJira
 
 Integrate Git with the JIRA L<http://www.atlassian.com/software/jira/>phase
 ticketing system by requiring that every commit message cites valid
 JIRA issues.
 
-=item Git::Hooks::check-structure.pl
+=item Git::Hooks::CheckStructure
 
 Check if newly added files and references (branches and tags) comply
 with specified policies, so that you can impose a strict structure to
@@ -704,22 +704,25 @@ define configuration global to a user or local to a repository.
 =head2 githooks.post-rewrite       PLUGIN
 
 To enable a plugin you must register it with one of the above
-options. For instance, if you want to enable the C<check-jira.pl>
+options. For instance, if you want to enable the C<CheckJira>
 plugin in the C<update> hook, you must do this:
 
-    $ git config --add githooks.update check-jira
+    $ git config --add githooks.update CheckJira
 
-(The '.pl' extension in the plugin name is optional.)
+(Up to version 0.022 of Git::Hooks, the plugin filename were in the
+form C<check-jira.pl>. The old form is still valid to preserve
+compatibility, but the standard CamelCase form for Perl module names
+are now prefered. The '.pl' extension in the plugin name is optional.)
 
 Note that you may enable more than one plugin to the same hook. For
 instance:
 
-    $ git config --add githooks.update check-acls
+    $ git config --add githooks.update CheckAcls
 
 And you may enable the same plugin in more than one hook, if it makes
 sense to do so. For instance:
 
-    $ git config --add githooks.commit-msg check-jira
+    $ git config --add githooks.commit-msg CheckJira
 
 =head2 githooks.plugins DIR
 
@@ -822,8 +825,8 @@ user performing the git action.
 =head2 githooks.admin USERSPEC
 
 There are several hooks that perform access control checks before
-allowing a git action, such as the ones installed by the C<check-acls>
-and the C<check-jira> plugins. It's useful to allow some people (the
+allowing a git action, such as the ones installed by the C<CheckAcls>
+and the C<CheckJira> plugins. It's useful to allow some people (the
 "administrators") to bypass those checks. These hooks usually allow
 the users specified by this variable to do whatever they want to the
 repository. You may want to set it to a group of "super users" in your

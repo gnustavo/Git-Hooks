@@ -29,7 +29,7 @@ use Data::Util qw(:check);
 use List::MoreUtils qw/uniq/;
 use JIRA::Client;
 
-my $HOOK = flatten_plugin_name(__PACKAGE__);
+(my $HOOK = __PACKAGE__) =~ s/.*:://;
 
 #############
 # Grok hook configuration, check it and set defaults.
@@ -45,12 +45,12 @@ foreach my $option (qw/require unresolved/) {
 }
 
 # Up to version 0.020 the configuration variables 'admin' and
-# 'userenv' were defined for the check-jira plugin. In version 0.021
+# 'userenv' were defined for the CheckJira plugin. In version 0.021
 # they were both "promoted" to the Git::Hooks module, so that they can
 # be used by any access control plugin. In order to maintain
 # compatibility with their previous usage, here we virtually "inject"
 # the variables in the "githooks" configuration section if they
-# undefined there and are defined in the "check-jira" section.
+# undefined there and are defined in the "CheckJira" section.
 foreach my $var (qw/admin userenv/) {
     if (exists $Config->{$var} && ! exists hook_config('githooks')->{$var}) {
 	hook_config('githooks')->{$var} = $Config->{$var};
@@ -84,7 +84,7 @@ sub get_issue {
     unless (defined $JIRA) {
 	for my $option (qw/jiraurl jirauser jirapass/) {
 	    exists $Config->{$option}
-		or die "$HOOK: Missing check-jira.$option configuration variable.\n";
+		or die "$HOOK: Missing CheckJira.$option configuration variable.\n";
 	    $Config->{$option} = $Config->{$option}[-1];
 	}
 	$Config->{jiraurl} =~ s:/+$::; # trim trailing slashes from the URL
@@ -205,7 +205,7 @@ EOF
     return;
 }
 
-COMMIT_MSG {
+sub check_message_file {
     my ($git, $commit_msg_file) = @_;
 
     return if im_admin();
@@ -226,7 +226,7 @@ COMMIT_MSG {
 	{ commit => '', body => $msg },	# fake a commit hash to simplify check_commit_msg
 	$current_branch,
     );
-};
+}
 
 sub check_ref {
     my ($git, $ref) = @_;
@@ -252,6 +252,7 @@ sub check_affected_refs {
 }
 
 # Install hooks
+COMMIT_MSG  \&check_message_file;
 UPDATE      \&check_affected_refs;
 PRE_RECEIVE \&check_affected_refs;
 
@@ -259,9 +260,11 @@ PRE_RECEIVE \&check_affected_refs;
 
 
 __END__
+=for Pod::Coverage check_codes check_commit_msg check_ref ferror get_issue grok_msg_jiras
+
 =head1 NAME
 
-check-jira.pl - Git::Hooks plugin which requires citation of JIRA
+CheckJira - Git::Hooks plugin which requires citation of JIRA
 issues in commit messages.
 
 =head1 DESCRIPTION
@@ -300,15 +303,15 @@ digits. E.g., C<CDS-123>, C<RT-1>, and C<GIT-97>.
 To enable it you should define the appropriate Git configuration
 option:
 
-    git config --add githooks.commit-msg  check-jira.pl
-    git config --add githooks.update      check-jira.pl
-    git config --add githooks.pre-receive check-jira.pl
+    git config --add githooks.commit-msg  CheckJira
+    git config --add githooks.update      CheckJira
+    git config --add githooks.pre-receive CheckJira
 
 =head1 CONFIGURATION
 
 The plugin is configured by the following git options.
 
-=head2 check-jira.ref REFSPEC
+=head2 CheckJira.ref REFSPEC
 
 By default, the message of every commit is checked. If you want to
 have them checked only for some refs (usually some branch under
@@ -320,29 +323,29 @@ The refs can be specified as a complete ref name
 caret (C<^>), which is kept as part of the regexp
 (e.g. "^refs/heads/(master|fix)").
 
-=head2 check-jira.userenv STRING
+=head2 CheckJira.userenv STRING
 
 This variable is deprecated. Please, use the C<githooks.userenv>
 variable, which is defined in the Git::Hooks module. Please, see its
 documentation to understand it.
 
-=head2 check-jira.admin USERSPEC
+=head2 CheckJira.admin USERSPEC
 
 This variable is deprecated. Please, use the C<githooks.admin>
 variable, which is defined in the Git::Hooks module. Please, see its
 documentation to understand it.
 
-=head2 check-jira.jiraurl URL
+=head2 CheckJira.jiraurl URL
 
-=head2 check-jira.jirauser USERNAME
+=head2 CheckJira.jirauser USERNAME
 
-=head2 check-jira.jirapass PASSWORD
+=head2 CheckJira.jirapass PASSWORD
 
 These options are required and are used to construct the
 C<JIRA::Client> object which is used to interact with your JIRA
 server. Please, see the JIRA::Client documentation to know about them.
 
-=head2 check-jira.matchkey REGEXP
+=head2 CheckJira.matchkey REGEXP
 
 By default, JIRA keys are matched with the regex
 C</\b[A-Z][A-Z]+-\d+\b/>, meaning, a sequence of two or more capital
@@ -352,7 +355,7 @@ you customized your JIRA project keys
 you may need to customize how this hook is going to match them. Set
 this option to a suitable regex to match a complete JIRA issue key.
 
-=head2 check-jira.matchlog REGEXP
+=head2 CheckJira.matchlog REGEXP
 
 By default, JIRA keys are looked for in all of the commit
 message. However, this can lead to some false positives, since the
@@ -363,31 +366,31 @@ message where the keys are going to be looked for.
 For example, set it to C<\[([^]]+)\]> to require that JIRA keys be
 cited inside the first pair of brackets found in the message.
 
-=head2 check-jira.project STRING
+=head2 CheckJira.project STRING
 
 By default, the committer can reference any JIRA issue in the commit
 log. You can restrict the allowed keys to a set of JIRA projects by
 specifying a JIRA project key to this option. You can enable more than
 one project by specifying more than one value to this option.
 
-=head2 check-jira.require [01]
+=head2 CheckJira.require [01]
 
 By default, the log must reference at least one JIRA issue. You can
 make the reference optional by setting this option to 0.
 
-=head2 check-jira.unresolved [01]
+=head2 CheckJira.unresolved [01]
 
 By default, every issue referenced must be unresolved, i.e., it must
 not have a resolution. You can relax this requirement by setting this
 option to 0.
 
-=head2 check-jira.by-assignee STRING
+=head2 CheckJira.by-assignee STRING
 
 By default, the committer can reference any valid JIRA issue. Setting
 this value to the name of an environment variable, the script will
 check if its value is equal to the referenced JIRA issue's assignee.
 
-=head2 check-jira.check-code CODESPEC
+=head2 CheckJira.check-code CODESPEC
 
 If the above checks aren't enough you can use this option to define a
 custom code to check your commits. The code may be specified directly
@@ -423,6 +426,22 @@ issues being cited by the commit's message.
 
 The subroutine must simply return with no value to indicate success
 and must die to indicate failure.
+
+=head1 EXPORTS
+
+This module exports two routines that can be used directly without
+using all of Git::Hooks infrastructure.
+
+=head2 check_affected_refs GIT
+
+This is the routine used to implement the C<update> and the
+C<pre-receive> hooks. It needs a C<Git::More> object.
+
+=head2 check_message_file GIT, MSGFILE
+
+This is the routine used to implement the C<commit-msg> hook. It needs
+a C<Git::More> object and the name of a file containing the commit
+message.
 
 =head1 SEE ALSO
 

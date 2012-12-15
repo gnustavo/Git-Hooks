@@ -28,7 +28,7 @@ use Data::Util qw(:check);
 use File::Slurp;
 use Error qw(:try);
 
-my $HOOK = flatten_plugin_name(__PACKAGE__);
+(my $HOOK = __PACKAGE__) =~ s/.*:://;
 
 #############
 # Grok hook configuration and set defaults.
@@ -160,25 +160,27 @@ sub check_affected_refs {
     }
 }
 
-# Install hooks
-PRE_COMMIT {
+sub check_commit {
     my ($git) = @_;
 
     my @errors = check_added_files($git->get_diff_files('--diff-filter=A', '--cached'));
 
     die join("\n", "$HOOK: errors in commit", @errors), "\n" if @errors;
-};
+}
 
+# Install hooks
+PRE_COMMIT  \&check_commit;
 UPDATE      \&check_affected_refs;
 PRE_RECEIVE \&check_affected_refs;
 
 1;
 
 __END__
+=for Pod::Coverage check_added_files check_ref file_structure ref_structure
 
 =head1 NAME
 
-check-structure.pl - Git::Hooks plugin for ref/file structure validation.
+CheckStructure - Git::Hooks plugin for ref/file structure validation.
 
 =head1 DESCRIPTION
 
@@ -214,7 +216,7 @@ comply with its structure definition.
 
 The plugin is configured by the following git options.
 
-=head2 check-structure.file STRUCTURE
+=head2 CheckStructure.file STRUCTURE
 
 This directive specifies the repository file structure, causing the
 push to abort if it adds any file that does not comply.
@@ -274,7 +276,7 @@ and the hook fails.
 
 =back
 
-You can specify the check-structure.file structure using either an
+You can specify the CheckStructure.file structure using either an
 C<eval:> or a C<file:> prefixed value, because they have to be
 evaluated as Perl expressions. The later is probably more convenient
 for most cases.
@@ -312,9 +314,9 @@ root.
 In order to make the plugin read the specification from the file,
 configure it like this:
 
-    git config check-structure.file file:hooks/file-structure.def
+    git config CheckStructure.file file:hooks/file-structure.def
 
-=head2 check-structure.ref STRUCTURE
+=head2 CheckStructure.ref STRUCTURE
 
 This directive specifies the repository ref structure, causing the
 push to abort if it adds any reference (branch, tag, etc.) that does
@@ -322,7 +324,7 @@ not comply.
 
 The STRUCTURE argument must be a Perl data structure specifying the
 ref structure recursively in exactly the same way as was explained for
-the C<check-structure.file> variable above. Consider that reference
+the C<CheckStructure.file> variable above. Consider that reference
 names always begin with C<refs/>. Branches are kept under
 C<refs/heads/>, tags under C<refs/tags>, remotes under
 C<refs/remotes>, Gerrit branches under C<refs/for>, and so on.
@@ -364,4 +366,27 @@ used in the remote repository of a push.
 In order to make the plugin read the specification from the file,
 configure it like this:
 
-    git config check-structure.ref file:hooks/ref-structure.def
+    git config CheckStructure.ref file:hooks/ref-structure.def
+
+=head1 EXPORTS
+
+This module exports two routines that can be used directly without
+using all of Git::Hooks infrastructure.
+
+=head2 check_affected_refs GIT
+
+This is the routine used to implement the C<update> and the
+C<pre-receive> hooks. It needs a C<Git::More> object.
+
+=head2 check_commit GIT
+
+This is the routine used to implement the C<pre-commit>. It needs a
+C<Git::More> object.
+
+=head2 check_structure STRUCTURE, PATH
+
+This is the main routine of the hook. It gets (usually) an array-ref
+specifying the repository STRUCTURE and a PATH to check against it. It
+returns a tuple, the first value of which is a boolean telling if the
+check was succesful or not. The second value is an error message, in
+case the check failed.
