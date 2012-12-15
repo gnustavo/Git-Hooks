@@ -68,7 +68,8 @@ sub get_commits {
 sub get_commit_msg {
     my ($git, $commit) = @_;
     my $body = $git->command('rev-list' => '--format=%B', '--max-count=1', $commit);
-    $body =~ s/^.*//m;    # strip first line, which contains the commit id
+    $body =~ s/^[^\n]*\n//; # strip first line, which contains the commit id
+    chomp $body;	    # strip last newline
     return $body;
 }
 
