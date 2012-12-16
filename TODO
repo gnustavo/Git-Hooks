@@ -1,5 +1,3 @@
-* Transform the hooks in modulinos.
-
 * Devise and implement a way for the plugins to register their
   configuration options and a suitable routine in Git::Hooks to grok
   them all. This would simplify plugin option processing.
@@ -10,12 +8,9 @@
   of NFSv4 ACLs (http://tools.ietf.org/html/rfc5661#section-6). I'm
   thinking about prefixing the what component with a '!'.
 
-* Use tidyall
-  (http://www.openswartz.com/2012/08/21/one-tidier-to-rule-them-all/).
-
 * Implement equivalents for the following SVN::Hooks
-  (http://search.cpan.org/dist/SVN-Hooks/) plugins: CheckStructure,
-  CheckLog, DenyFilenames, UpdateConfFile.
+  (http://search.cpan.org/dist/SVN-Hooks/) plugins: CheckLog,
+  DenyFilenames, UpdateConfFile.
 
 * Let the user tell which configuration files Git::Hooks should
   consider. Currently it considers the three default ones (system,
