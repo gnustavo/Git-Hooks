@@ -1,3 +1,4 @@
+Acked
 ACL
 CamelCase
 CheckAcls
@@ -9,6 +10,7 @@ DEFs
 DIFFARGS
 DIR
 Gerrit
+Gerrit's
 GROUPNAME
 GROUPSPEC
 Git
@@ -51,6 +53,7 @@ plugins
 pre
 prev
 rebase
+rebases
 src
 userenv
 username
