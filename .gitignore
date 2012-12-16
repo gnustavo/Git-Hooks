@@ -3,3 +3,4 @@
 *.bak
 *.tar.gz
 *~
+/.tidyall.d/
