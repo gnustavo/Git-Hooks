@@ -184,6 +184,7 @@ sub test_ok {
 	fail($testname);
 	diag(" exit=$exit\n stdout=$stdout\n git-version=$git_version\n");
     }
+    return $ok;
 }
 
 sub test_nok {
@@ -195,6 +196,7 @@ sub test_nok {
     } else {
 	pass($testname);
     }
+    return !$ok;
 }
 
 sub test_nok_match {
@@ -203,11 +205,14 @@ sub test_nok_match {
     if ($ok) {
 	fail($testname);
 	diag(" succeeded without intention\n stdout=$stdout\n git-version=$git_version\n");
+	return 0;
     } elsif ($stdout =~ $regex) {
 	pass($testname);
+	return 1;
     } else {
 	fail($testname);
 	diag(" did not match regex ($regex)\n exit=$exit\n stdout=$stdout\n git-version=$git_version\n");
+	return 0;
     }
 }
 
