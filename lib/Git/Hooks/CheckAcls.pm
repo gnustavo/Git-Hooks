@@ -15,14 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+package Git::Hooks::CheckAcls;
+# ABSTRACT: Git::Hooks plugin for branch/tag access control.
+
 use 5.010;
 use utf8;
 use strict;
 use warnings;
-
-package Git::Hooks::CheckAcls;
-# ABSTRACT: Git::Hooks plugin for branch/tag access control.
-
 use File::Slurp;
 use Error qw(:try);
 use Git::Hooks qw/:DEFAULT :utils/;
@@ -43,7 +42,7 @@ my $Config = hook_config($HOOK);
 # undefined there and are defined in the "CheckAcls" section.
 foreach my $var (qw/admin userenv/) {
     if (exists $Config->{$var} && ! exists hook_config('githooks')->{$var}) {
-	hook_config('githooks')->{$var} = $Config->{$var};
+        hook_config('githooks')->{$var} = $Config->{$var};
     }
 }
 
@@ -52,14 +51,14 @@ foreach my $var (qw/admin userenv/) {
 sub grok_acls {
     my ($git) = @_;
     state $acls = do {
-	my @acls;		# This will hold the ACL specs
-	my $option = $Config->{acl} || [];
-	foreach my $acl (@$option) {
-	    # Interpolate environment variables embedded as "{VAR}".
-	    $acl =~ s/{(\w+)}/$ENV{$1}/ige;
-	    push @acls, [split / /, $acl, 3];
-	}
-	\@acls;
+        my @acls;               # This will hold the ACL specs
+        my $option = $Config->{acl} || [];
+        foreach my $acl (@$option) {
+            # Interpolate environment variables embedded as "{VAR}".
+            $acl =~ s/{(\w+)}/$ENV{$1}/ige;
+            push @acls, [split / /, $acl, 3];
+        }
+        \@acls;
     };
     return $acls;
 }
@@ -68,11 +67,11 @@ sub match_ref {
     my ($ref, $spec) = @_;
 
     if ($spec =~ /^\^/) {
-	return 1 if $ref =~ $spec;
+        return 1 if $ref =~ $spec;
     } elsif ($spec =~ /^!(.*)/) {
-	return 1 if $ref !~ $1;
+        return 1 if $ref !~ $1;
     } else {
-	return 1 if $ref eq $spec;
+        return 1 if $ref eq $spec;
     }
     return 0;
 }
@@ -87,36 +86,36 @@ sub check_ref {
     # Grok which operation we're doing on this ref
     my $op;
     if      ($old_commit eq '0' x 40) {
-	$op = 'C';		# create
+        $op = 'C';              # create
     } elsif ($new_commit eq '0' x 40) {
-	$op = 'D';		# delete
+        $op = 'D';              # delete
     } elsif ($ref !~ m:^refs/heads/:) {
-	$op = 'R';		# rewrite a non-branch
+        $op = 'R';              # rewrite a non-branch
     } else {
-	# This is an U if "merge-base(old, new) == old". Otherwise it's an R.
-	try {
-	    chomp(my $merge_base = $git->command('merge-base' => $old_commit, $new_commit));
-	    $op = ($merge_base eq $old_commit) ? 'U' : 'R';
-	} otherwise {
-	    # Probably $old_commit and $new_commit do not have a common ancestor.
-	    $op = 'R';
-	};
+        # This is an U if "merge-base(old, new) == old". Otherwise it's an R.
+        try {
+            chomp(my $merge_base = $git->command('merge-base' => $old_commit, $new_commit));
+            $op = ($merge_base eq $old_commit) ? 'U' : 'R';
+        } otherwise {
+            # Probably $old_commit and $new_commit do not have a common ancestor.
+            $op = 'R';
+        };
     }
 
     foreach my $acl (@$acls) {
-	my ($who, $what, $refspec) = @$acl;
-	next unless match_user($who);
-	next unless match_ref($ref, $refspec);
-	$what =~ /[^CRUD-]/ and die "$HOOK: invalid acl 'what' component ($what).\n";
-	return if index($what, $op) != -1;
+        my ($who, $what, $refspec) = @$acl;
+        next unless match_user($who);
+        next unless match_ref($ref, $refspec);
+        $what =~ /[^CRUD-]/ and die "$HOOK: invalid acl 'what' component ($what).\n";
+        return if index($what, $op) != -1;
     }
 
     # Assign meaningful names to op codes.
     my %op = (
-	C => 'create',
-	R => 'rewind/rebase',
-	U => 'update',
-	D => 'delete',
+        C => 'create',
+        R => 'rewind/rebase',
+        U => 'update',
+        D => 'delete',
     );
 
     my $myself = grok_userenv();
@@ -131,8 +130,10 @@ sub check_affected_refs {
     return if im_admin();
 
     foreach my $ref (get_affected_refs()) {
-	check_ref($git, $ref);
+        check_ref($git, $ref);
     }
+
+    return;
 }
 
 # Install hooks

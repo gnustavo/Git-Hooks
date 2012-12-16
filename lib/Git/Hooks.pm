@@ -1,46 +1,45 @@
-use 5.010;
-use strict;
-use warnings;
-
 package Git::Hooks;
 # ABSTRACT: A framework for implementing Git hooks.
 
+use 5.010;
+use strict;
+use warnings;
 use Exporter qw/import/;
 use Data::Util qw(:all);
 use File::Basename;
 use File::Spec::Functions;
 use Git::More;
 
-our %Hooks;
-our (@EXPORT, @EXPORT_OK, %EXPORT_TAGS);
+our (@EXPORT, @EXPORT_OK, %EXPORT_TAGS); ## no critic (Modules::ProhibitAutomaticExportation)
+my %Hooks;
 
-BEGIN {
+BEGIN {                ## no critic (Subroutines::RequireArgUnpacking)
     my @installers =
-	qw/ APPLYPATCH_MSG PRE_APPLYPATCH POST_APPLYPATCH
-	    PRE_COMMIT PREPARE_COMMIT_MSG COMMIT_MSG
-	    POST_COMMIT PRE_REBASE POST_CHECKOUT POST_MERGE
-	    PRE_RECEIVE UPDATE POST_RECEIVE POST_UPDATE
-	    PRE_AUTO_GC POST_REWRITE /;
+        qw/ APPLYPATCH_MSG PRE_APPLYPATCH POST_APPLYPATCH
+            PRE_COMMIT PREPARE_COMMIT_MSG COMMIT_MSG
+            POST_COMMIT PRE_REBASE POST_CHECKOUT POST_MERGE
+            PRE_RECEIVE UPDATE POST_RECEIVE POST_UPDATE
+            PRE_AUTO_GC POST_REWRITE /;
 
     for my $installer (@installers) {
-	my $hook = lc $installer;
-	$hook =~ tr/_/-/;
-	install_subroutine(
-	    __PACKAGE__,
-	    $installer => sub (&) {
-		my ($foo) = @_;
-		$Hooks{$hook}{$foo} ||= sub { $foo->(@_); };
-	    }
-	);
+        my $hook = lc $installer;
+        $hook =~ tr/_/-/;
+        install_subroutine(
+            __PACKAGE__,
+            $installer => sub (&) {
+                my ($foo) = @_;
+                $Hooks{$hook}{$foo} ||= sub { $foo->(@_); };
+            }
+        );
     }
 
     @EXPORT      = (@installers, 'run_hook');
 
     @EXPORT_OK = qw/repository hook_config is_ref_enabled
-		    get_affected_refs get_affected_ref_commits
-		    get_affected_ref_range im_memberof grok_userenv
-		    match_user im_admin eval_gitconfig
-		    flatten_plugin_name unflatten_plugin_name/;
+                    get_affected_refs get_affected_ref_commits
+                    get_affected_ref_range im_memberof grok_userenv
+                    match_user im_admin eval_gitconfig
+                    flatten_plugin_name unflatten_plugin_name/;
 
     %EXPORT_TAGS = (utils => \@EXPORT_OK);
 }
@@ -63,11 +62,11 @@ sub hook_config {
 sub is_ref_enabled {
     my ($specs, $ref) = @_;
     foreach (@$specs) {
-	if (/^\^/) {
-	    return 1 if $ref =~ qr/$_/;
-	} else {
-	    return 1 if $ref eq $_;
-	}
+        if (/^\^/) {
+            return 1 if $ref =~ qr/$_/;
+        } else {
+            return 1 if $ref eq $_;
+        }
     }
     return 0;
 }
@@ -80,17 +79,18 @@ my %affected_refs;
 sub grok_affected_refs {
     my ($hook_name) = @_;
     if ($hook_name eq 'update') {
-	my ($ref, $old_commit, $new_commit) = @ARGV;
-	$affected_refs{$ref}{range} = [$old_commit, $new_commit];
+        my ($ref, $old_commit, $new_commit) = @ARGV;
+        $affected_refs{$ref}{range} = [$old_commit, $new_commit];
     } elsif ($hook_name =~ /^(?:pre|post)-receive$/) {
-	# pre-receive and post-receive get the list of affected
-	# commits via STDIN.
-	while (<>) {
-	    chomp;
-	    my ($old_commit, $new_commit, $ref) = split;
-	    $affected_refs{$ref}{range} = [$old_commit, $new_commit];
-	}
+        # pre-receive and post-receive get the list of affected
+        # commits via STDIN.
+        while (<>) {
+            chomp;
+            my ($old_commit, $new_commit, $ref) = split;
+            $affected_refs{$ref}{range} = [$old_commit, $new_commit];
+        }
     }
+    return;
 }
 
 sub get_affected_refs {
@@ -101,7 +101,7 @@ sub get_affected_ref_range {
     my ($ref) = @_;
 
     exists $affected_refs{$ref}
-	or die __PACKAGE__, ": internal error: no such affected ref ($ref)";
+        or die __PACKAGE__, ": internal error: no such affected ref ($ref)\n";
     return @{$affected_refs{$ref}{range}};
 }
 
@@ -109,8 +109,8 @@ sub get_affected_ref_commit_ids {
     my ($ref) = @_;
 
     unless (exists $affected_refs{$ref}{ids}) {
-	my $range = get_affected_ref_range($ref);
-	$affected_refs{$ref}{ids} = [repository()->command('rev-list' => join('..', @$range))];
+        my $range = get_affected_ref_range($ref);
+        $affected_refs{$ref}{ids} = [repository()->command('rev-list' => join('..', @$range))];
     }
 
     return $affected_refs{$ref}{ids};
@@ -120,7 +120,7 @@ sub get_affected_ref_commits {
     my ($ref) = @_;
 
     unless (exists $affected_refs{$ref}{commits}) {
-	$affected_refs{$ref}{commits} = repository()->get_commits(get_affected_ref_range($ref));
+        $affected_refs{$ref}{commits} = repository()->get_commits(get_affected_ref_range($ref));
     }
 
     return $affected_refs{$ref}{commits};
@@ -134,31 +134,31 @@ sub spawn_external_file {
 
     my $exit;
     if ($hook !~ /^(?:pre|post)-receive$/) {
-	$exit = system {$file} ($hook, @args);
+        $exit = system {$file} ($hook, @args);
     } else {
-	my $pid = open my $pipe, '|-';
-	if (! defined $pid) {
-	    die __PACKAGE__, ": can't fork: $!\n";
-	} elsif ($pid) {
-	    # parent
-	    foreach my $ref (get_affected_refs()) {
-		my ($old, $new) = get_affected_ref_range($ref);
-		say $pipe "$old $new $ref";
-	    }
-	    $exit = close $pipe;
-	} else {
-	    # child
-	    exec {$file} ($hook, @args);
-	    die __PACKAGE__, ": can't exec: $!\n";
-	}
+        my $pid = open my $pipe, '|-';
+        if (! defined $pid) {
+            die __PACKAGE__, ": can't fork: $!\n";
+        } elsif ($pid) {
+            # parent
+            foreach my $ref (get_affected_refs()) {
+                my ($old, $new) = get_affected_ref_range($ref);
+                say $pipe "$old $new $ref";
+            }
+            $exit = close $pipe;
+        } else {
+            # child
+            exec {$file} ($hook, @args);
+            die __PACKAGE__, ": can't exec: $!\n";
+        }
     }
     unless ($exit == 0) {
-	die __PACKAGE__, ": failed to execute '$file': $!\n"
-	    if $exit == -1;
-	die sprintf("%s: '$file' died with signal %d, %s coredump\n",
-		    __PACKAGE__, ($exit & 127), ($exit & 128) ? 'with' : 'without')
-	    if $exit & 127;
-	die sprintf("%s: '$file' exited abnormally with value %d\n", __PACKAGE__, $exit >> 8);
+        die __PACKAGE__, ": failed to execute '$file': $!\n"
+            if $exit == -1;
+        die sprintf("%s: '$file' died with signal %d, %s coredump",
+                    __PACKAGE__, ($exit & 127), ($exit & 128) ? 'with' : 'without'), "\n"
+            if $exit & 127;
+        die sprintf("%s: '$file' exited abnormally with value %d", __PACKAGE__, $exit >> 8), "\n";
     }
 }
 
@@ -166,43 +166,43 @@ sub grok_groups_spec {
     my ($specs, $source) = @_;
     my %groups;
     foreach (@$specs) {
-	s/\#.*//;		# strip comments
-	next unless /\S/;	# skip blank lines
-	/^\s*(\w+)\s*=\s*(.+?)\s*$/
-	    or die __PACKAGE__, ": invalid line in group file '$source': $_\n";
-	my ($groupname, $members) = ($1, $2);
-	exists $groups{"\@$groupname"}
-	    and die __PACKAGE__, ": redefinition of group ($groupname) in '$source': $_\n";
-	foreach my $member (split / /, $members) {
-	    if ($member =~ /^\@/) {
-		# group member
-		$groups{"\@$groupname"}{$member} = $groups{$member}
-		    or die __PACKAGE__, ": unknown group ($member) cited in '$source': $_\n";
-	    } else {
-		# user member
-		$groups{"\@$groupname"}{$member} = undef;
-	    }
-	}
+        s/\#.*//;               # strip comments
+        next unless /\S/;       # skip blank lines
+        /^\s*(\w+)\s*=\s*(.+?)\s*$/
+            or die __PACKAGE__, ": invalid line in group file '$source': $_\n";
+        my ($groupname, $members) = ($1, $2);
+        exists $groups{"\@$groupname"}
+            and die __PACKAGE__, ": redefinition of group ($groupname) in '$source': $_\n";
+        foreach my $member (split / /, $members) {
+            if ($member =~ /^\@/) {
+                # group member
+                $groups{"\@$groupname"}{$member} = $groups{$member}
+                    or die __PACKAGE__, ": unknown group ($member) cited in '$source': $_\n";
+            } else {
+                # user member
+                $groups{"\@$groupname"}{$member} = undef;
+            }
+        }
     }
     return \%groups;
 }
 
 sub grok_groups {
     state $groups = do {
-	my $config = config();
-	exists $config->{githooks}{groups}
-	    or die __PACKAGE__, ": you have to define the githooks.groups option to use groups.\n";
-	my $option = $config->{githooks}{groups};
+        my $config = config();
+        exists $config->{githooks}{groups}
+            or die __PACKAGE__, ": you have to define the githooks.groups option to use groups.\n";
+        my $option = $config->{githooks}{groups};
 
-	if (my ($groupfile) = ($option->[-1] =~ /^file:(.*)/)) {
-	    my @groupspecs = read_file($groupfile);
-	    defined $groupspecs[0]
-		or die __PACKAGE__, ": can't open groups file ($groupfile): $!\n";
-	    grok_groups_spec(\@groupspecs, $groupfile);
-	} else {
-	    my @groupspecs = split /\n/, $option->[-1];
-	    grok_groups_spec(\@groupspecs, "githooks.groups");
-	}
+        if (my ($groupfile) = ($option->[-1] =~ /^file:(.*)/)) {
+            my @groupspecs = read_file($groupfile);
+            defined $groupspecs[0]
+                or die __PACKAGE__, ": can't open groups file ($groupfile): $!\n";
+            grok_groups_spec(\@groupspecs, $groupfile);
+        } else {
+            my @groupspecs = split /\n/, $option->[-1];
+            grok_groups_spec(\@groupspecs, "githooks.groups");
+        }
     };
     return $groups;
 }
@@ -213,13 +213,13 @@ sub im_memberof {
     state $groups = grok_groups();
 
     exists $groups->{$groupname}
-	or die __PACKAGE__, ": group $groupname is not defined.\n";
+        or die __PACKAGE__, ": group $groupname is not defined.\n";
 
     my $group = $groups->{$groupname};
     return 1 if exists $group->{$myself};
     while (my ($member, $subgroup) = each %$group) {
-	next     unless defined $subgroup;
-	return 1 if     im_memberof($myself, $member);
+        next     unless defined $subgroup;
+        return 1 if     im_memberof($myself, $member);
     }
     return 0;
 }
@@ -227,18 +227,18 @@ sub im_memberof {
 my $myself;
 sub grok_userenv {
     my $userenv = config()->{githooks}{userenv}
-	or return;
+        or return;
 
     $userenv = $userenv->[-1] if is_array_ref($userenv);
 
     if ($userenv =~ /^eval:(.*)/) {
-	$myself = eval $1; ## no critic (BuiltinFunctions::ProhibitStringyEval)
-	die __PACKAGE__, ": error evaluating userenv value ($userenv): $@\n"
-	    if $@;
+        $myself = eval $1; ## no critic (BuiltinFunctions::ProhibitStringyEval)
+        die __PACKAGE__, ": error evaluating userenv value ($userenv): $@\n"
+            if $@;
     } elsif (exists $ENV{$userenv}) {
-	$myself = $ENV{$userenv};
+        $myself = $ENV{$userenv};
     } else {
-	die __PACKAGE__, ": option userenv environment variable ($userenv) is not defined.\n";
+        die __PACKAGE__, ": option userenv environment variable ($userenv) is not defined.\n";
     }
 
     return $myself;
@@ -251,11 +251,11 @@ sub match_user {
     return 0       unless defined $myself;
 
     if ($spec =~ /^\^/) {
-	return 1 if $myself =~ $spec;
+        return 1 if $myself =~ $spec;
     } elsif ($spec =~ /^@/) {
-	return 1 if im_memberof($myself, $spec);
+        return 1 if im_memberof($myself, $spec);
     } else {
-	return 1 if $myself eq $spec;
+        return 1 if $myself eq $spec;
     }
     return 0;
 }
@@ -264,9 +264,9 @@ sub im_admin {
     my $config = hook_config('githooks');
     return 0 unless defined $config and exists $config->{admin};
     foreach my $admin (@{$config->{admin}}) {
-	if (match_user($admin)) {
-	    return 1;
-	}
+        if (match_user($admin)) {
+            return 1;
+        }
     }
     return 0;
 }
@@ -277,17 +277,17 @@ sub eval_gitconfig {
     my $value;
 
     if ($config =~ s/^file://) {
-	$value = do $config;
-	unless ($value) {
-	    die "couldn't parse '$config': $@\n" if $@;
-	    die "couldn't do '$config': $!\n"    unless defined $value;
-	    die "couldn't run '$config'\n"       unless $value;
-	}
+        $value = do $config;
+        unless ($value) {
+            die "couldn't parse '$config': $@\n" if $@;
+            die "couldn't do '$config': $!\n"    unless defined $value;
+            die "couldn't run '$config'\n"       unless $value;
+        }
     } elsif ($config =~ s/^eval://) {
-	$value = eval $config; ## no critic (BuiltinFunctions::ProhibitStringyEval)
-	die "couldn't parse '$config':\n$@\n" if $@;
+        $value = eval $config; ## no critic (BuiltinFunctions::ProhibitStringyEval)
+        die "couldn't parse '$config':\n$@\n" if $@;
     } else {
-	$value = $config;
+        $value = $config;
     }
 
     return $value;
@@ -324,52 +324,54 @@ sub run_hook {
 
     # Invoke enabled plugins
     if (my $enabled_plugins = $config->{$hook_name}) {
-	# Define the list of directories where we'll look for the hook
-	# plugins. First the local directory 'githooks' under the
-	# repository path, then the optional list of directories
-	# specified by the githooks.plugins config option, and,
-	# finally, the Git::Hooks standard hooks directory.
-	unshift @{$config->{plugins}}, 'githooks';
-	push    @{$config->{plugins}}, catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks');
-	my @plugin_dirs = grep {-d} @{$config->{plugins}};
+        # Define the list of directories where we'll look for the hook
+        # plugins. First the local directory 'githooks' under the
+        # repository path, then the optional list of directories
+        # specified by the githooks.plugins config option, and,
+        # finally, the Git::Hooks standard hooks directory.
+        unshift @{$config->{plugins}}, 'githooks';
+        push    @{$config->{plugins}}, catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks');
+        my @plugin_dirs = grep {-d} @{$config->{plugins}};
 
       HOOK:
-	foreach my $hook (@$enabled_plugins) {
-	    my $name = unflatten_plugin_name($hook);
-	    foreach my $dir (@plugin_dirs) {
-		my $script = catfile($dir, $name);
-		next unless -f $script;
+        foreach my $hook (@$enabled_plugins) {
+            my $name = unflatten_plugin_name($hook);
+            foreach my $dir (@plugin_dirs) {
+                my $script = catfile($dir, $name);
+                next unless -f $script;
 
-		my $exit = do $script;
-		unless ($exit) {
-		    die __PACKAGE__, ": couldn't parse $script: $@\n" if $@;
-		    die __PACKAGE__, ": couldn't do $script: $!\n"    unless defined $exit;
-		    die __PACKAGE__, ": couldn't run $script\n"       unless $exit;
-		}
-		next HOOK;
-	    }
-	    die __PACKAGE__, ": can't find enabled hook $hook (a.k.a. $name).\n";
-	}
+                my $exit = do $script;
+                unless ($exit) {
+                    die __PACKAGE__, ": couldn't parse $script: $@\n" if $@;
+                    die __PACKAGE__, ": couldn't do $script: $!\n"    unless defined $exit;
+                    die __PACKAGE__, ": couldn't run $script\n"       unless $exit;
+                }
+                next HOOK;
+            }
+            die __PACKAGE__, ": can't find enabled hook $hook (a.k.a. $name).\n";
+        }
     }
 
     # Call every hook function installed by the hook scripts before.
     foreach my $hook (values %{$Hooks{$hook_name}}) {
-	$hook->($git, @args);
+        $hook->($git, @args);
     }
 
     # Invoked enabled external hooks
-    unless (exists $config->{externals} && ! $config->{externals}[-1]) {
-	# By default, start looking for external hooks in the
-	# '.git/hooks.d' directory.
-	unshift @{$config->{hooks}}, catfile($git->repo_path(), 'hooks.d');
+    if (! exists $config->{externals} || $config->{externals}[-1]) {
+        # By default, start looking for external hooks in the
+        # '.git/hooks.d' directory.
+        unshift @{$config->{hooks}}, catfile($git->repo_path(), 'hooks.d');
 
-	foreach my $dir (grep {-e} map {catfile($_, $hook_name)} @{$config->{hooks}}) {
-	    opendir my $dh, $dir or die __PACKAGE__, ": cannot opendir $dir: $!\n";
-	    foreach my $file (grep {-f && -x} map {catfile($dir, $_)} readdir $dh) {
-		spawn_external_file($file, $hook_name, @args);
-	    }
-	}
+        foreach my $dir (grep {-e} map {catfile($_, $hook_name)} @{$config->{hooks}}) {
+            opendir my $dh, $dir or die __PACKAGE__, ": cannot opendir $dir: $!\n";
+            foreach my $file (grep {-f && -x} map {catfile($dir, $_)} readdir $dh) {
+                spawn_external_file($file, $hook_name, @args);
+            }
+        }
     }
+
+    return;
 }
 
 
@@ -382,31 +384,31 @@ __END__
 
 A single script can implement several Git hooks:
 
-	#!/usr/bin/env perl
+        #!/usr/bin/env perl
 
-	use Git::Hooks;
+        use Git::Hooks;
 
-	PRE_COMMIT {
-	    my ($git) = @_;
-	    # ...
-	};
+        PRE_COMMIT {
+            my ($git) = @_;
+            # ...
+        };
 
-	COMMIT_MSG {
-	    my ($git, $msg_file) = @_;
-	    # ...
-	};
+        COMMIT_MSG {
+            my ($git, $msg_file) = @_;
+            # ...
+        };
 
-	run_hook($0, @ARGV);
+        run_hook($0, @ARGV);
 
 Or you can use Git::Hooks plugins or external hooks, driven by the
 single script below. These hooks are enabled by Git configuration
 options. (More on this later.)
 
-	#!/usr/bin/env perl
+        #!/usr/bin/env perl
 
-	use Git::Hooks;
+        use Git::Hooks;
 
-	run_hook($0, @ARGV);
+        run_hook($0, @ARGV);
 
 =head1 INTRODUCTION
 
@@ -497,15 +499,15 @@ You should see there a bunch of files with names ending in C<.sample>
 which are hook examples. Create a three-line script called, e.g.,
 C<git-hooks.pl>, in this directory like this:
 
-	$ cd /path/to/repo/.git/hooks
+        $ cd /path/to/repo/.git/hooks
 
-	$ cat >git-hooks.pl <<EOT
-	#!/usr/bin/env perl
-	use Git::Hooks;
-	run_hook($0, @ARGV);
-	EOT
+        $ cat >git-hooks.pl <<EOT
+        #!/usr/bin/env perl
+        use Git::Hooks;
+        run_hook($0, @ARGV);
+        EOT
 
-	$ chmod +x git-hooks.pl
+        $ chmod +x git-hooks.pl
 
 Now you should create symbolic links pointing to it for each hook you
 are interested in. For example, if you are interested in a
@@ -517,9 +519,9 @@ script for all hooked operations, even for those that you may not be
 interested in. Nothing wrong will happen, but the server will be doing
 extra work for nothing.)
 
-	$ ln -s git-hooks.pl commit-msg
-	$ ln -s git-hooks.pl post-commit
-	$ ln -s git-hooks.pl pre-receive
+        $ ln -s git-hooks.pl commit-msg
+        $ ln -s git-hooks.pl post-commit
+        $ ln -s git-hooks.pl pre-receive
 
 As is, the script won't do anything. You have to implement some hooks
 in it, use some of the existing plugins, or set up some external
@@ -685,11 +687,11 @@ define configuration global to a user or local to a repository.
 
 =head2 githooks.prepare-commit-msg PLUGIN
 
-=head2 githooks.commit-msg  	   PLUGIN
+=head2 githooks.commit-msg         PLUGIN
 
-=head2 githooks.post-commit 	   PLUGIN
+=head2 githooks.post-commit        PLUGIN
 
-=head2 githooks.pre-rebase  	   PLUGIN
+=head2 githooks.pre-rebase         PLUGIN
 
 =head2 githooks.post-checkout      PLUGIN
 
@@ -872,7 +874,7 @@ the basename of the parameter.
 The remaining arguments depend on the hook for which it's being
 called. Usually you just pass C<@ARGV> to it. And that's it. Mostly.
 
-	run_hook($0, @ARGV);
+        run_hook($0, @ARGV);
 
 =head1 HOOK DIRECTIVES
 

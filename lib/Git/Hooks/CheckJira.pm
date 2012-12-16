@@ -15,14 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+package Git::Hooks::CheckJira;
+# ABSTRACT: Git::Hooks plugin which requires citation of JIRA issues in commit messages.
+
 use 5.010;
 use utf8;
 use strict;
 use warnings;
-
-package Git::Hooks::CheckJira;
-# ABSTRACT: Git::Hooks plugin which requires citation of JIRA issues in commit messages.
-
 use Git::Hooks qw/:DEFAULT :utils/;
 use File::Slurp;
 use Data::Util qw(:check);
@@ -53,7 +52,7 @@ foreach my $option (qw/require unresolved/) {
 # undefined there and are defined in the "CheckJira" section.
 foreach my $var (qw/admin userenv/) {
     if (exists $Config->{$var} && ! exists hook_config('githooks')->{$var}) {
-	hook_config('githooks')->{$var} = $Config->{$var};
+        hook_config('githooks')->{$var} = $Config->{$var};
     }
 }
 
@@ -64,14 +63,14 @@ sub grok_msg_jiras {
     # Grok the JIRA issue keys from the commit log
     state $matchkey = qr/$Config->{matchkey}[-1]/;
     if (exists $Config->{matchlog}) {
-	state $matchlog = is_rx($Config->{matchlog}[-1]) ? $Config->{matchlog}[-1] : qr/$Config->{matchlog}[-1]/;
-	if (my ($match) = ($msg =~ $matchlog)) {
-	    return $match =~ /$matchkey/g;
-	} else {
-	    return ();
-	}
+        state $matchlog = is_rx($Config->{matchlog}[-1]) ? $Config->{matchlog}[-1] : qr/$Config->{matchlog}[-1]/;
+        if (my ($match) = ($msg =~ $matchlog)) {
+            return $match =~ /$matchkey/g;
+        } else {
+            return ();
+        }
     } else {
-	return $msg =~ /$matchkey/g;
+        return $msg =~ /$matchkey/g;
     }
 }
 
@@ -82,22 +81,22 @@ sub get_issue {
 
     # Connect to JIRA if not yet connected
     unless (defined $JIRA) {
-	for my $option (qw/jiraurl jirauser jirapass/) {
-	    exists $Config->{$option}
-		or die "$HOOK: Missing CheckJira.$option configuration variable.\n";
-	    $Config->{$option} = $Config->{$option}[-1];
-	}
-	$Config->{jiraurl} =~ s:/+$::; # trim trailing slashes from the URL
-	$JIRA = eval {JIRA::Client->new($Config->{jiraurl}, $Config->{jirauser}, $Config->{jirapass})};
-	die "$HOOK: cannot connect to the JIRA server at '$Config->{jiraurl}' as '$Config->{jirauser}': $@\n" if $@;
+        for my $option (qw/jiraurl jirauser jirapass/) {
+            exists $Config->{$option}
+                or die "$HOOK: Missing CheckJira.$option configuration variable.\n";
+            $Config->{$option} = $Config->{$option}[-1];
+        }
+        $Config->{jiraurl} =~ s:/+$::; # trim trailing slashes from the URL
+        $JIRA = eval {JIRA::Client->new($Config->{jiraurl}, $Config->{jirauser}, $Config->{jirapass})};
+        die "$HOOK: cannot connect to the JIRA server at '$Config->{jiraurl}' as '$Config->{jirauser}': $@\n" if $@;
     }
 
     state %issue_cache;
 
     # Try to get the issue from the cache
     unless (exists $issue_cache{$key}) {
-	$issue_cache{$key} = eval {$JIRA->getIssue($key)};
-	die "$HOOK: cannot get issue $key: $@\n"	if $@;
+        $issue_cache{$key} = eval {$JIRA->getIssue($key)};
+        die "$HOOK: cannot get issue $key: $@\n"        if $@;
     }
 
     return $issue_cache{$key};
@@ -107,7 +106,7 @@ sub ferror {
     my ($key, $commit, $ref, $error) = @_;
     my $msg = "$HOOK: issue $key, $error.\n  (cited ";
     $msg .= "by $commit->{commit} " if $commit->{commit};
-    $msg .= "in $ref)\n";
+    $msg .= "in $ref)";
     return $msg;
 }
 
@@ -115,27 +114,27 @@ sub check_codes {
     state $codes = undef;
 
     unless (defined $codes) {
-	if (exists $Config->{'check-code'}) {
-	    foreach my $code (@{$Config->{'check-code'}}) {
-		my $check;
-		if ($code =~ s/^file://) {
-		    $check = do $code;
-		    unless ($check) {
-			die "$HOOK: couldn't parse option check-code ($code): $@\n" if $@;
-			die "$HOOK: couldn't do option check-code ($code): $!\n"    unless defined $check;
-			die "$HOOK: couldn't run option check-code ($code)\n"       unless $check;
-		    }
-		} else {
-		    $check = eval $code; ## no critic (BuiltinFunctions::ProhibitStringyEval)
-		    die "$HOOK: couldn't parse option check-code value:\n$@\n" if $@;
-		}
-		is_code_ref($check)
-		    or die "$HOOK: option check-code must end with a code ref.\n";
-		push @$codes, $check;
-	    }
-	} else {
-	    $codes = [];
-	}
+        if (exists $Config->{'check-code'}) {
+            foreach my $code (@{$Config->{'check-code'}}) {
+                my $check;
+                if ($code =~ s/^file://) {
+                    $check = do $code;
+                    unless ($check) {
+                        die "$HOOK: couldn't parse option check-code ($code): $@\n" if $@;
+                        die "$HOOK: couldn't do option check-code ($code): $!\n"    unless defined $check;
+                        die "$HOOK: couldn't run option check-code ($code)\n"       unless $check;
+                    }
+                } else {
+                    $check = eval $code; ## no critic (BuiltinFunctions::ProhibitStringyEval)
+                    die "$HOOK: couldn't parse option check-code value:\n$@\n" if $@;
+                }
+                is_code_ref($check)
+                    or die "$HOOK: option check-code must end with a code ref.\n";
+                push @$codes, $check;
+            }
+        } else {
+            $codes = [];
+        }
     }
 
     return @$codes;
@@ -150,56 +149,56 @@ sub check_commit_msg {
     # Filter out JIRAs not belonging to any of the specific projects,
     # if any. We don't care about them.
     if (my $option = $Config->{project}) {
-	state $projects = {map {($_ => undef)} @$option}; # hash it to speed up lookup
-	@keys = grep {/([^-]+)/ && exists $projects->{$1}} @keys;
+        state $projects = {map {($_ => undef)} @$option}; # hash it to speed up lookup
+        @keys = grep {/([^-]+)/ && exists $projects->{$1}} @keys;
     }
 
     unless (@keys) {
-	if ($Config->{require}) {
-	    my $shortid = substr $commit->{commit}, 0, 8;
-	    if (@keys == $nkeys) {
-		die <<EOF;
+        if ($Config->{require}) {
+            my $shortid = substr $commit->{commit}, 0, 8;
+            if (@keys == $nkeys) {
+                die <<"EOF";
 $HOOK: commit $shortid (in $ref) does not cite any JIRA in the message:
 $commit->{body}
 EOF
-	    } else {
-		my $projects = join(' ', @{$Config->{project}});
-		die <<EOF;
+            } else {
+                my $projects = join(' ', @{$Config->{project}});
+                die <<"EOF";
 $HOOK: commit $shortid (in $ref) does not cite any JIRA from the expected
 $HOOK: projects ($projects) in the message:
 $commit->{body}
 EOF
-	    }
-	} else {
-	    return;
-	}
+            }
+        } else {
+            return;
+        }
     }
 
     my @issues;
 
     foreach my $key (@keys) {
-	my $issue = get_issue($key);
+        my $issue = get_issue($key);
 
-	if ($Config->{unresolved} && defined $issue->{resolution}) {
-	    die ferror($key, $commit, $ref, "is already resolved");
-	}
+        if ($Config->{unresolved} && defined $issue->{resolution}) {
+            die ferror($key, $commit, $ref, "is already resolved"), "\n";
+        }
 
-	if (my $committer = $Config->{'by-assignee'}) {
-	    $committer = $committer->[-1];
-	    exists $ENV{$committer}
-		or die ferror($key, $commit, $ref,
-			      "the environment variable '$committer' is undefined. Cannot get committer name");
+        if (my $committer = $Config->{'by-assignee'}) {
+            $committer = $committer->[-1];
+            exists $ENV{$committer}
+                or die ferror($key, $commit, $ref,
+                              "the environment variable '$committer' is undefined. Cannot get committer name"), "\n";
 
-	    $ENV{$committer} eq $issue->{assignee}
-		or die ferror($key, $commit, $ref,
-			      "is currently assigned to '$issue->{assignee}' but should be assigned to you ($ENV{$committer})");
-	}
+            $ENV{$committer} eq $issue->{assignee}
+                or die ferror($key, $commit, $ref,
+                              "is currently assigned to '$issue->{assignee}' but should be assigned to you ($ENV{$committer})"), "\n";
+        }
 
-	push @issues, $issue;
+        push @issues, $issue;
     }
 
     foreach my $code (check_codes()) {
-	$code->($git, $commit, $JIRA, @issues);
+        $code->($git, $commit, $JIRA, @issues);
     }
 
     return;
@@ -212,7 +211,7 @@ sub check_message_file {
 
     my $current_branch = 'refs/heads/' . $git->get_current_branch();
     if (my $refs = $Config->{ref}) {
-	return unless is_ref_enabled($refs, $current_branch);
+        return unless is_ref_enabled($refs, $current_branch);
     }
 
     my $msg = read_file($commit_msg_file);
@@ -222,22 +221,26 @@ sub check_message_file {
     $msg =~ s/\n#[^\n]*//sg;
 
     check_commit_msg(
-	$git,
-	{ commit => '', body => $msg },	# fake a commit hash to simplify check_commit_msg
-	$current_branch,
+        $git,
+        { commit => '', body => $msg }, # fake a commit hash to simplify check_commit_msg
+        $current_branch,
     );
+
+    return;
 }
 
 sub check_ref {
     my ($git, $ref) = @_;
 
     if (my $refs = $Config->{ref}) {
-	return unless is_ref_enabled($refs, $ref);
+        return unless is_ref_enabled($refs, $ref);
     }
 
     foreach my $commit (@{get_affected_ref_commits($ref)}) {
-	check_commit_msg($git, $commit, $ref);
+        check_commit_msg($git, $commit, $ref);
     }
+
+    return;
 };
 
 # This routine can act both as an update or a pre-receive hook.
@@ -247,8 +250,10 @@ sub check_affected_refs {
     return if im_admin();
 
     foreach my $ref (get_affected_refs()) {
-	check_ref($git, $ref);
+        check_ref($git, $ref);
     }
+
+    return;
 }
 
 # Install hooks
