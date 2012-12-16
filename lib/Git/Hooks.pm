@@ -11,7 +11,6 @@ use File::Basename;
 use File::Spec::Functions;
 use Git::More;
 
-our $Git;
 our %Hooks;
 our (@EXPORT, @EXPORT_OK, %EXPORT_TAGS);
 
@@ -37,17 +36,22 @@ BEGIN {
 
     @EXPORT      = (@installers, 'run_hook');
 
-    @EXPORT_OK = qw/hook_config is_ref_enabled get_affected_refs
-		    get_affected_ref_commits get_affected_ref_range
-		    im_memberof grok_userenv match_user im_admin
-		    eval_gitconfig flatten_plugin_name
-		    unflatten_plugin_name/;
+    @EXPORT_OK = qw/repository hook_config is_ref_enabled
+		    get_affected_refs get_affected_ref_commits
+		    get_affected_ref_range im_memberof grok_userenv
+		    match_user im_admin eval_gitconfig
+		    flatten_plugin_name unflatten_plugin_name/;
 
     %EXPORT_TAGS = (utils => \@EXPORT_OK);
 }
 
+sub repository {
+    state $git = Git::More->repository();
+    return $git;
+}
+
 sub config {
-    state $config = $Git->get_config();
+    state $config = repository()->get_config();
     return $config;
 }
 
@@ -106,7 +110,7 @@ sub get_affected_ref_commit_ids {
 
     unless (exists $affected_refs{$ref}{ids}) {
 	my $range = get_affected_ref_range($ref);
-	$affected_refs{$ref}{ids} = [$Git->command('rev-list' => join('..', @$range))];
+	$affected_refs{$ref}{ids} = [repository()->command('rev-list' => join('..', @$range))];
     }
 
     return $affected_refs{$ref}{ids};
@@ -116,7 +120,7 @@ sub get_affected_ref_commits {
     my ($ref) = @_;
 
     unless (exists $affected_refs{$ref}{commits}) {
-	$affected_refs{$ref}{commits} = $Git->get_commits(get_affected_ref_range($ref));
+	$affected_refs{$ref}{commits} = repository()->get_commits(get_affected_ref_range($ref));
     }
 
     return $affected_refs{$ref}{commits};
@@ -310,7 +314,7 @@ sub run_hook {
 
     $hook_name = basename $hook_name;
 
-    $Git = Git::More->repository();
+    my $git = repository();
 
     my $config = hook_config('githooks');
 
@@ -350,14 +354,14 @@ sub run_hook {
 
     # Call every hook function installed by the hook scripts before.
     foreach my $hook (values %{$Hooks{$hook_name}}) {
-	$hook->($Git, @args);
+	$hook->($git, @args);
     }
 
     # Invoked enabled external hooks
     unless (exists $config->{externals} && ! $config->{externals}[-1]) {
 	# By default, start looking for external hooks in the
 	# '.git/hooks.d' directory.
-	unshift @{$config->{hooks}}, catfile($Git->repo_path(), 'hooks.d');
+	unshift @{$config->{hooks}}, catfile($git->repo_path(), 'hooks.d');
 
 	foreach my $dir (grep {-e} map {catfile($_, $hook_name)} @{$config->{hooks}}) {
 	    opendir my $dh, $dir or die __PACKAGE__, ": cannot opendir $dir: $!\n";
@@ -372,7 +376,7 @@ sub run_hook {
 1; # End of Git::Hooks
 __END__
 
-=for Pod::Coverage config grok_affected_refs spawn_external_file grok_groups_spec grok_groups
+=for Pod::Coverage repository config grok_affected_refs spawn_external_file grok_groups_spec grok_groups
 
 =head1 SYNOPSIS
 
