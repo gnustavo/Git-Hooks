@@ -405,5 +405,5 @@ C<Git::More> object.
 This is the main routine of the hook. It gets (usually) an array-ref
 specifying the repository STRUCTURE and a PATH to check against it. It
 returns a tuple, the first value of which is a boolean telling if the
-check was succesful or not. The second value is an error message, in
+check was successful or not. The second value is an error message, in
 case the check failed.

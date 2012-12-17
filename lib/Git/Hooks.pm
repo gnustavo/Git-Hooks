@@ -741,7 +741,7 @@ sense to do so. For instance:
 (Up to version 0.022 of Git::Hooks, the plugin filename were in the
 form C<check-jira.pl>. The old form is still valid to preserve
 compatibility, but the standard CamelCase form for Perl module names
-are now prefered. The '.pl' extension in the plugin name is optional.)
+are now preferred. The '.pl' extension in the plugin name is optional.)
 
 =head2 githooks.plugins DIR
 
@@ -951,7 +951,7 @@ need to implement more than one specific hook.
 
 =head1 METHODS FOR PLUGIN DEVELOPERS
 
-Plugins should start by importing the utility routines from
+plugins should start by importing the utility routines from
 Git::Hooks:
 
     use Git::Hooks qw/:utils/;
@@ -1056,13 +1056,13 @@ returned.
 
 This routine takes a name like C<Git::Hooks::CheckJira> and returns
 C<check-jira>. It takes the PACKAGENAME's basename, inserts hyphens
-between the CamelCased words and lowercase everything.
+between the CamelCase words and lowercase everything.
 
 =head2 unflatten_plugin_name(PLUGINNAME)
 
 This routine takes a name like C<check-jira.pl> and returns
 C<Git::Hooks::CheckJira>. It takes the PLUGINNAME, upcase the
-characteres following hyphens, removes the hyphens, and upcase the
+characters following hyphens, removes the hyphens, and upcase the
 first line. It also strips a trailing C<.pl>, if present.
 
 =head1 SEE ALSO

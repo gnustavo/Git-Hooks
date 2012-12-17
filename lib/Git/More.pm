@@ -165,7 +165,7 @@ it's usually sub-intended to reside under the 'refs/heads/' ref scope.
 
 =head2 get_commit_msg COMMIT_ID
 
-This method returns the commit message (aka body) of the commit
+This method returns the commit message (a.k.a. body) of the commit
 identified by COMMIT_ID. The result is a string.
 
 =head2 get_commits OLDCOMMIT NEWCOMMIT
