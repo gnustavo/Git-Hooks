@@ -677,48 +677,56 @@ repository. Note that this will fetch all C<--system>, C<--global>,
 and C<--local> options, in this order. You may use this mechanism to
 define configuration global to a user or local to a repository.
 
-=head2 githooks.applypatch-msg     PLUGIN
+=head2 githooks.HOOK PLUGIN
 
-=head2 githooks.pre-applypatch     PLUGIN
-
-=head2 githooks.post-applypatch    PLUGIN
-
-=head2 githooks.pre-commit         PLUGIN
-
-=head2 githooks.prepare-commit-msg PLUGIN
-
-=head2 githooks.commit-msg         PLUGIN
-
-=head2 githooks.post-commit        PLUGIN
-
-=head2 githooks.pre-rebase         PLUGIN
-
-=head2 githooks.post-checkout      PLUGIN
-
-=head2 githooks.post-merge         PLUGIN
-
-=head2 githooks.pre-receive        PLUGIN
-
-=head2 githooks.update             PLUGIN
-
-=head2 githooks.post-receive       PLUGIN
-
-=head2 githooks.post-update        PLUGIN
-
-=head2 githooks.pre-auto-gc        PLUGIN
-
-=head2 githooks.post-rewrite       PLUGIN
-
-To enable a plugin you must register it with one of the above
-options. For instance, if you want to enable the C<CheckJira>
-plugin in the C<update> hook, you must do this:
+To enable a plugin you must register it to the appropriate Git hook.
+For instance, if you want to register the C<CheckJira> plugin in the
+C<update> hook, you must do this:
 
     $ git config --add githooks.update CheckJira
 
-(Up to version 0.022 of Git::Hooks, the plugin filename were in the
-form C<check-jira.pl>. The old form is still valid to preserve
-compatibility, but the standard CamelCase form for Perl module names
-are now prefered. The '.pl' extension in the plugin name is optional.)
+And if you want to register the C<CheckAcls> plugin in the
+C<pre-receive> hook, you must do this:
+
+    $ git config --add githooks.pre-receive CheckAcls
+
+The complete list of Git hooks that can be used is this: 
+
+=over 4
+
+=item githooks.applypatch-msg
+
+=item githooks.pre-applypatch
+
+=item githooks.post-applypatch
+
+=item githooks.pre-commit
+
+=item githooks.prepare-commit-msg
+
+=item githooks.commit-msg
+
+=item githooks.post-commit
+
+=item githooks.pre-rebase
+
+=item githooks.post-checkout
+
+=item githooks.post-merge
+
+=item githooks.pre-receive
+
+=item githooks.update
+
+=item githooks.post-receive
+
+=item githooks.post-update
+
+=item githooks.pre-auto-gc
+
+=item githooks.post-rewrite
+
+=back
 
 Note that you may enable more than one plugin to the same hook. For
 instance:
@@ -729,6 +737,11 @@ And you may enable the same plugin in more than one hook, if it makes
 sense to do so. For instance:
 
     $ git config --add githooks.commit-msg CheckJira
+
+(Up to version 0.022 of Git::Hooks, the plugin filename were in the
+form C<check-jira.pl>. The old form is still valid to preserve
+compatibility, but the standard CamelCase form for Perl module names
+are now prefered. The '.pl' extension in the plugin name is optional.)
 
 =head2 githooks.plugins DIR
 
@@ -900,37 +913,41 @@ will prevent Git from finishing its operation.
 Also note that each hook directive can be called more than once if you
 need to implement more than one specific hook.
 
-=head2 APPLYPATCH_MSG(GIT, commit-msg-file)
+=over
 
-=head2 PRE_APPLYPATCH(GIT)
+=item APPLYPATCH_MSG(GIT, commit-msg-file)
 
-=head2 POST_APPLYPATCH(GIT)
+=item PRE_APPLYPATCH(GIT)
 
-=head2 PRE_COMMIT(GIT)
+=item POST_APPLYPATCH(GIT)
 
-=head2 PREPARE_COMMIT_MSG(GIT, commit-msg-file [, msg-src [, SHA1]])
+=item PRE_COMMIT(GIT)
 
-=head2 COMMIT_MSG(GIT, commit-msg-file)
+=item PREPARE_COMMIT_MSG(GIT, commit-msg-file [, msg-src [, SHA1]])
 
-=head2 POST_COMMIT(GIT)
+=item COMMIT_MSG(GIT, commit-msg-file)
 
-=head2 PRE_REBASE(GIT)
+=item POST_COMMIT(GIT)
 
-=head2 POST_CHECKOUT(GIT, prev-head-ref, new-head-ref, is-branch-checkout)
+=item PRE_REBASE(GIT)
 
-=head2 POST_MERGE(GIT, is-squash-merge)
+=item POST_CHECKOUT(GIT, prev-head-ref, new-head-ref, is-branch-checkout)
 
-=head2 PRE_RECEIVE(GIT)
+=item POST_MERGE(GIT, is-squash-merge)
 
-=head2 UPDATE(GIT, updated-ref-name, old-object-name, new-object-name)
+=item PRE_RECEIVE(GIT)
 
-=head2 POST_RECEIVE(GIT)
+=item UPDATE(GIT, updated-ref-name, old-object-name, new-object-name)
 
-=head2 POST_UPDATE(GIT, updated-ref-name, ...)
+=item POST_RECEIVE(GIT)
 
-=head2 PRE_AUTO_GC(GIT)
+=item POST_UPDATE(GIT, updated-ref-name, ...)
 
-=head2 POST_REWRITE(GIT, command)
+=item PRE_AUTO_GC(GIT)
+
+=item POST_REWRITE(GIT, command)
+
+=back
 
 =head1 METHODS FOR PLUGIN DEVELOPERS
 

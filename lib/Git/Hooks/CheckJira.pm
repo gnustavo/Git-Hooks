@@ -342,13 +342,19 @@ documentation to understand it.
 
 =head2 CheckJira.jiraurl URL
 
+This option specifies the JIRA server HTTP URL, used to construct the
+C<JIRA::Client> object which is used to interact with your JIRA
+server. Please, see the JIRA::Client documentation to know about them.
+
 =head2 CheckJira.jirauser USERNAME
+
+This option specifies the JIRA server username, used to construct the
+C<JIRA::Client> object.
 
 =head2 CheckJira.jirapass PASSWORD
 
-These options are required and are used to construct the
-C<JIRA::Client> object which is used to interact with your JIRA
-server. Please, see the JIRA::Client documentation to know about them.
+This option specifies the JIRA server password, used to construct the
+C<JIRA::Client> object.
 
 =head2 CheckJira.matchkey REGEXP
 
