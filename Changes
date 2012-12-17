@@ -2,6 +2,15 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.024     2012-12-17 12:35:52 America/Sao_Paulo
+
+        Implement a new plugin Git::Hooks::GerritChangeId which is a
+        reimplementation of Gerrit's commit-msg official one
+        (http://tinyurl.com/cglobb4, at Gerrit's v2.5.1).
+
+        Improve code and documentation with the help of Code::TidyAll,
+        Perl::Critic, Pod::Checker, and Pod::Spell.
+
 0.023     2012-12-16 08:47:55 America/Sao_Paulo
 
 	This version makes a large refactor in the code. The plugins
