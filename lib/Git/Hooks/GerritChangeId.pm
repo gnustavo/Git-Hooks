@@ -15,14 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+package Git::Hooks::GerritChangeId;
+# ABSTRACT: Git::Hooks plugin to insert a Change-Id in a commit message.
+
 use 5.010;
 use utf8;
 use strict;
 use warnings;
-
-package Git::Hooks::GerritChangeId;
-# ABSTRACT: Git::Hooks plugin to insert a Change-Id in a commit message.
-
 use Git::Hooks qw/:DEFAULT :utils/;
 use File::Slurp;
 use File::Temp qw/tempfile/;
