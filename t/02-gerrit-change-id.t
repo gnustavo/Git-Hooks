@@ -14,7 +14,7 @@ require "test-functions.pl";
 
 my ($repo, $filename) = new_repos();
 
-install_hooks($repo);
+install_hooks($repo, undef, qw/commit-msg/);
 
 sub last_log {
     return $repo->get_commit_msg('HEAD');

@@ -15,8 +15,8 @@ my ($repo, $clone);
 sub setup_repos {
     ($repo, undef, $clone) = new_repos();
 
-    install_hooks($repo);
-    install_hooks($clone);
+    install_hooks($repo, undef, qw/pre-commit/);
+    install_hooks($clone, undef, qw/update pre-receive/);
 }
 
 sub setup_structure {

@@ -20,7 +20,7 @@ sub setup_repos_for {
 	# Inject a fake JIRA::Client class definition in order to be able
 	# to test this without a real JIRA server.
 
-	install_hooks($git, <<'EOF');
+	install_hooks($git, <<'EOF', qw/commit-msg update pre-receive/);
 package JIRA::Client;
 
 sub new {

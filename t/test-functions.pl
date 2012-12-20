@@ -47,7 +47,7 @@ sub debug_test {
 }
 
 sub install_hooks {
-    my ($git, $extra_perl) = @_;
+    my ($git, $extra_perl, @hooks) = @_;
     my $hooks_dir = catfile($git->repo_path(), 'hooks');
     my $hook_pl   = catfile($hooks_dir, 'hook.pl');
     {
@@ -80,11 +80,15 @@ run_hook(\$0, \@ARGV);
 EOF
     }
 	    chmod 0755 => $hook_pl;
-    foreach (qw/ applypatch-msg pre-applypatch post-applypatch
+
+    @hooks = qw/ applypatch-msg pre-applypatch post-applypatch
 		 pre-commit prepare-commit-msg commit-msg
 		 post-commit pre-rebase post-checkout post-merge
 		 pre-receive update post-receive post-update
-		 pre-auto-gc post-rewrite /) {
+		 pre-auto-gc post-rewrite /
+                     unless @hooks;
+
+    foreach (@hooks) {
 	symlink 'hook.pl', catfile($hooks_dir, $_)
 	    or BAIL_OUT("can't symlink '$hooks_dir', '$_': $!");
     }

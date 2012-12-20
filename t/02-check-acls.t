@@ -10,7 +10,7 @@ require "test-functions.pl";
 
 my ($repo, $file, $clone) = new_repos();
 foreach my $git ($repo, $clone) {
-    install_hooks($git);
+    install_hooks($git, undef, qw/update pre-receive/);
 }
 
 sub check_can_push {

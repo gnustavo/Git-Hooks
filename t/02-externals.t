@@ -11,7 +11,7 @@ use Config;
 require "test-functions.pl";
 
 my ($repo, $file, $clone) = new_repos();
-install_hooks($repo);
+install_hooks($repo, undef, qw/pre-commit/);
 
 sub check_can_commit {
     my ($testname) = @_;
