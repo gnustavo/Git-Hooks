@@ -28,32 +28,13 @@ use Git::Hooks qw/:DEFAULT :utils/;
 
 (my $HOOK = __PACKAGE__) =~ s/.*:://;
 
-#############
-# Grok hook configuration and set defaults.
-
-my $Config = hook_config($HOOK);
-
-# Up to version 0.020 the configuration variables 'admin' and
-# 'userenv' were defined for the CheckAcls plugin. In version 0.021
-# they were both "promoted" to the Git::Hooks module, so that they can
-# be used by any access control plugin. In order to maintain
-# compatibility with their previous usage, here we virtually "inject"
-# the variables in the "githooks" configuration section if they
-# undefined there and are defined in the "CheckAcls" section.
-foreach my $var (qw/admin userenv/) {
-    if (exists $Config->{$var} && ! exists hook_config('githooks')->{$var}) {
-        hook_config('githooks')->{$var} = $Config->{$var};
-    }
-}
-
 ##########
 
 sub grok_acls {
     my ($git) = @_;
     state $acls = do {
         my @acls;               # This will hold the ACL specs
-        my $option = $Config->{acl} || [];
-        foreach my $acl (@$option) {
+        foreach my $acl ($git->config_list($HOOK => 'acl')) {
             # Interpolate environment variables embedded as "{VAR}".
             $acl =~ s/{(\w+)}/$ENV{$1}/ige;
             push @acls, [split / /, $acl, 3];
@@ -79,7 +60,7 @@ sub match_ref {
 sub check_ref {
     my ($git, $ref) = @_;
 
-    my ($old_commit, $new_commit) = get_affected_ref_range($ref);
+    my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
 
     my $acls = grok_acls($git);
 
@@ -104,7 +85,7 @@ sub check_ref {
 
     foreach my $acl (@$acls) {
         my ($who, $what, $refspec) = @$acl;
-        next unless match_user($who);
+        next unless match_user($git, $who);
         next unless match_ref($ref, $refspec);
         $what =~ /[^CRUD-]/ and die "$HOOK: invalid acl 'what' component ($what).\n";
         return if index($what, $op) != -1;
@@ -118,7 +99,7 @@ sub check_ref {
         D => 'delete',
     );
 
-    my $myself = grok_userenv();
+    my $myself = $git->authenticated_user();
 
     die "$HOOK: you ($myself) cannot $op{$op} ref $ref.\n";
 }
@@ -127,9 +108,9 @@ sub check_ref {
 sub check_affected_refs {
     my ($git) = @_;
 
-    return if im_admin();
+    return if im_admin($git);
 
-    foreach my $ref (get_affected_refs()) {
+    foreach my $ref ($git->get_affected_refs()) {
         check_ref($git, $ref);
     }
 

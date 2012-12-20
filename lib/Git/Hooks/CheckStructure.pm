@@ -29,26 +29,35 @@ use Error qw(:try);
 
 (my $HOOK = __PACKAGE__) =~ s/.*:://;
 
-#############
-# Grok hook configuration and set defaults.
-
-my $Config = hook_config($HOOK);
-
 ##########
 
 sub file_structure {
-    return unless exists $Config->{file};
-    local $@ = undef;
-    state $structure = eval { eval_gitconfig($Config->{file}[-1]) };
-    die "$HOOK: $@\n" if $@;
+    my ($git) = @_;
+
+    state $file = $git->config_scalar($HOOK => 'file');
+    state $structure;
+
+    if (defined $file && ! defined $structure) {
+        local $@ = undef;
+        $structure->{file} = eval {eval_gitconfig($file)};
+        die "$HOOK: $@\n" if $@;
+    }
+
     return $structure;
 }
 
 sub ref_structure {
-    return unless exists $Config->{ref};
-    local $@ = undef;
-    state $structure = eval { eval_gitconfig($Config->{ref}[-1]) };
-    die "$HOOK: $@\n" if $@;
+    my ($git) = @_;
+
+    state $ref = $git->config_scalar($HOOK => 'ref');
+    state $structure;
+
+    if (defined $ref && ! defined $structure) {
+        local $@ = undef;
+        $structure->{ref} = eval {eval_gitconfig($ref)};
+        die "$HOOK: $@\n" if $@;
+    }
+
     return $structure;
 }
 
@@ -125,13 +134,13 @@ sub check_structure {
 }
 
 sub check_added_files {
-    my ($files) = @_;
+    my ($git, $files) = @_;
     my @errors;
     foreach my $file (sort keys %$files) {
         # Split the $file path in its components. We prefix $file with
         # a slash to make it look like an absolute path for
         # check_structure.
-        my ($code, $error) = check_structure(file_structure(), [split '/', "/$file"]);
+        my ($code, $error) = check_structure(file_structure($git), [split '/', "/$file"]);
         push @errors, "$error: $file" if $code == 0;
     }
     return @errors;
@@ -142,10 +151,10 @@ sub check_ref {
 
     my @errors;
 
-    my ($old_commit, $new_commit) = get_affected_ref_range($ref);
+    my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
 
     # Check names of newly created refs
-    if (my $structure = ref_structure()) {
+    if (my $structure = ref_structure($git)) {
         if ($old_commit eq '0' x 40) {
             check_structure($structure, [split '/', "/$ref"])
                 or push @errors, "reference name '$ref' not allowed";
@@ -153,8 +162,8 @@ sub check_ref {
     }
 
     # Check names of newly added files
-    if (file_structure()) {
-        push @errors, check_added_files($git->get_diff_files('--diff-filter=A', $old_commit, $new_commit));
+    if (file_structure($git)) {
+        push @errors, check_added_files($git, $git->get_diff_files('--diff-filter=A', $old_commit, $new_commit));
     }
 
     die join("\n", "$HOOK: errors in ref '$ref' commits", @errors), "\n" if @errors;
@@ -166,9 +175,9 @@ sub check_ref {
 sub check_affected_refs {
     my ($git) = @_;
 
-    return if im_admin();
+    return if im_admin($git);
 
-    foreach my $ref (get_affected_refs()) {
+    foreach my $ref ($git->get_affected_refs()) {
         check_ref($git, $ref);
     }
 
@@ -178,7 +187,7 @@ sub check_affected_refs {
 sub check_commit {
     my ($git) = @_;
 
-    my @errors = check_added_files($git->get_diff_files('--diff-filter=A', '--cached'));
+    my @errors = check_added_files($git, $git->get_diff_files('--diff-filter=A', '--cached'));
 
     die join("\n", "$HOOK: errors in commit", @errors), "\n" if @errors;
 

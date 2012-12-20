@@ -8,7 +8,6 @@ use Exporter qw/import/;
 use Data::Util qw(:all);
 use File::Basename;
 use File::Spec::Functions;
-use Git::More;
 
 our (@EXPORT, @EXPORT_OK, %EXPORT_TAGS); ## no critic (Modules::ProhibitAutomaticExportation)
 my %Hooks;
@@ -35,102 +34,35 @@ BEGIN {                ## no critic (Subroutines::RequireArgUnpacking)
 
     @EXPORT      = (@installers, 'run_hook');
 
-    @EXPORT_OK = qw/repository hook_config is_ref_enabled
-                    get_affected_refs get_affected_ref_commits
-                    get_affected_ref_range im_memberof grok_userenv
-                    match_user im_admin eval_gitconfig
-                    flatten_plugin_name unflatten_plugin_name/;
+    @EXPORT_OK = qw/is_ref_enabled im_memberof match_user im_admin
+                    eval_gitconfig /;
 
     %EXPORT_TAGS = (utils => \@EXPORT_OK);
 }
 
-sub repository {
-    state $git = Git::More->repository();
-    return $git;
-}
-
-sub config {
-    state $config = repository()->get_config();
-    return $config;
-}
-
-sub hook_config {
-    my ($plugin) = @_;
-    return config()->{$plugin} || config()->{flatten_plugin_name($plugin)};
-}
+use Git::More;
 
 sub is_ref_enabled {
-    my ($specs, $ref) = @_;
-    foreach (@$specs) {
+    my ($ref, @specs) = @_;
+
+    return 1 unless @specs;
+
+    foreach (@specs) {
         if (/^\^/) {
             return 1 if $ref =~ qr/$_/;
         } else {
             return 1 if $ref eq $_;
         }
     }
+
     return 0;
-}
-
-# This is an internal routine used to grok the affected refs of
-# update, pre-receive, and post-receive hooks. They're kept in a
-# common data structure so that those hooks can usually share code.
-
-my %affected_refs;
-sub grok_affected_refs {
-    my ($hook_name) = @_;
-    if ($hook_name eq 'update') {
-        my ($ref, $old_commit, $new_commit) = @ARGV;
-        $affected_refs{$ref}{range} = [$old_commit, $new_commit];
-    } elsif ($hook_name =~ /^(?:pre|post)-receive$/) {
-        # pre-receive and post-receive get the list of affected
-        # commits via STDIN.
-        while (<>) {
-            chomp;
-            my ($old_commit, $new_commit, $ref) = split;
-            $affected_refs{$ref}{range} = [$old_commit, $new_commit];
-        }
-    }
-    return;
-}
-
-sub get_affected_refs {
-    return keys %affected_refs;
-}
-
-sub get_affected_ref_range {
-    my ($ref) = @_;
-
-    exists $affected_refs{$ref}
-        or die __PACKAGE__, ": internal error: no such affected ref ($ref)\n";
-    return @{$affected_refs{$ref}{range}};
-}
-
-sub get_affected_ref_commit_ids {
-    my ($ref) = @_;
-
-    unless (exists $affected_refs{$ref}{ids}) {
-        my $range = get_affected_ref_range($ref);
-        $affected_refs{$ref}{ids} = [repository()->command('rev-list' => join('..', @$range))];
-    }
-
-    return $affected_refs{$ref}{ids};
-}
-
-sub get_affected_ref_commits {
-    my ($ref) = @_;
-
-    unless (exists $affected_refs{$ref}{commits}) {
-        $affected_refs{$ref}{commits} = repository()->get_commits(get_affected_ref_range($ref));
-    }
-
-    return $affected_refs{$ref}{commits};
 }
 
 # This is an internal routine used to invoke external hooks, feed them
 # the needed input and wait for them.
 
 sub spawn_external_file {
-    my ($file, $hook, @args) = @_;
+    my ($git, $file, $hook, @args) = @_;
 
     my $exit;
     if ($hook !~ /^(?:pre|post)-receive$/) {
@@ -141,8 +73,8 @@ sub spawn_external_file {
             die __PACKAGE__, ": can't fork: $!\n";
         } elsif ($pid) {
             # parent
-            foreach my $ref (get_affected_refs()) {
-                my ($old, $new) = get_affected_ref_range($ref);
+            foreach my $ref ($git->get_affected_refs()) {
+                my ($old, $new) = $git->get_affected_ref_range($ref);
                 say $pipe "$old $new $ref";
             }
             $exit = close $pipe;
@@ -188,19 +120,19 @@ sub grok_groups_spec {
 }
 
 sub grok_groups {
-    state $groups = do {
-        my $config = config();
-        exists $config->{githooks}{groups}
-            or die __PACKAGE__, ": you have to define the githooks.groups option to use groups.\n";
-        my $option = $config->{githooks}{groups};
+    my ($git) = @_;
 
-        if (my ($groupfile) = ($option->[-1] =~ /^file:(.*)/)) {
+    state $groups = do {
+        my $grps = $git->config_scalar(githooks => 'groups')
+            or die __PACKAGE__, ": you have to define the githooks.groups option to use groups.\n";
+
+        if (my ($groupfile) = ($grps =~ /^file:(.*)/)) {
             my @groupspecs = read_file($groupfile);
             defined $groupspecs[0]
                 or die __PACKAGE__, ": can't open groups file ($groupfile): $!\n";
             grok_groups_spec(\@groupspecs, $groupfile);
         } else {
-            my @groupspecs = split /\n/, $option->[-1];
+            my @groupspecs = split /\n/, $grps;
             grok_groups_spec(\@groupspecs, "githooks.groups");
         }
     };
@@ -208,9 +140,9 @@ sub grok_groups {
 }
 
 sub im_memberof {
-    my ($myself, $groupname) = @_;
+    my ($git, $myself, $groupname) = @_;
 
-    state $groups = grok_groups();
+    state $groups = grok_groups($git);
 
     exists $groups->{$groupname}
         or die __PACKAGE__, ": group $groupname is not defined.\n";
@@ -219,54 +151,31 @@ sub im_memberof {
     return 1 if exists $group->{$myself};
     while (my ($member, $subgroup) = each %$group) {
         next     unless defined $subgroup;
-        return 1 if     im_memberof($myself, $member);
+        return 1 if     im_memberof($git, $myself, $member);
     }
     return 0;
 }
 
-my $myself;
-sub grok_userenv {
-    my $userenv = config()->{githooks}{userenv}
-        or return;
-
-    $userenv = $userenv->[-1] if is_array_ref($userenv);
-
-    if ($userenv =~ /^eval:(.*)/) {
-        $myself = eval $1; ## no critic (BuiltinFunctions::ProhibitStringyEval)
-        die __PACKAGE__, ": error evaluating userenv value ($userenv): $@\n"
-            if $@;
-    } elsif (exists $ENV{$userenv}) {
-        $myself = $ENV{$userenv};
-    } else {
-        die __PACKAGE__, ": option userenv environment variable ($userenv) is not defined.\n";
-    }
-
-    return $myself;
-}
-
 sub match_user {
-    my ($spec) = @_;
+    my ($git, $spec) = @_;
 
-    grok_userenv() unless defined $myself;
-    return 0       unless defined $myself;
-
-    if ($spec =~ /^\^/) {
-        return 1 if $myself =~ $spec;
-    } elsif ($spec =~ /^@/) {
-        return 1 if im_memberof($myself, $spec);
-    } else {
-        return 1 if $myself eq $spec;
+    if (my $myself = $git->authenticated_user()) {
+        if ($spec =~ /^\^/) {
+            return 1 if $myself =~ $spec;
+        } elsif ($spec =~ /^@/) {
+            return 1 if im_memberof($git, $myself, $spec);
+        } else {
+            return 1 if $myself eq $spec;
+        }
     }
+
     return 0;
 }
 
 sub im_admin {
-    my $config = hook_config('githooks');
-    return 0 unless defined $config and exists $config->{admin};
-    foreach my $admin (@{$config->{admin}}) {
-        if (match_user($admin)) {
-            return 1;
-        }
+    my ($git) = @_;
+    foreach my $spec ($git->config_list(githooks => 'admin')) {
+        return 1 if match_user($git, $spec);
     }
     return 0;
 }
@@ -293,51 +202,46 @@ sub eval_gitconfig {
     return $value;
 }
 
-sub flatten_plugin_name {
-    my ($name) = @_;
-
-    $name =~ s/.*:://;
-    $name =~ s/([a-z])([A-Z])/$1-$2/g;
-    return lc $name;
-}
-
-sub unflatten_plugin_name {
-    my ($name) = @_;
-
-    $name =~ s/-([a-z])/\U$1\E/g;
-    $name =~ s/\.p[lm]$//i;
-    return ucfirst "$name.pm";
-}
-
 sub run_hook {
     my ($hook_name, @args) = @_;
 
     $hook_name = basename $hook_name;
 
-    my $git = repository();
-
-    my $config = hook_config('githooks');
+    my $git = Git::More->repository();
 
     # Some hooks (update, pre-receive, and post-receive) affect refs
     # and associated commit ranges. Let's grok them at once.
-    grok_affected_refs($hook_name);
+    if ($hook_name eq 'update') {
+        my ($ref, $old_commit, $new_commit) = @args;
+        $git->set_affected_ref($ref, $old_commit, $new_commit);
+    } elsif ($hook_name =~ /^(?:pre|post)-receive$/) {
+        # pre-receive and post-receive get the list of affected
+        # commits via STDIN.
+        while (<>) {
+            chomp;
+            my ($old_commit, $new_commit, $ref) = split;
+            $git->set_affected_ref($ref, $old_commit, $new_commit);
+        }
+    }
 
     # Invoke enabled plugins
-    if (my $enabled_plugins = $config->{$hook_name}) {
+    if (my @enabled_plugins = $git->config_list(githooks => $hook_name)) {
         # Define the list of directories where we'll look for the hook
         # plugins. First the local directory 'githooks' under the
         # repository path, then the optional list of directories
         # specified by the githooks.plugins config option, and,
         # finally, the Git::Hooks standard hooks directory.
-        unshift @{$config->{plugins}}, 'githooks';
-        push    @{$config->{plugins}}, catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks');
-        my @plugin_dirs = grep {-d} @{$config->{plugins}};
+        my @plugin_dirs = grep {-d} (
+            'githooks',
+            $git->config_list(githooks => 'plugins'),
+            catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks'),
+        );
 
       HOOK:
-        foreach my $hook (@$enabled_plugins) {
-            my $name = unflatten_plugin_name($hook);
+        foreach my $hook (@enabled_plugins) {
+            $hook .= '.pm' unless $hook =~ /\.p[lm]$/i;
             foreach my $dir (@plugin_dirs) {
-                my $script = catfile($dir, $name);
+                my $script = catfile($dir, $hook);
                 next unless -f $script;
 
                 my $exit = do $script;
@@ -348,7 +252,7 @@ sub run_hook {
                 }
                 next HOOK;
             }
-            die __PACKAGE__, ": can't find enabled hook $hook (a.k.a. $name).\n";
+            die __PACKAGE__, ": can't find enabled hook $hook.\n";
         }
     }
 
@@ -357,16 +261,15 @@ sub run_hook {
         $hook->($git, @args);
     }
 
-    # Invoked enabled external hooks
-    if (! exists $config->{externals} || $config->{externals}[-1]) {
-        # By default, start looking for external hooks in the
-        # '.git/hooks.d' directory.
-        unshift @{$config->{hooks}}, catfile($git->repo_path(), 'hooks.d');
-
-        foreach my $dir (grep {-e} map {catfile($_, $hook_name)} @{$config->{hooks}}) {
+    # Invoke enabled external hooks
+    if ($git->config_scalar(githooks => 'externals')) {
+        foreach my $dir (
+            grep {-e} map {catfile($_, $hook_name)}
+                ($git->config_list(githooks => 'hooks'), catfile($git->repo_path(), 'hooks.d'))
+        ) {
             opendir my $dh, $dir or die __PACKAGE__, ": cannot opendir $dir: $!\n";
             foreach my $file (grep {-f && -x} map {catfile($dir, $_)} readdir $dh) {
-                spawn_external_file($file, $hook_name, @args);
+                spawn_external_file($git, $file, $hook_name, @args);
             }
         }
     }
@@ -378,7 +281,7 @@ sub run_hook {
 1; # End of Git::Hooks
 __END__
 
-=for Pod::Coverage repository config grok_affected_refs spawn_external_file grok_groups_spec grok_groups
+=for Pod::Coverage spawn_external_file grok_groups_spec grok_groups
 
 =head1 SYNOPSIS
 
@@ -974,77 +877,42 @@ this. Hopefully it's not that hard.
 
 The utility routines implemented by Git::Hooks are the following:
 
-=head2 hook_config(NAME)
-
-This routine returns a hash-ref containing every configuration
-variable for the section NAME. It's usually called with the name of
-the plugin as argument, meaning that the plugin configuration is
-contained in a section by its name.
-
-=head2 is_ref_enabled(SPECS, REF)
+=head2 is_ref_enabled(REF, SPEC, ...)
 
 This routine returns a boolean indicating if REF matches one of the
 ref-specs in SPECS. REF is the complete name of a Git ref and SPECS is
-a reference to an array of strings, each one specifying a rule for
-matching ref names.
+a list of strings, each one specifying a rule for matching ref names.
+
+As a special case, it returns true if there is no SPEC whatsoever,
+meaning that by default all refs are enabled.
 
 You may want to use it, for example, in an C<update>, C<pre-receive>,
 or C<post-receive> hook which may be enabled depending on the
 particular refs being affected.
 
-Each rule in SPECS may indicate the matching refs as the complete ref
+Each SPEC rule may indicate the matching refs as the complete ref
 name (e.g. "refs/heads/master") or by a regular expression starting
 with a caret (C<^>), which is kept as part of the regexp.
 
-=head2 get_affected_refs()
-
-This routine returns a list of all the Git refs affected by the
-current operation. During the C<update> hook it returns the single ref
-passed via the command line. During the C<pre-receive> and
-C<post-receive> hooks it returns the list of refs passed via
-STDIN. During any other hook it returns the empty list.
-
-=head2 get_affected_ref_range(REF)
-
-This routine returns the two-element list of commit ids representing
-the OLDCOMMIT and the NEWCOMMIT of the affected REF.
-
-=head2 get_affected_ref_commit_ids(REF)
-
-This routine returns the list of commit ids leading from the affected
-REF's NEWCOMMIT to OLDCOMMIT.
-
-=head2 get_affected_ref_commits(REF)
-
-This routine returns the list of commits leading from the affected
-REF's NEWCOMMIT to OLDCOMMIT. The commits are represented by hashes,
-as returned by C<Git::More::get_commits>.
-
-=head2 im_memberof(USER, GROUPNAME)
+=head2 im_memberof(GIT, USER, GROUPNAME)
 
 This routine tells if USER belongs to GROUPNAME. The groupname is
 looked for in the specification given by the C<githooks.groups>
 configuration variable.
 
-=head2 grok_userenv()
-
-This routine returns the username of the authenticated user performing
-the Git action. It groks it from the C<githooks.userenv> configuration
-variable specification, which is described above.
-
-=head2 match_user(SPEC)
+=head2 match_user(GIT, SPEC)
 
 This routine checks if the authenticated user (as returned by the
-C<grok_userenv> routine above) matches the specification, which may be
-given in one of the three different forms acceptable for the
-C<githooks.admin> configuration variable above, i.e., as a username,
-as a @group, or as a ^regex.
+C<Git::More::authenticated_user> method) matches the specification,
+which may be given in one of the three different forms acceptable for
+the C<githooks.admin> configuration variable above, i.e., as a
+username, as a @group, or as a ^regex.
 
-=head2 im_admin()
+=head2 im_admin(GIT)
 
 This routine checks if the authenticated user (again, as returned by
-the C<grok_userenv> routine above) matches the specifications given by
-the C<githooks.admin> configuration variable.
+the C<Git::More::authenticated_user> method) matches the
+specifications given by the C<githooks.admin> configuration variable.
 
 =head2 eval_gitconfig(VALUE)
 
@@ -1055,19 +923,6 @@ C<VALUE> is a string beginning with C<file:>, the remaining of it is
 treated as a file name which contents are evaluated as Perl code and
 the resulting value is returned. Otherwise, C<VALUE> itself is
 returned.
-
-=head2 flatten_plugin_name(PACKAGENAME)
-
-This routine takes a name like C<Git::Hooks::CheckJira> and returns
-C<check-jira>. It takes the PACKAGENAME's basename, inserts hyphens
-between the CamelCase words and lowercase everything.
-
-=head2 unflatten_plugin_name(PLUGINNAME)
-
-This routine takes a name like C<check-jira.pl> and returns
-C<Git::Hooks::CheckJira>. It takes the PLUGINNAME, upcase the
-characters following hyphens, removes the hyphens, and upcase the
-first line. It also strips a trailing C<.pl>, if present.
 
 =head1 SEE ALSO
 

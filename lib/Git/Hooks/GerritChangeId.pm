@@ -29,11 +29,6 @@ use Error qw(:try);
 
 (my $HOOK = __PACKAGE__) =~ s/.*:://;
 
-#############
-# Grok hook configuration, check it and set defaults.
-
-my $Config = hook_config($HOOK);
-
 ##########
 
 sub clean_message {
