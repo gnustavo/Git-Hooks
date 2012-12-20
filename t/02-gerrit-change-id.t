@@ -46,7 +46,7 @@ sub can_commit {
 }
 
 
-$repo->command(config => "githooks.commit-msg", 'gerrit-change-id');
+$repo->command(config => "githooks.commit-msg", 'GerritChangeId');
 
 # test EmptyMessages
 foreach my $test (
