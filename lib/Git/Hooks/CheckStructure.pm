@@ -31,34 +31,22 @@ use Error qw(:try);
 
 ##########
 
-sub file_structure {
-    my ($git) = @_;
+sub get_structure {
+    my ($git, $what) = @_;
 
-    state $file = $git->config_scalar($HOOK => 'file');
-    state $structure;
+    state $structure = {};
 
-    if (defined $file && ! defined $structure) {
-        local $@ = undef;
-        $structure->{file} = eval {eval_gitconfig($file)};
-        die "$HOOK: $@\n" if $@;
+    unless (exists $structure->{$what}) {
+        if (my $value = $git->config_scalar($HOOK => $what)) {
+            local $@ = undef;
+            $structure->{$what} = eval {eval_gitconfig($value)};
+            die "$HOOK: $@\n" if $@;
+        } else {
+            $structure->{$what} = undef;
+        }
     }
 
-    return $structure;
-}
-
-sub ref_structure {
-    my ($git) = @_;
-
-    state $ref = $git->config_scalar($HOOK => 'ref');
-    state $structure;
-
-    if (defined $ref && ! defined $structure) {
-        local $@ = undef;
-        $structure->{ref} = eval {eval_gitconfig($ref)};
-        die "$HOOK: $@\n" if $@;
-    }
-
-    return $structure;
+    return $structure->{$what};
 }
 
 sub check_array_structure {
@@ -140,7 +128,7 @@ sub check_added_files {
         # Split the $file path in its components. We prefix $file with
         # a slash to make it look like an absolute path for
         # check_structure.
-        my ($code, $error) = check_structure(file_structure($git), [split '/', "/$file"]);
+        my ($code, $error) = check_structure(get_structure($git, 'file'), [split '/', "/$file"]);
         push @errors, "$error: $file" if $code == 0;
     }
     return @errors;
@@ -154,7 +142,7 @@ sub check_ref {
     my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
 
     # Check names of newly created refs
-    if (my $structure = ref_structure($git)) {
+    if (my $structure = get_structure($git, 'ref')) {
         if ($old_commit eq '0' x 40) {
             check_structure($structure, [split '/', "/$ref"])
                 or push @errors, "reference name '$ref' not allowed";
@@ -162,7 +150,7 @@ sub check_ref {
     }
 
     # Check names of newly added files
-    if (file_structure($git)) {
+    if (get_structure($git, 'file')) {
         push @errors, check_added_files($git, $git->get_diff_files('--diff-filter=A', $old_commit, $new_commit));
     }
 
@@ -202,7 +190,7 @@ PRE_RECEIVE \&check_affected_refs;
 1;
 
 __END__
-=for Pod::Coverage check_added_files check_ref file_structure ref_structure check_array_structure check_string_structure
+=for Pod::Coverage check_added_files check_ref get_structure check_array_structure check_string_structure
 
 =head1 NAME
 
