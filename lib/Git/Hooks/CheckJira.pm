@@ -218,7 +218,7 @@ sub check_message_file {
     defined $msg or die "$HOOK: Can't open file '$commit_msg_file' for reading: $!\n";
 
     # Remove comment lines from the message file contents.
-    $msg =~ s/\n#[^\n]*//sg;
+    $msg =~ s/^#[^\n]*\n//mgs;
 
     check_commit_msg(
         $git,
