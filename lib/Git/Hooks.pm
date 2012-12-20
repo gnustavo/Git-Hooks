@@ -631,7 +631,7 @@ The CONFIGURATION section below explains this in more detail.
 =head2 Invoking external hooks
 
 Since the default Git hook scripts are taken by the symbolic links to
-the Git::Hooks generic script, you must install your external hooks
+the Git::Hooks generic script, you must install any other hooks
 somewhere else. By default, the C<run_hook> routine will look for
 external hook scripts in the directory C<.git/hooks.d> (which you must
 create) under the repository. Below this directory you should have
@@ -690,7 +690,7 @@ C<pre-receive> hook, you must do this:
 
     $ git config --add githooks.pre-receive CheckAcls
 
-The complete list of Git hooks that can be used is this: 
+The complete list of Git hooks that can be used is this:
 
 =over 4
 
@@ -729,19 +729,23 @@ The complete list of Git hooks that can be used is this:
 =back
 
 Note that you may enable more than one plugin to the same hook. For
-instance:
+instance, you may enable both C<CheckAcls> and C<CheckJira> for the
+C<update> hook:
 
     $ git config --add githooks.update CheckAcls
+    $ git config --add githooks.update CheckJira
 
 And you may enable the same plugin in more than one hook, if it makes
 sense to do so. For instance:
 
     $ git config --add githooks.commit-msg CheckJira
+    $ git config --add githooks.pre-receive CheckJira
 
-(Up to version 0.022 of Git::Hooks, the plugin filename were in the
-form C<check-jira.pl>. The old form is still valid to preserve
+(Up to version 0.022 of Git::Hooks, the plugin names were in the form
+C<check-jira.pl>. The old form is still valid to preserve
 compatibility, but the standard CamelCase form for Perl module names
-are now preferred. The '.pl' extension in the plugin name is optional.)
+are now preferred. The '.pl' extension in the plugin name is
+optional.)
 
 =head2 githooks.plugins DIR
 
@@ -873,7 +877,7 @@ anchored at the start of the username.
 
 =back
 
-=head1 MAIN METHOD
+=head1 MAIN FUNCTION
 
 =head2 run_hook(NAME, ARGS...)
 
