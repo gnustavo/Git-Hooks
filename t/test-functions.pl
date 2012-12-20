@@ -92,7 +92,7 @@ EOF
 
 sub new_repos {
     my $cleanup = exists $ENV{REPO_CLEANUP} ? $ENV{REPO_CLEANUP} : 1;
-    $T = tempdir('t.XXXX', DIR => getcwd(), CLEANUP => $cleanup);
+    $T = tempdir('githooks.XXXXX', TMPDIR => 1, CLEANUP => $cleanup);
 
     my $repodir  = catfile($T, 'repo');
     my $filename = catfile($repodir, 'file.txt');
