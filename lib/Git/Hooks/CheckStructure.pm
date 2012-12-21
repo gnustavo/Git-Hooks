@@ -34,19 +34,14 @@ use Error qw(:try);
 sub get_structure {
     my ($git, $what) = @_;
 
-    state $structure = {};
-
-    unless (exists $structure->{$what}) {
-        if (my $value = $git->config_scalar($HOOK => $what)) {
-            local $@ = undef;
-            $structure->{$what} = eval {eval_gitconfig($value)};
-            die "$HOOK: $@\n" if $@;
-        } else {
-            $structure->{$what} = undef;
-        }
+    if (my $value = $git->config_scalar($HOOK => $what)) {
+        local $@ = undef;
+        my $structure = eval {eval_gitconfig($value)};
+        die "$HOOK: $@\n" if $@;
+        return $structure;
+    } else {
+        return;
     }
-
-    return $structure->{$what};
 }
 
 sub check_array_structure {

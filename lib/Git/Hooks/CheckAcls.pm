@@ -32,16 +32,16 @@ use Git::Hooks qw/:DEFAULT :utils/;
 
 sub grok_acls {
     my ($git) = @_;
-    state $acls = do {
-        my @acls;               # This will hold the ACL specs
-        foreach my $acl ($git->config_list($HOOK => 'acl')) {
-            # Interpolate environment variables embedded as "{VAR}".
-            $acl =~ s/{(\w+)}/$ENV{$1}/ige;
-            push @acls, [split / /, $acl, 3];
-        }
-        \@acls;
-    };
-    return $acls;
+
+    my @acls;                   # This will hold the ACL specs
+
+    foreach my $acl ($git->config_list($HOOK => 'acl')) {
+        # Interpolate environment variables embedded as "{VAR}".
+        $acl =~ s/{(\w+)}/$ENV{$1}/ige;
+        push @acls, [split / /, $acl, 3];
+    }
+
+    return @acls;
 }
 
 sub match_ref {
@@ -62,8 +62,6 @@ sub check_ref {
 
     my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
 
-    my $acls = grok_acls($git);
-
     # Grok which operation we're doing on this ref
     my $op;
     if      ($old_commit eq '0' x 40) {
@@ -83,7 +81,7 @@ sub check_ref {
         };
     }
 
-    foreach my $acl (@$acls) {
+    foreach my $acl (grok_acls($git)) {
         my ($who, $what, $refspec) = @$acl;
         next unless match_user($git, $who);
         next unless match_ref($ref, $refspec);

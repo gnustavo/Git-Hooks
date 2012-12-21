@@ -52,8 +52,8 @@ sub _setup_config {
 sub grok_msg_jiras {
     my ($git, $msg) = @_;
 
-    state $matchkey = $git->config_scalar($HOOK => 'matchkey');
-    state $matchlog = $git->config_scalar($HOOK => 'matchlog');
+    my $matchkey = $git->config_scalar($HOOK => 'matchkey');
+    my $matchlog = $git->config_scalar($HOOK => 'matchlog');
 
     # Grok the JIRA issue keys from the commit log
     if ($matchlog) {
@@ -85,15 +85,15 @@ sub get_issue {
             if $@;
     }
 
-    state %issue_cache;
+    my $cache = $git->cache($HOOK);
 
     # Try to get the issue from the cache
-    unless (exists $issue_cache{$key}) {
-        $issue_cache{$key} = eval {$JIRA->getIssue($key)};
+    unless (exists $cache->{$key}) {
+        $cache->{$key} = eval {$JIRA->getIssue($key)};
         die "$HOOK: cannot get issue $key: $@\n" if $@;
     }
 
-    return $issue_cache{$key};
+    return $cache->{$key};
 }
 
 sub ferror {
@@ -107,30 +107,27 @@ sub ferror {
 sub check_codes {
     my ($git) = @_;
 
-    state $codes = undef;
+    my @codes;
 
-    unless (defined $codes) {
-        $codes = [];
-        foreach my $code ($git->config_list($HOOK => 'check-code')) {
-            my $check;
-            if ($code =~ s/^file://) {
-                $check = do $code;
-                unless ($check) {
-                    die "$HOOK: couldn't parse option check-code ($code): $@\n" if $@;
-                    die "$HOOK: couldn't do option check-code ($code): $!\n"    unless defined $check;
-                    die "$HOOK: couldn't run option check-code ($code)\n"       unless $check;
-                }
-            } else {
-                $check = eval $code; ## no critic (BuiltinFunctions::ProhibitStringyEval)
-                die "$HOOK: couldn't parse option check-code value:\n$@\n" if $@;
+    foreach my $check ($git->config_list($HOOK => 'check-code')) {
+        my $code;
+        if ($check =~ s/^file://) {
+            $code = do $check;
+            unless ($code) {
+                die "$HOOK: couldn't parse option check-code ($check): $@\n" if $@;
+                die "$HOOK: couldn't do option check-code ($check): $!\n"    unless defined $code;
+                die "$HOOK: couldn't run option check-code ($check)\n"       unless $code;
             }
-            is_code_ref($check)
-                or die "$HOOK: option check-code must end with a code ref.\n";
-            push @$codes, $check;
+        } else {
+            $code = eval $check; ## no critic (BuiltinFunctions::ProhibitStringyEval)
+            die "$HOOK: couldn't parse option check-code value:\n$@\n" if $@;
         }
+        is_code_ref($code)
+            or die "$HOOK: option check-code must end with a code ref.\n";
+        push @codes, $code;
     }
 
-    return @$codes;
+    return @codes;
 }
 
 sub check_commit_msg {
@@ -141,9 +138,9 @@ sub check_commit_msg {
 
     # Filter out JIRAs not belonging to any of the specific projects,
     # if any. We don't care about them.
-    state $projects = {map {($_ => undef)} $git->config_list($HOOK => 'project')};
-    if (keys %$projects) {
-        @keys = grep {/([^-]+)/ && exists $projects->{$1}} @keys;
+    if (my @projects = $git->config_list($HOOK => 'project')) {
+        my %projects = map {($_ => undef)} @projects;
+        @keys = grep {/([^-]+)/ && exists $projects{$1}} @keys;
     }
 
     unless (@keys) {
@@ -169,8 +166,8 @@ EOF
 
     my @issues;
 
-    state $unresolved = $git->config_scalar($HOOK => 'unresolved');
-    state $committer  = $git->config_scalar($HOOK => 'by-assignee');
+    my $unresolved = $git->config_scalar($HOOK => 'unresolved');
+    my $committer  = $git->config_scalar($HOOK => 'by-assignee');
 
     foreach my $key (@keys) {
         my $issue = get_issue($git, $key);

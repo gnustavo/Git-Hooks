@@ -122,27 +122,30 @@ sub grok_groups_spec {
 sub grok_groups {
     my ($git) = @_;
 
-    state $groups = do {
-        my $grps = $git->config_scalar(githooks => 'groups')
+    my $cache = $git->cache('githooks');
+
+    unless (exists $cache->{groups}) {
+        my $groups = $git->config_scalar(githooks => 'groups')
             or die __PACKAGE__, ": you have to define the githooks.groups option to use groups.\n";
 
-        if (my ($groupfile) = ($grps =~ /^file:(.*)/)) {
+        if (my ($groupfile) = ($groups =~ /^file:(.*)/)) {
             my @groupspecs = read_file($groupfile);
             defined $groupspecs[0]
                 or die __PACKAGE__, ": can't open groups file ($groupfile): $!\n";
-            grok_groups_spec(\@groupspecs, $groupfile);
+            $cache->{groups} = grok_groups_spec(\@groupspecs, $groupfile);
         } else {
-            my @groupspecs = split /\n/, $grps;
-            grok_groups_spec(\@groupspecs, "githooks.groups");
+            my @groupspecs = split /\n/, $groups;
+            $cache->{groups} = grok_groups_spec(\@groupspecs, "githooks.groups");
         }
-    };
-    return $groups;
+    }
+
+    return $cache->{groups};
 }
 
 sub im_memberof {
     my ($git, $myself, $groupname) = @_;
 
-    state $groups = grok_groups($git);
+    my $groups = grok_groups($git);
 
     exists $groups->{$groupname}
         or die __PACKAGE__, ": group $groupname is not defined.\n";

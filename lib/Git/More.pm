@@ -106,6 +106,16 @@ sub config_list {
     return exists $config->{$section}{$var} ? @{$config->{$section}{$var}} : ();
 }
 
+sub cache {
+    my ($git, $section) = @_;
+
+    unless (exists $git->{more}{cache}{$section}) {
+        $git->{more}{cache}{$section} = {};
+    }
+
+    return $git->{more}{cache}{$section};
+}
+
 sub get_commits {
     my ($git, $old_commit, $new_commit) = @_;
 
@@ -327,6 +337,14 @@ returned. If the option is undefined, it returns undef.
 
 This method fetches the configuration option SECTION.VARIABLE as a
 list. If the option is undefined, it returns the empty list.
+
+=head2 cache SECTION
+
+This method may be used by plugin developers to cache information in
+the context of a Git::More object. SECTION is a string (usually a
+plugin name) that is associated with a hash-ref. The method simply
+returns the hash-ref, which can be used by the caller to store any
+kind of information.
 
 =head2 get_commits OLDCOMMIT NEWCOMMIT
 
