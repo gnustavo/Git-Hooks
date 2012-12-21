@@ -234,6 +234,8 @@ sub authenticated_user {
             } else {
                 die __PACKAGE__, ": option userenv environment variable ($userenv) is not defined.\n";
             }
+        } elsif (my $user = $ENV{USER}) {
+            $git->{more}{authenticated_user} = $user;
         } else {
             $git->{more}{authenticated_user} = undef;
         }
