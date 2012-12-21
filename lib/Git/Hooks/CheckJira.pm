@@ -52,8 +52,8 @@ sub _setup_config {
 sub grok_msg_jiras {
     my ($git, $msg) = @_;
 
-    my $matchkey = $git->config_scalar($HOOK => 'matchkey');
-    my $matchlog = $git->config_scalar($HOOK => 'matchlog');
+    my $matchkey = $git->config($HOOK => 'matchkey');
+    my $matchlog = $git->config($HOOK => 'matchlog');
 
     # Grok the JIRA issue keys from the commit log
     if ($matchlog) {
@@ -76,7 +76,7 @@ sub get_issue {
     unless (defined $JIRA) {
         my %jira;
         for my $option (qw/jiraurl jirauser jirapass/) {
-            $jira{$option} = $git->config_scalar($HOOK => $option)
+            $jira{$option} = $git->config($HOOK => $option)
                 or die "$HOOK: Missing $HOOK.$option configuration attribute.\n";
         }
         $jira{jiraurl} =~ s:/+$::; # trim trailing slashes from the URL
@@ -109,7 +109,7 @@ sub check_codes {
 
     my @codes;
 
-    foreach my $check ($git->config_list($HOOK => 'check-code')) {
+    foreach my $check ($git->config($HOOK => 'check-code')) {
         my $code;
         if ($check =~ s/^file://) {
             $code = do $check;
@@ -138,13 +138,13 @@ sub check_commit_msg {
 
     # Filter out JIRAs not belonging to any of the specific projects,
     # if any. We don't care about them.
-    if (my @projects = $git->config_list($HOOK => 'project')) {
+    if (my @projects = $git->config($HOOK => 'project')) {
         my %projects = map {($_ => undef)} @projects;
         @keys = grep {/([^-]+)/ && exists $projects{$1}} @keys;
     }
 
     unless (@keys) {
-        if ($git->config_scalar($HOOK => 'require')) {
+        if ($git->config($HOOK => 'require')) {
             my $shortid = substr $commit->{commit}, 0, 8;
             if (@keys == $nkeys) {
                 die <<"EOF";
@@ -152,7 +152,7 @@ $HOOK: commit $shortid (in $ref) does not cite any JIRA in the message:
 $commit->{body}
 EOF
             } else {
-                my $project = join(' ', $git->config_list($HOOK => 'project'));
+                my $project = join(' ', $git->config($HOOK => 'project'));
                 die <<"EOF";
 $HOOK: commit $shortid (in $ref) does not cite any JIRA from the expected
 $HOOK: projects ($project) in the message:
@@ -166,8 +166,8 @@ EOF
 
     my @issues;
 
-    my $unresolved = $git->config_scalar($HOOK => 'unresolved');
-    my $committer  = $git->config_scalar($HOOK => 'by-assignee');
+    my $unresolved = $git->config($HOOK => 'unresolved');
+    my $committer  = $git->config($HOOK => 'by-assignee');
 
     foreach my $key (@keys) {
         my $issue = get_issue($git, $key);
@@ -202,7 +202,7 @@ sub check_message_file {
     _setup_config($git);
 
     my $current_branch = 'refs/heads/' . $git->get_current_branch();
-    return unless is_ref_enabled($current_branch, $git->config_list($HOOK => 'ref'));
+    return unless is_ref_enabled($current_branch, $git->config($HOOK => 'ref'));
 
     my $msg = read_file($commit_msg_file)
         or die "$HOOK: Can't open file '$commit_msg_file' for reading: $!\n";
@@ -222,7 +222,7 @@ sub check_message_file {
 sub check_ref {
     my ($git, $ref) = @_;
 
-    return unless is_ref_enabled($ref, $git->config_list($HOOK => 'ref'));
+    return unless is_ref_enabled($ref, $git->config($HOOK => 'ref'));
 
     foreach my $commit ($git->get_affected_ref_commits($ref)) {
         check_commit_msg($git, $commit, $ref);

@@ -35,7 +35,7 @@ sub grok_acls {
 
     my @acls;                   # This will hold the ACL specs
 
-    foreach my $acl ($git->config_list($HOOK => 'acl')) {
+    foreach my $acl ($git->config($HOOK => 'acl')) {
         # Interpolate environment variables embedded as "{VAR}".
         $acl =~ s/{(\w+)}/$ENV{$1}/ige;
         push @acls, [split / /, $acl, 3];

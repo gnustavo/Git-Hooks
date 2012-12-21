@@ -34,7 +34,7 @@ use Error qw(:try);
 sub get_structure {
     my ($git, $what) = @_;
 
-    if (my $value = $git->config_scalar($HOOK => $what)) {
+    if (my $value = $git->config($HOOK => $what)) {
         local $@ = undef;
         my $structure = eval {eval_gitconfig($value)};
         die "$HOOK: $@\n" if $@;

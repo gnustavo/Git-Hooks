@@ -94,16 +94,14 @@ sub get_config {
     return $git->{more}{config};
 }
 
-sub config_scalar {
+sub config {
     my ($git, $section, $var) = @_;
     my $config = $git->get_config();
-    return exists $config->{$section}{$var} ? $config->{$section}{$var}[-1] : undef;
-}
-
-sub config_list {
-    my ($git, $section, $var) = @_;
-    my $config = $git->get_config();
-    return exists $config->{$section}{$var} ? @{$config->{$section}{$var}} : ();
+    if (exists $config->{$section}{$var}) {
+        return wantarray ? @{$config->{$section}{$var}} : $config->{$section}{$var}[-1];
+    } else {
+        return wantarray ? () : undef;
+    }
 }
 
 sub cache {
@@ -226,7 +224,7 @@ sub authenticated_user {
     my ($git) = @_;
 
     unless (exists $git->{more}{authenticated_user}) {
-        if (my $userenv = $git->config_scalar(githooks => 'userenv')) {
+        if (my $userenv = $git->config(githooks => 'userenv')) {
             if ($userenv =~ /^eval:(.*)/) {
                 $git->{more}{authenticated_user} = eval $1; ## no critic (BuiltinFunctions::ProhibitStringyEval)
                 die __PACKAGE__, ": error evaluating userenv value ($userenv): $@\n"
@@ -327,16 +325,16 @@ it like this:
      $h->{section1}{a}[-1]
      $h->{section2}{'x.a'}[-1]
 
-=head2 config_scalar SECTION VARIABLE
+=head2 config SECTION VARIABLE
 
 This method fetches the configuration option SECTION.VARIABLE as a
-scalar. If the option has more than one value, the last one is
-returned. If the option is undefined, it returns undef.
+scalar or a list, depending on the context in which it was called.
 
-=head2 config_list SECTION VARIABLE
+In scalar context, if the option has more than one value, the last one
+is returned. If the option is undefined, it returns undef.
 
-This method fetches the configuration option SECTION.VARIABLE as a
-list. If the option is undefined, it returns the empty list.
+In list context, all option values are returned in a list. If the
+option is undefined, it returns the empty list.
 
 =head2 cache SECTION
 
