@@ -166,8 +166,8 @@ EOF
 
     my @issues;
 
-    my $unresolved = $git->config($HOOK => 'unresolved');
-    my $committer  = $git->config($HOOK => 'by-assignee');
+    my $unresolved  = $git->config($HOOK => 'unresolved');
+    my $by_assignee = $git->config($HOOK => 'by-assignee');
 
     foreach my $key (@keys) {
         my $issue = get_issue($git, $key);
@@ -176,14 +176,14 @@ EOF
             die ferror($key, $commit, $ref, "is already resolved"), "\n";
         }
 
-        if ($committer) {
-            exists $ENV{$committer}
+        if ($by_assignee) {
+            my $user = $git->authenticated_user()
                 or die ferror($key, $commit, $ref,
-                              "the environment variable '$committer' is undefined. Cannot get committer name"), "\n";
+                              "cannot grok the authenticated user"), "\n";
 
-            $ENV{$committer} eq $issue->{assignee}
+            $user eq $issue->{assignee}
                 or die ferror($key, $commit, $ref,
-                              "is currently assigned to '$issue->{assignee}' but should be assigned to you ($ENV{$committer})"), "\n";
+                              "is currently assigned to '$issue->{assignee}' but should be assigned to you ($user)"), "\n";
         }
 
         push @issues, $issue;
@@ -385,11 +385,12 @@ By default, every issue referenced must be unresolved, i.e., it must
 not have a resolution. You can relax this requirement by setting this
 option to 0.
 
-=head2 CheckJira.by-assignee STRING
+=head2 CheckJira.by-assignee [01]
 
 By default, the committer can reference any valid JIRA issue. Setting
-this value to the name of an environment variable, the script will
-check if its value is equal to the referenced JIRA issue's assignee.
+this value 1 requires that the user doing the push/commit (as
+specified by the C<userenv> configuration variable) be the current
+issue's assignee.
 
 =head2 CheckJira.check-code CODESPEC
 
