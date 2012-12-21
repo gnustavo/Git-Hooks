@@ -2,6 +2,60 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.025     2012-12-21 08:06:04 America/Sao_Paulo
+
+        This version is another big refactoring. It introduces a few
+        incompatible changes as well, for good measure. ;-)
+
+        * INCOMPATIBLE CHANGES AFFECTING PLUGIN USERS:
+
+        The CheckJira.by-assignee option previously required the name
+        of an environment variable. But this was duplicating poorly
+        the functionality of the githooks.userenv global option. So, I
+        changed its meaning to now require a boolean (integer). If
+        true it now checks if the authenticated_user (as infered by
+        the githooks.userenv option) is the current issue's assignee.
+
+        * INCOMPATIBLE CHANGES AFFECTING PLUGIN DEVELOPERS:
+
+        The Git::Hooks routines grok_affected_refs, get_affected_refs,
+        get_affected_ref_range, get_affected_ref_commit_ids, and
+        get_affected_ref_commits were transformed in Git::More
+        methods, so that they can now keep the affected_refs
+        information inside the objects.
+
+        The Git::Hooks::grok_userenv routine was transformed into the
+        Git::More::authenticated_user method.
+
+        The Git::Hooks::git_config routine was tranformed into the
+        Git::More::config method.
+
+        The method Git::More::get_commits now returns a list of
+        commits and not an array-ref. This makes its usage simpler.
+
+        * FIXES:
+
+        The tests are now performed out of the distribution directory.
+        By performing them in the distribution directory we run the
+        risk of messing up with Git::Hooks own git repository, which
+        can interfere with the tests too.
+
+        * REFACTORINGS:
+
+        Got rid of global variables in Git::Hooks and all state
+        variables used throughout. This had a great impact in the
+        code, adding arguments to several routines, turning Git::Hooks
+        routines into Git::More methods, adding new methods
+
+        The tests now prepare only the hooks that will be
+        tested. Earlier we prepared all 16 hooks, which made the
+        testing take longer.
+
+        The compatibility with old plugin names that was implemented
+        some commits ago was made more specific, affecting just the
+        plugins CheckAcls, CheckJira, and CheckStructure. Those were
+        the plugins that existed before the plugin name change.
+
 0.024     2012-12-17 12:35:52 America/Sao_Paulo
 
         Implement a new plugin Git::Hooks::GerritChangeId which is a
