@@ -2,6 +2,16 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.026     2012-12-22 20:23:22 America/Sao_Paulo
+
+        Implement a new plugin Git::Hooks::CheckLog to enforce
+        formatting policies for git commit log messages.
+
+        Fix configuration grokking.
+
+        Recommends JIRA::Client instead of requiring it, as it is only
+        needed for the Git::Hooks::CheckJira plugin.
+
 0.025     2012-12-21 08:06:04 America/Sao_Paulo
 
         This version is another big refactoring. It introduces a few
