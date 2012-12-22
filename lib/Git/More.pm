@@ -31,12 +31,17 @@ sub _compatibilize_config {
     }
 
     foreach my $name (
-        ['check-acls'      => 'CheckAcls'],
-        ['check-jira'      => 'CheckJira'],
-        ['check-structure' => 'CheckStructure'],
+        ['check-acls'      => 'checkacls'],
+        ['check-jira'      => 'checkjira'],
+        ['check-structure' => 'checkstructure'],
     ) {
-        if (exists $config->{$name->[0]} && ! exists $config->{$name->[1]}) {
-            $config->{$name->[1]} = delete $config->{$name->[0]};
+        if (exists $config->{$name->[0]}) {
+            if (exists $config->{$name->[1]}) {
+                die  __PACKAGE__, ": you have incompatible configuration sections: '$name->[0]' and '$name->[1]'.\n",
+                    "Please, rename all variables from section '$name->[0]' to section '$name->[1]'.\n";
+            } else {
+                $config->{$name->[1]} = delete $config->{$name->[0]};
+            }
         }
     }
 
@@ -51,7 +56,7 @@ sub _compatibilize_config {
 
     foreach my $var (qw/admin userenv/) {
         next if exists $config->{githooks}{$var};
-        foreach my $plugin (qw/CheckAcls CheckJira/) {
+        foreach my $plugin (qw/checkacls checkjira/) {
             if (exists $config->{$plugin}{$var}) {
                 $config->{githooks}{$var} = $config->{$plugin}{$var};
                 next;
@@ -73,8 +78,11 @@ sub get_config {
             while (<$fh>) {
                 chop;           # final \x0
                 my ($option, $value) = split /\n/, $_, 2;
-                my ($section, $key)  = split /\./, $option, 2;
-                push @{$config{$section}{$key}}, $value;
+                if ($option =~ /(.+)\.(.+)/) {
+                    push @{$config{lc $1}{lc $2}}, $value;
+                } else {
+                    die __PACKAGE__, ": Cannot grok config variable name '$option'.\n";
+                }
             }
         }
         try {
@@ -97,8 +105,8 @@ sub get_config {
 sub config {
     my ($git, $section, $var) = @_;
     my $config = $git->get_config();
-    if (exists $config->{$section}{$var}) {
-        return wantarray ? @{$config->{$section}{$var}} : $config->{$section}{$var}[-1];
+    if (exists $config->{lc $section}{$var}) {
+        return wantarray ? @{$config->{lc $section}{$var}} : $config->{lc $section}{$var}[-1];
     } else {
         return wantarray ? () : undef;
     }

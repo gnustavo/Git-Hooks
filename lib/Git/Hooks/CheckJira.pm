@@ -38,11 +38,15 @@ sub _setup_config {
 
     my $config = $git->get_config();
 
-    # Default matchkey for matching default JIRA keys.
-    $config->{$HOOK}{matchkey}   //= ['\b[A-Z][A-Z]+-\d+\b'];
+    $config->{lc $HOOK} //= {};
 
-    $config->{$HOOK}{require}    //= [1];
-    $config->{$HOOK}{unresolved} //= [1];
+    my $default = $config->{lc $HOOK};
+
+    # Default matchkey for matching default JIRA keys.
+    $default->{matchkey}   //= ['\b[A-Z][A-Z]+-\d+\b'];
+
+    $default->{require}    //= [1];
+    $default->{unresolved} //= [1];
 
     return;
 }
