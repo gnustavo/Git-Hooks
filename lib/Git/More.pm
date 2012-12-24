@@ -150,10 +150,22 @@ sub get_commits {
 
 sub get_commit_msg {
     my ($git, $commit) = @_;
-    my $body = $git->command('rev-list' => '--format=%B', '--max-count=1', $commit);
-    $body =~ s/^[^\n]*\n//; # strip first line, which contains the commit id
-    chomp $body;            # strip last newline
-    return $body;
+
+    # We want to use the %B format to grok the commit message, but it
+    # was implemented only in Git v1.7.2. If we try to use it with
+    # rev-list in previous Gits we get back the same format
+    # unexpanded. In this case, we try the second best option which is
+    # to use the format %s%n%n%b. The difference is that this format
+    # unfolds the first sequence of non-empty lines in a single line
+    # which is considered the message's subject (or title).
+    foreach my $format (qw/%B %s%n%n%b/) {
+        my $body = $git->command('rev-list' => "--format=$format", '--max-count=1', $commit);
+        next if $body eq $format;
+        $body =~ s/^[^\n]*\n//; # strip first line, which contains the commit id
+        chomp $body;            # strip last newline
+        return $body;
+    }
+    die __PACKAGE__, "::get_commit_msg: cannot get commit msg.\n";
 }
 
 sub get_diff_files {
