@@ -3,6 +3,11 @@ use warnings;
 
 ##{ $perl_prereq ? qq[use $perl_prereq;] : ''; ##}
 
+if ($^O eq 'MSWin32') {
+    warn "I do not support Windows yet. Sorry.\n";
+    exit 0;
+}
+
 # Check if we have a proper git
 chomp(my $git_version = `git version`);
 if ($? == -1) {
