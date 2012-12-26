@@ -58,21 +58,10 @@ $repo->command(config => "githooks.commit-msg", 'CheckLog');
 
 # title-required
 
-check_cannot_commit('deny without required title', qr/log SHOULD have a title/, <<'EOF');
+check_cannot_commit('deny without required title', qr/log title has 2 lines but should have only 1/, <<'EOF');
 No
 Title
 EOF
-
-# The following test cannot succeed because git takes care of removing
-# any extra blank lines betwee the title and the body already.
-if (0) {
-    check_cannot_commit('deny with too much neck', qr/log title and body are separated by 2 blank lines/, <<'EOF');
-Title
-
-
-Body
-EOF
-}
 
 check_can_commit('allow with required title', <<'EOF');
 Title
@@ -89,13 +78,6 @@ $repo->command(config => 'CheckLog.title-required', 0);
 check_can_commit('allow without non-required title', <<'EOF');
 No
 Title
-EOF
-
-check_can_commit('allow with too much neck', <<'EOF');
-Title
-
-
-Body
 EOF
 
 $repo->command(config => 'CheckLog.title-required', 1);
@@ -140,7 +122,7 @@ $repo->command(config => 'CheckLog.title-period', 'deny');
 
 # title-max-width
 
-check_cannot_commit('deny large title', qr/log title is 51 characters long/, <<'EOF');
+check_cannot_commit('deny large title', qr/log title should be at most 50 characters wide, but it has 51/, <<'EOF');
 123456789012345678901234567890123456789012345678901
 
 The above title has 51 characters.
@@ -158,12 +140,12 @@ $repo->command(config => 'CheckLog.title-max-width', 50);
 
 # body-max-width
 
-check_cannot_commit('deny large body', qr/log body lines must be shorter than 72 characters but there is one with 75/, <<'EOF');
+check_cannot_commit('deny large body', qr/log body lines should be at most 72 characters wide, but there is one with 73/, <<'EOF');
 Title
 
 Body first line.
 
-123456789012345678901234567890123456789012345678900123456789001234567890123
+1234567890123456789012345678901234567890123456789012345678901234567890123
 The previous line has 73 characters.
 EOF
 

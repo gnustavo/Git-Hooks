@@ -82,41 +82,49 @@ sub check_patterns {
 }
 
 sub check_title {
-    my ($git, $id, $msg) = @_;
+    my ($git, $id, $title, $neck, $body) = @_;
 
-    if ($msg =~ s/^([^\n]+)(\n$|\n\n+)//s) {
-        my ($title, $sep) = ($1, $2);
-        length($msg) == 0 || length($sep) == 2
-            or die "$HOOK: $id\'s log title and body are separated by ", (length($sep)-1), " blank lines, not 1!\n";
-        if (my $max_width = $git->config($HOOK => 'title-max-width')) {
-            length($title) <= $max_width
-                or die "$HOOK: $id\'s log title is ", length($title), " characters long, more than $max_width!\n";
+    return unless $git->config($HOOK => 'title-required');
+
+    {
+        my $title_lines = ($title =~ tr/\n/\n/);
+        $title_lines += 1 if defined $neck;
+        die "$HOOK: $id\'s log title has $title_lines lines but should have only 1!\n"
+            unless $title_lines == 1;
+    }
+
+    # Here I was going to check the $neck length to make sure there is
+    # only one blank line between the title and the body. However, I
+    # soon realised that Git takes care of this and gets rid of any
+    # extra blank line in the original message before passing it to
+    # the commit-msg hook.
+
+    if (my $max_width = $git->config($HOOK => 'title-max-width')) {
+        die "$HOOK: $id\'s log title should be at most $max_width characters wide, but it has ", length($title), "!\n"
+            unless length($title) <= $max_width;
+    }
+
+    if (my $period = $git->config($HOOK => 'title-period')) {
+        if ($period eq 'deny') {
+            $title !~ /\.$/ or die "$HOOK: $id\'s log title SHOULD NOT end in a period.\n";
+        } elsif ($period eq 'require') {
+            $title =~ /\.$/ or die "$HOOK: $id\'s log title SHOULD end in a period.\n";
+        } elsif ($period ne 'allow') {
+            die "$HOOK: Invalid value for the $HOOK.title-period option: '$period'.\n";
         }
-        if (my $period = $git->config($HOOK => 'title-period')) {
-            if ($period eq 'deny') {
-                $title !~ /\.$/ or die "$HOOK: $id\'s log title SHOULD NOT end in a period.\n";
-            } elsif ($period eq 'require') {
-                $title =~ /\.$/ or die "$HOOK: $id\'s log title SHOULD end in a period.\n";
-            } elsif ($period ne 'allow') {
-                die "$HOOK: Invalid value for the $HOOK.title-period option: '$period'.\n";
-            }
-        }
-    } elsif ($git->config($HOOK => 'title-required')) {
-        die "$HOOK: $id\'s log SHOULD have a title.\n";
     }
 
     return;
 }
 
 sub check_body {
-    my ($git, $id, $msg) = @_;
+    my ($git, $id, $body) = @_;
 
     if (my $max_width = $git->config($HOOK => 'body-max-width')) {
-        $msg =~ /.*/gm;         # skip title
-        while ($msg =~ /^(.*)/gm) {
+        while ($body =~ /^(.*)/gm) {
             my $line = $1;
-            length($line) <= $max_width
-                or die "$HOOK: $id\'s log body lines must be shorter than $max_width characters but there is one with ", length($line), "!\n";
+            die "$HOOK: $id\'s log body lines should be at most $max_width characters wide, but there is one with ", length($line), "!\n"
+                unless length($line) <= $max_width;
         }
     }
 
@@ -130,9 +138,11 @@ sub check_message {
 
     check_patterns($git, $id, $msg);
 
-    check_title($git, $id, $msg);
+    my ($title, $neck, $body) = split /(\n\n+)/s, $msg, 2;
 
-    check_body($git, $id, $msg);
+    check_title($git, $id, $title, $neck, $body);
+
+    check_body($git, $id, $body);
 
     return;
 }
