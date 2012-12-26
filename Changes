@@ -2,6 +2,14 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.028     2012-12-25 22:47:34 America/Sao_Paulo
+
+        CheckLog implements spell checking of log messages.
+
+        Abort building on Windows. We're not ready yet.
+
+        Git::More::get_commit_msg now supports pre-1.7.2 Gits.
+
 0.026     2012-12-22 20:23:22 America/Sao_Paulo
 
         Implement a new plugin Git::Hooks::CheckLog to enforce
