@@ -24,6 +24,7 @@ use strict;
 use warnings;
 use Git::Hooks qw/:DEFAULT :utils/;
 use File::Slurp;
+use List::MoreUtils qw/uniq/;
 
 (my $HOOK = __PACKAGE__) =~ s/.*:://;
 
@@ -65,6 +66,65 @@ sub read_msg_encoded {
     return $msg;
 }
 
+sub _spell_checker {
+    my ($git, $msg) = @_;
+
+    my %extra_options;
+
+    if (my $lang = $git->config($HOOK => 'spelling-lang')) {
+        $extra_options{lang} = $lang;
+    }
+
+    unless (state $tried_to_check) {
+        unless (eval { require Text::SpellChecker; }) {
+            my $message = $@ ? $@ : '';
+            die "$HOOK: Could not require Text::SpellChecker module to spell messages.\n$message\n";
+        }
+
+        # Text::SpellChecker uses either Text::Hunspell or
+        # Text::Aspell to perform the checks. But it doesn't try to
+        # load those modules until we invoke its next_word method. So,
+        # in order to detect errors in those modules we first create a
+        # bogus Text::SpellChecker object and force it to spell a word
+        # to see if it can go so far.
+
+        my $checker = Text::SpellChecker->new(text => 'a', %extra_options);
+
+        my $word = eval { $checker->next_word(); };
+        die "$HOOK: Cannot spell check using Text::SpellChecker.\n$@\n" if $@;
+
+        $tried_to_check = 1;
+    };
+
+    return Text::SpellChecker->new(text => $msg, %extra_options);
+}
+
+sub check_spelling {
+    my ($git, $id, $msg) = @_;
+
+    return unless $git->config($HOOK => 'spelling');
+
+    # Check all words comprised of at least three Unicode letters
+    my $checker = _spell_checker($git, join("\n", uniq($msg =~ /\b(\p{Cased_Letter}{3,})\b/gi)));
+
+    my $errors = 0;
+    foreach my $badword ($checker->next_word()) {
+        unless ($errors++) {
+            warn "$HOOK: $id\'s log has the following spelling problems in it.\n";
+        }
+        my @suggestions = $checker->suggestions($badword);
+        if (defined $suggestions[0]) {
+            warn "  $badword (suggestions: ", join(', ', @suggestions), ")\n";
+        } else {
+            warn "  $badword (no suggestions)\n";
+        }
+    }
+
+    die "\n" if $errors;
+
+    return;
+}
+
 sub check_patterns {
     my ($git, $id, $msg) = @_;
 
@@ -101,7 +161,7 @@ sub check_title {
 
     if (my $max_width = $git->config($HOOK => 'title-max-width')) {
         die "$HOOK: $id\'s log title should be at most $max_width characters wide, but it has ", length($title), "!\n"
-            unless length($title) <= $max_width;
+            if length($title) > $max_width;
     }
 
     if (my $period = $git->config($HOOK => 'title-period')) {
@@ -124,7 +184,7 @@ sub check_body {
         while ($body =~ /^(.*)/gm) {
             my $line = $1;
             die "$HOOK: $id\'s log body lines should be at most $max_width characters wide, but there is one with ", length($line), "!\n"
-                unless length($line) <= $max_width;
+                if length($line) > $max_width;
         }
     }
 
@@ -135,6 +195,8 @@ sub check_message {
     my ($git, $commit, $msg) = @_;
 
     my $id = defined $commit ? substr($commit->{commit}, 0, 7) : 'commit';
+
+    check_spelling($git, $id, $msg);
 
     check_patterns($git, $id, $msg);
 
@@ -191,7 +253,7 @@ PRE_RECEIVE \&check_affected_refs;
 
 
 __END__
-=for Pod::Coverage read_msg_encoded check_message check_ref
+=for Pod::Coverage read_msg_encoded check_spelling check_patterns check_title check_body check_message check_ref
 
 =head1 NAME
 
@@ -224,11 +286,11 @@ comply.
 =back
 
 Projects using Git, probably more than projects using any other
-version control system, have a tradition of stablishing policies on
+version control system, have a tradition of establishing policies on
 the format of commit log messages. The REFERENCES section below lists
 some of the more important ones.
 
-This plugin allows one to enforce most of the more stablished
+This plugin allows one to enforce most of the more established
 policies. The default configuration already enforces the most common
 one.
 
@@ -291,6 +353,24 @@ This option may be specified more than once. It defines a list of
 regular expressions that will be matched against the commit log
 messages. If the '!' prefix isn't used, the log has to match the
 REGEXP. Otherwise, the log must not match the REGEXP.
+
+=head2 CheckLog.spelling [01]
+
+This option makes the plugin spell check the commit log message using
+C<Text::SpellChecker>. Any spell error will cause the commit or push
+to abort.
+
+Note that C<Text::SpellChecker> isn't required to install
+C<Git::Hooks>. So, you may see errors when you enable this
+check. Please, refer to the module's own documentation to see how to
+install it and its own dependencies (which are C<Text::Hunspell> or
+C<Text::Aspell>).
+
+=head2 CheckLog.spelling-lang ISO
+
+The Text::SpellChecker module uses defaults to infer which language is
+must use to spell check the message. You can make it use a particular
+language passing its ISO code to this option.
 
 =head2 i18n.commitEncoding ENCODING
 
