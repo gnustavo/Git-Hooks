@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use lib 't';
 use Test::More;
+use Test::Requires qw/Text::SpellChecker/;
 use File::Slurp;
 use File::Temp qw/tmpnam/;
 

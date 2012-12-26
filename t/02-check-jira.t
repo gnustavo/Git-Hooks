@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use lib 't';
 use Test::More tests => 18;
+use Test::Requires qw/Jira::Client/;
 use File::Slurp;
 
 require "test-functions.pl";
