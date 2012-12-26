@@ -65,10 +65,8 @@ sub read_msg_encoded {
     return $msg;
 }
 
-sub check_message {
-    my ($git, $commit, $msg) = @_;
-
-    my $id = defined $commit ? substr($commit->{commit}, 0, 7) : 'commit';
+sub check_patterns {
+    my ($git, $id, $msg) = @_;
 
     foreach my $match ($git->config($HOOK => 'match')) {
         if ($match =~ s/^!\s*//) {
@@ -80,7 +78,12 @@ sub check_message {
         }
     }
 
-    # Check title
+    return;
+}
+
+sub check_title {
+    my ($git, $id, $msg) = @_;
+
     if ($msg =~ s/^([^\n]+)(\n$|\n\n+)//s) {
         my ($title, $sep) = ($1, $2);
         length($msg) == 0 || length($sep) == 2
@@ -102,14 +105,34 @@ sub check_message {
         die "$HOOK: $id\'s log SHOULD have a title.\n";
     }
 
-    # Check body
+    return;
+}
+
+sub check_body {
+    my ($git, $id, $msg) = @_;
+
     if (my $max_width = $git->config($HOOK => 'body-max-width')) {
+        $msg =~ /.*/gm;         # skip title
         while ($msg =~ /^(.*)/gm) {
             my $line = $1;
             length($line) <= $max_width
                 or die "$HOOK: $id\'s log body lines must be shorter than $max_width characters but there is one with ", length($line), "!\n";
         }
     }
+
+    return;
+}
+
+sub check_message {
+    my ($git, $commit, $msg) = @_;
+
+    my $id = defined $commit ? substr($commit->{commit}, 0, 7) : 'commit';
+
+    check_patterns($git, $id, $msg);
+
+    check_title($git, $id, $msg);
+
+    check_body($git, $id, $msg);
 
     return;
 }
