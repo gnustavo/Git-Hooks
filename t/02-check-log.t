@@ -4,24 +4,13 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More;
+use Test::More tests => 20;
 use File::Slurp;
 use File::Temp qw/tmpnam/;
 
 require "test-functions.pl";
 
 my ($repo, $file, $clone);
-
-{
-    my $plan = 20;
-
-    # See if we can test the spell checker
-    if (eval { Git::Hooks::CheckLog::_spell_checker($repo, 'word'); }) {
-        $plan += 2;
-    }
-
-    plan tests => $plan;
-}
 
 my $msgfile = tmpnam();
 END { unlink $msgfile; };
@@ -202,13 +191,22 @@ $repo->command(config => '--unset-all', 'CheckLog.match');
 # encoding
 
 # spelling
+SKIP: {
+    use Git::Hooks::CheckLog;
+    my $checker = eval { Git::Hooks::CheckLog::_spell_checker($repo, 'word'); };
 
-check_can_commit('allow misspelling without checking', <<'EOF');
+    skip "Text::SpellChecker isn't properly installed", 2 unless $checker;
+
+    check_can_commit('allow misspelling without checking', <<'EOF');
 xytxuythiswordshouldnotspell
 EOF
 
-$repo->command(config => '--add', 'CheckLog.spelling', 1);
+    $repo->command(config => '--add', 'CheckLog.spelling', 1);
 
-check_cannot_commit('deny misspelling with checking', qr/log has the following spelling problems in it/, <<'EOF');
+    check_cannot_commit('deny misspelling with checking', qr/log has the following spelling problems in it/, <<'EOF');
 xytxuythiswordshouldnotspell
 EOF
+
+    $repo->command(config => '--unset-all', 'CheckLog.spelling');
+}
+
