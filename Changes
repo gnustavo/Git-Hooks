@@ -10,7 +10,7 @@ Revision history for Git-Hooks. -*- text -*-
 
         Fix test t/02-check-log.t requirement of Text::SpellChecker.
 
-        Recomends Text::SpellChecker instead of requiring it, as it's
+        Recommends Text::SpellChecker instead of requiring it, as it's
         only needed for the Git::Hooks::CheckLog plugin.
 
         Update TODO file.
@@ -44,7 +44,7 @@ Revision history for Git-Hooks. -*- text -*-
         of an environment variable. But this was duplicating poorly
         the functionality of the githooks.userenv global option. So, I
         changed its meaning to now require a boolean (integer). If
-        true it now checks if the authenticated_user (as infered by
+        true it now checks if the authenticated_user (as inferred by
         the githooks.userenv option) is the current issue's assignee.
 
         * INCOMPATIBLE CHANGES AFFECTING PLUGIN DEVELOPERS:
@@ -58,7 +58,7 @@ Revision history for Git-Hooks. -*- text -*-
         The Git::Hooks::grok_userenv routine was transformed into the
         Git::More::authenticated_user method.
 
-        The Git::Hooks::git_config routine was tranformed into the
+        The Git::Hooks::git_config routine was transformed into the
         Git::More::config method.
 
         The method Git::More::get_commits now returns a list of
@@ -145,7 +145,7 @@ Revision history for Git-Hooks. -*- text -*-
 0.018     2012-11-06 21:49:20 America/Sao_Paulo
 
 	Fix a bug that prevented installed hooks to be invoked in the
-	absense of any configured plugins. This was reported to me by
+	absence of any configured plugins. This was reported to me by
 	Mike South. Thanks!
 
 0.017     2012-10-31 10:45:10 America/Sao_Paulo

@@ -52,7 +52,7 @@
   http://tech.yipit.com/2011/11/16/183772396/.
 
 * Implement a hook to check the safety of rewrites, by detecting when
-  we're ammending or rebasing commits that have already been
+  we're amending or rebasing commits that have already been
   pushed. Some discussions about this:
 
   ** http://git.661346.n2.nabble.com/pre-rebase-safety-hook-td1614613.html

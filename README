@@ -4,7 +4,7 @@ WARNING: THIS IS IN BETA STATUS!!!
 
 Instead of having separate scripts implementing different
 functionality you may have a single script implementing all the
-funcionality you need either directly or using some of the existing
+functionality you need either directly or using some of the existing
 plugins, which are implemented by Perl scripts in the Git::Hooks::
 namespace. This single script can be used to implement all standard
 hooks, because each hook knows when to perform based on the context in
