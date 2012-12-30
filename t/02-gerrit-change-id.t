@@ -138,6 +138,11 @@ my $CID  = 'Change-Id: I7fc3876fee63c766a2063df97fbe04a2dddd8d7c';
 my $SOB1 = 'Signed-off-by: J Author <ja@example.com>';
 my $SOB2 = 'Signed-off-by: J Committer <jc@example.com>';
 
+# Set these environment variables to make sure the change ids come out
+# the same from our plugin and from the official Gerrit commit-msg
+# hook.
+$ENV{GIT_AUTHOR_DATE} = $ENV{GIT_COMMITTER_DATE} = '1356828164 -0200';
+
 foreach my $test (
     [ 'no-CID',              "a\n" ],
     [ 'single-line',         "a\n\n$CID\n" ],
