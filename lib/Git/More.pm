@@ -160,9 +160,9 @@ sub get_commit_msg {
     # which is considered the message's subject (or title).
     foreach my $format (qw/%B %s%n%n%b/) {
         my $body = $git->command('rev-list' => "--format=$format", '--max-count=1', $commit);
-        next if $body eq $format;
         $body =~ s/^[^\n]*\n//; # strip first line, which contains the commit id
         chomp $body;            # strip last newline
+        next if $body eq $format;
         return $body;
     }
     die __PACKAGE__, "::get_commit_msg: cannot get commit msg.\n";
