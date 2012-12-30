@@ -2,6 +2,10 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.030     2012-12-29 23:06:08 America/Sao_Paulo
+
+        Fix two bugs. No new features.
+
 0.029     2012-12-26 23:12:17 America/Sao_Paulo
 
         Fix test t/02-check-log.t requirement of Text::SpellChecker.
