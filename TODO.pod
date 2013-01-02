@@ -1,0 +1,144 @@
+=head1 TO-DO list of niceties for the future of Git::Hooks.
+
+The following list is in approximately my order of implementation
+intention. Any comments or other suggestion are welcome at gnustavo AT
+cpan.org.
+
+=head2 Move plugin config options to a githooks subsection
+
+Currently, each plugin defines a new configuration section for its own
+config options. This pollutes unnecessarily the configuration
+namespace. It would be better if each plugin used a subsection of the
+C<githooks> configuration section. For example, instead of
+C<checklog.spelling> we would use C<githooks.checklog.spelling>.
+
+=head2 Implement the Git::Hooks::SafeRewrite plugin
+
+Implement a plugin to check the safety of rewrites, by detecting when
+we're amending or rebasing commits that have already been pushed. Here
+are some discussion about this:
+
+=over
+
+=item L<http://git.661346.n2.nabble.com/pre-rebase-safety-hook-td1614613.html>
+
+=item L<http://git.apache.org/xmlbeans.git/hooks/pre-rebase.sample>
+
+=item L<http://www.mentby.com/Group/git/rfc-pre-rebase-refuse-to-rewrite-commits-that-are-reachable-from-upstream.html>
+
+=item L<http://git.661346.n2.nabble.com/RFD-Rewriting-safety-warn-before-when-rewriting-published-history-td7254708.html>
+
+=back
+
+The rebase check could be performed in a pre-rebase hook. But there is
+no way to check for an amended commit before it's done. One idea would
+be to record the HEAD's parents in a file during a pre-commit hook and
+produce an alert during a post-commit hook if the HEAD's parents are
+the same. In this case, the alert should provide the command that
+should be performed to revert the amend.
+
+=head2 Simplify plugin/hook integration
+
+Currently, if a plugin may be hooked to more than one hook, one must
+configure all the integrations by hand. For instance, the CheckJira
+plugin can be hooked to the C<update>, the C<pre-receive>, and the
+C<commit-msg> hooks, and the user has to know which hooks must be
+enabled. It would be easier if the plugins could hook themselves to
+all hooks directly. In this way, for instance, instead of configuring
+CheckJira specifically for one of those hooks with one of the
+following configurations:
+
+    git config --add githooks.commig-msg  CheckJira
+    git config --add githooks.pre-receive CheckJira
+    git config --add githooks.update      CheckJira
+
+One would simply do this:
+
+    git config --add githooks.plugin CheckJira
+
+CheckJira would automatically be enabled for all plugins, which would
+not even make it less efficient, because normally only one of those
+hooks would be invoked in a single operation. (The C<commit-msg>
+plugin would be invoked in a commit and the other two in a push. But,
+on the server the user would probably link either the pre-receive or
+the update hook to the generic script, so that only one of them would
+be effectively invoked during the operation.)
+
+=head2 Find a substitute for App::gh::Git
+
+The C<Git::More> module currently inherits from C<App::gh::Git>,
+augmenting its functionality with some methods useful for hooks and
+caching information to speed up things. The C<App::gh::Git> has some
+problems, though, which led me to want to substitute another Git
+wrapper for it as a base for C<Git::More>. Two of the finest
+candidates on CPAN are C<Git::Wrapper> and C<Git::Repository>.
+
+=head2 Support the WIN32 Platform
+
+Currently we abort the build on C<Makefile.PL>.
+
+=head2 Implement the Scott Chacon example hooks
+
+In L<https://github.com/schacon/githooks>.
+
+=head2 In CheckAcls implement DENY for ACL operations
+
+Along the lines of NFSv4 ACLs
+(L<http://tools.ietf.org/html/rfc5661#section-6>). I'm thinking about
+prefixing the what component with a '!'.
+
+=head2 Implement equivalents for the SVN::Hooks plugins
+
+In L<http://search.cpan.org/dist/SVN-Hooks/>. Currently we're missing
+DenyFilenames and UpdateConfFile. Actually, I'm thinking that
+UpdateConfFile is too much specific. Perhaps something along the lines
+of this post-update hook would be more interesting:
+L<http://stackoverflow.com/questions/279169/deploy-a-project-using-git-push>.
+
+=head2 Let the user control which config files to read
+
+Let the user tell which configuration files Git::Hooks should
+consider. Currently it considers the three default ones (system,
+global, and local), without knowing which one sets what. Perhaps we
+could have a new option C<githooks.extra_config> that could be set
+with an array of filenames to invoke C<git config --file> with in
+succession. This option, if set in the default configuration files,
+could tell Git::Hooks to grok an extra set of configuration from
+specific files.
+
+=head2 In CheckLog allow for stop words
+
+C<CheckLog.spelling> should have a way to register stop words. I'd
+have to ask for a change in Text::SpellChecker.
+
+=head2 CheckLog should check the footer of the commit log message
+
+The Gerrit default C<commit-msg> implements some checks that could be
+used here. Some other things to check:
+
+=over
+
+=item Require Signed-off-by lines
+(L<https://github.com/icefox/git-hooks/blob/master/git_hooks/commit-msg/signed-off-by>)
+
+=item Duplicate Signed-off-by lines
+(L<https://github.com/icefox/git-hooks/blob/master/contrib/commit-msg/duplicate-signedoffby>)
+
+=back
+
+=head2 Implement the Git::Hooks::CheckFile plugin
+
+Implement a hook to make it easy to perform some checks on
+added/modified files. For instance, Perl files should be syntax
+checked. This could be configured somewhat like this:
+
+    CheckFile.rule "\.p[lm]$ perl -c"
+
+The first 'word' in the value would be a regexp used to match the
+files we're interested in. All that follows would be a command to
+which the filename would be passed.
+
+This would allow for all kinds of checks specific for some kinds of
+files. Some interesting ideas here:
+L<http://tech.yipit.com/2011/11/16/183772396/>.
+
