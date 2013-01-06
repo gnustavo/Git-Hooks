@@ -4,33 +4,6 @@ The following list is in approximately my order of implementation
 intention. Any comments or other suggestion are welcome at gnustavo AT
 cpan.org.
 
-=head2 Simplify plugin/hook integration
-
-Currently, if a plugin may be hooked to more than one hook, one must
-configure all the integrations by hand. For instance, the CheckJira
-plugin can be hooked to the C<update>, the C<pre-receive>, and the
-C<commit-msg> hooks, and the user has to know which hooks must be
-enabled. It would be easier if the plugins could hook themselves to
-all hooks directly. In this way, for instance, instead of configuring
-CheckJira specifically for one of those hooks with one of the
-following configurations:
-
-    git config --add githooks.commig-msg  CheckJira
-    git config --add githooks.pre-receive CheckJira
-    git config --add githooks.update      CheckJira
-
-One would simply do this:
-
-    git config --add githooks.plugin CheckJira
-
-CheckJira would automatically be enabled for all plugins, which would
-not even make it less efficient, because normally only one of those
-hooks would be invoked in a single operation. (The C<commit-msg>
-plugin would be invoked in a commit and the other two in a push. But,
-on the server the user would probably link either the pre-receive or
-the update hook to the generic script, so that only one of them would
-be effectively invoked during the operation.)
-
 =head2 Implement the Git::Hooks::SafeRewrite plugin
 
 Implement a plugin to check the safety of rewrites, by detecting when

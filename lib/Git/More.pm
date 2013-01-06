@@ -84,6 +84,20 @@ sub _compatibilize_config {
         }
     }
 
+    # Up to v0.031 the plugins had to be hooked explicitly to the
+    # hooks they implement by configuring the githooks.HOOK
+    # options. From v0.032 on the plugins can hook themselves to any
+    # hooks they want. The users have simply to tell which plugins
+    # they are interested in by adding them to the githooks.plugin
+    # option. Here we construct this option from the HOOK options if
+    # it's not configured yet.
+
+    unless (exists $config->{'githooks.plugin'}) {
+        foreach my $hook (grep {exists $config->{githooks}{$_}} qw/commit-msg pre-commit pre-receive post-receive update/) {
+            push @{$config->{githooks}{plugin}}, @{$config->{githooks}{$hook}};
+        }
+    }
+
     return;
 }
 

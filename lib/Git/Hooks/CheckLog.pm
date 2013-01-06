@@ -262,7 +262,7 @@ Git::Hooks::CheckLog - Git::Hooks plugin to enforce commit log policies.
 
 =head1 DESCRIPTION
 
-This Git::Hooks plugin can act as any of the below hooks to enforce
+This Git::Hooks plugin hooks itself to the hooks below to enforce
 policies on the commit log messages.
 
 =over
@@ -295,12 +295,10 @@ This plugin allows one to enforce most of the more established
 policies. The default configuration already enforces the most common
 one.
 
-To enable the plugin you should define the appropriate Git
-configuration option like one of these:
+To enable it you should add it to the githooks.plugin configuration
+option:
 
-    git config --add githooks.commit-msg  CheckLog
-    git config --add githooks.pre-receive CheckLog
-    git config --add githooks.update      CheckLog
+    git config --add githooks.plugin CheckLog
 
 =head1 CONFIGURATION
 

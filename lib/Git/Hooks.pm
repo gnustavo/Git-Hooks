@@ -8,6 +8,7 @@ use Exporter qw/import/;
 use Data::Util qw(:all);
 use File::Basename;
 use File::Spec::Functions;
+use List::MoreUtils qw/uniq/;
 
 our (@EXPORT, @EXPORT_OK, %EXPORT_TAGS); ## no critic (Modules::ProhibitAutomaticExportation)
 my %Hooks;
@@ -228,7 +229,7 @@ sub run_hook {
     }
 
     # Invoke enabled plugins
-    if (my @enabled_plugins = $git->config(githooks => $hook_name)) {
+    if (my @enabled_plugins = $git->config(githooks => 'plugin')) {
         # Define the list of directories where we'll look for the hook
         # plugins. First the local directory 'githooks' under the
         # repository path, then the optional list of directories
@@ -241,21 +242,27 @@ sub run_hook {
         );
 
       HOOK:
-        foreach my $hook (@enabled_plugins) {
-            $hook .= '.pm' unless $hook =~ /\.p[lm]$/i;
-            foreach my $dir (@plugin_dirs) {
-                my $script = catfile($dir, $hook);
-                next unless -f $script;
-
-                my $exit = do $script;
-                unless ($exit) {
-                    die __PACKAGE__, ": couldn't parse $script: $@\n" if $@;
-                    die __PACKAGE__, ": couldn't do $script: $!\n"    unless defined $exit;
-                    die __PACKAGE__, ": couldn't run $script\n"       unless $exit;
+        foreach my $hook (uniq @enabled_plugins) {
+            my $exit = do {
+                if ($hook =~ /::/) {
+                    # It must be a module name
+                    eval "require $hook"; ## no critic (BuiltinFunctions::ProhibitStringyEval ErrorHandling::RequireCheckingReturnValueOfEval)
+                } else {
+                    # Otherwise, it's a basename that we must look for
+                    # in @plugin_dirs
+                    $hook .= '.pm' unless $hook =~ /\.p[lm]$/i;
+                    my @scripts = grep {-f} map {catfile($_, $hook)} @plugin_dirs;
+                    my $script = shift @scripts
+                        or die __PACKAGE__, ": can't find enabled hook $hook.\n";
+                    $hook = $script; # for the error messages below
+                    do $script;
                 }
-                next HOOK;
+            };
+            unless ($exit) {
+                die __PACKAGE__, ": couldn't parse $hook: $@\n" if $@;
+                die __PACKAGE__, ": couldn't do $hook: $!\n"    unless defined $exit;
+                die __PACKAGE__, ": couldn't run $hook\n";
             }
-            die __PACKAGE__, ": can't find enabled hook $hook.\n";
         }
     }
 
@@ -375,8 +382,8 @@ command, which spawns yet another process.
 
 =back
 
-Git::Hooks is a framework for implementing Git and driving existing
-external hooks in a way that tries to solve these problems.
+Git::Hooks is a framework for implementing Git hooks and driving
+existing external hooks in a way that tries to solve these problems.
 
 Instead of having separate scripts implementing different
 functionality you may have a single script implementing all the
@@ -498,10 +505,9 @@ the current Git phase.
 
 =head2 Using Plugins
 
-There are several hooks already implemented as plugin modules under
-the namespace C<Git::Hooks::>, which you can use. The main ones are
-described succinctly below. Please, see their own documentation for
-more details.
+There are several hooks already implemented as plugin modules, which
+you can use. Some are described succinctly below. Please, see their
+own documentation for more details.
 
 =over
 
@@ -540,6 +546,9 @@ These plugins are configured by Git's own configuration framework,
 using the C<git config> command or by directly editing Git's
 configuration files. (See C<git help config> to know more about Git's
 configuration infrastructure.)
+
+To enable a plugin you must add it to the C<githooks.plugin>
+configuration option.
 
 The CONFIGURATION section below explains this in more detail.
 
@@ -596,80 +605,28 @@ repository. Note that this will fetch all C<--system>, C<--global>,
 and C<--local> options, in this order. You may use this mechanism to
 define configuration global to a user or local to a repository.
 
-=head2 githooks.HOOK PLUGIN
+=head2 githooks.plugin PLUGIN
 
-To enable a plugin you must register it to the appropriate Git hook.
-For instance, if you want to register the C<CheckJira> plugin in the
-C<update> hook, you must do this:
+To enable a plugin you must add it to this configutation option, like
+this:
 
-    $ git config --add githooks.update CheckJira
+    $ git config --add githooks.plugin CheckAcls
 
-And if you want to register the C<CheckAcls> plugin in the
-C<pre-receive> hook, you must do this:
+To enable more than one plugin, simply repeat the command for the next
+one:
 
-    $ git config --add githooks.pre-receive CheckAcls
+    $ git config --add githooks.plugin CheckJira
 
-The complete list of Git hooks that can be used is this:
+A plugin may hook itself to one or more hooks. C<CheckJira>, for
+example, hook itself to three: C<commit-msg>, C<pre-receive>, and
+C<update>. It's important that the corresponding symbolic links be
+created pointing from the hook names to the generic script so that the
+hooks are effectively invoked.
 
-=over 4
+In the previous examples, the plugins were referred to by their short
+names. In this case they are looked for in three places.
 
-=item githooks.applypatch-msg
-
-=item githooks.pre-applypatch
-
-=item githooks.post-applypatch
-
-=item githooks.pre-commit
-
-=item githooks.prepare-commit-msg
-
-=item githooks.commit-msg
-
-=item githooks.post-commit
-
-=item githooks.pre-rebase
-
-=item githooks.post-checkout
-
-=item githooks.post-merge
-
-=item githooks.pre-receive
-
-=item githooks.update
-
-=item githooks.post-receive
-
-=item githooks.post-update
-
-=item githooks.pre-auto-gc
-
-=item githooks.post-rewrite
-
-=back
-
-Note that you may enable more than one plugin to the same hook. For
-instance, you may enable both C<CheckAcls> and C<CheckJira> for the
-C<update> hook:
-
-    $ git config --add githooks.update CheckAcls
-    $ git config --add githooks.update CheckJira
-
-And you may enable the same plugin in more than one hook, if it makes
-sense to do so. For instance:
-
-    $ git config --add githooks.commit-msg CheckJira
-    $ git config --add githooks.pre-receive CheckJira
-
-(Up to version 0.022 of Git::Hooks, the plugin names were in the form
-C<check-jira.pl>. The old form is still valid to preserve
-compatibility, but the standard CamelCase form for Perl module names
-are now preferred. The '.pl' extension in the plugin name is
-optional.)
-
-=head2 githooks.plugins DIR
-
-The plugins enabled for a hook are searched for in three places. First
-they're are searched for in the C<githooks> directory under the
+First they're are searched for in the C<githooks> directory under the
 repository path (usually in C<.git/githooks>), so that you may have
 repository specific hooks (or repository specific versions of a hook).
 
@@ -679,10 +636,22 @@ have more than one directory holding your hooks.
 
 Finally, they are searched for in Git::Hooks installation.
 
-The first match is taken as the desired plugin, which is executed and
-the search stops. So, you may want to copy one of the standard plugins
-and change it to suit your needs better. (Don't shy away from sending
-your changes back to us, though.)
+The first match is taken as the desired plugin, which is executed (via
+C<do>) and the search stops. So, you may want to copy one of the
+standard plugins and change it to suit your needs better. (Don't shy
+away from sending your changes back to us, though.)
+
+However, if you use the fully qualified module name of the plugin in
+the configuration, then it will be simply C<required> as a normal
+module. For example:
+
+    $ git config --add githooks.plugin My::Hook::CheckSomething
+
+=head2 githooks.plugins DIR
+
+This option specify a list of directories where plugins are looked for
+besides the default locations, as explained in the C<githooks.plugin>
+option above.
 
 =head2 githooks.externals [01]
 
@@ -874,7 +843,7 @@ need to implement more than one specific hook.
 
 =head1 METHODS FOR PLUGIN DEVELOPERS
 
-plugins should start by importing the utility routines from
+Plugins should start by importing the utility routines from
 Git::Hooks:
 
     use Git::Hooks qw/:utils/;
