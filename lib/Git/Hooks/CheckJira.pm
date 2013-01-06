@@ -28,7 +28,8 @@ use Data::Util qw(:check);
 use List::MoreUtils qw/uniq/;
 use JIRA::Client;
 
-(my $HOOK = __PACKAGE__) =~ s/.*:://;
+my $PKG = __PACKAGE__;
+(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
 #############
 # Grok hook configuration, check it and set defaults.
@@ -38,9 +39,9 @@ sub _setup_config {
 
     my $config = $git->get_config();
 
-    $config->{lc $HOOK} //= {};
+    $config->{lc $CFG} //= {};
 
-    my $default = $config->{lc $HOOK};
+    my $default = $config->{lc $CFG};
 
     # Default matchkey for matching default JIRA keys.
     $default->{matchkey}   //= ['\b[A-Z][A-Z]+-\d+\b'];
@@ -56,8 +57,8 @@ sub _setup_config {
 sub grok_msg_jiras {
     my ($git, $msg) = @_;
 
-    my $matchkey = $git->config($HOOK => 'matchkey');
-    my $matchlog = $git->config($HOOK => 'matchlog');
+    my $matchkey = $git->config($CFG => 'matchkey');
+    my $matchlog = $git->config($CFG => 'matchlog');
 
     # Grok the JIRA issue keys from the commit log
     if ($matchlog) {
@@ -80,21 +81,21 @@ sub get_issue {
     unless (defined $JIRA) {
         my %jira;
         for my $option (qw/jiraurl jirauser jirapass/) {
-            $jira{$option} = $git->config($HOOK => $option)
-                or die "$HOOK: Missing $HOOK.$option configuration attribute.\n";
+            $jira{$option} = $git->config($CFG => $option)
+                or die "$PKG: Missing $CFG.$option configuration attribute.\n";
         }
         $jira{jiraurl} =~ s:/+$::; # trim trailing slashes from the URL
         $JIRA = eval {JIRA::Client->new($jira{jiraurl}, $jira{jirauser}, $jira{jirapass})};
-        die "$HOOK: cannot connect to the JIRA server at '$jira{jiraurl}' as '$jira{jirauser}': $@\n"
+        die "$PKG: cannot connect to the JIRA server at '$jira{jiraurl}' as '$jira{jirauser}': $@\n"
             if $@;
     }
 
-    my $cache = $git->cache($HOOK);
+    my $cache = $git->cache($PKG);
 
     # Try to get the issue from the cache
     unless (exists $cache->{$key}) {
         $cache->{$key} = eval {$JIRA->getIssue($key)};
-        die "$HOOK: cannot get issue $key: $@\n" if $@;
+        die "$PKG: cannot get issue $key: $@\n" if $@;
     }
 
     return $cache->{$key};
@@ -102,7 +103,7 @@ sub get_issue {
 
 sub ferror {
     my ($key, $commit, $ref, $error) = @_;
-    my $msg = "$HOOK: issue $key, $error.\n  (cited ";
+    my $msg = "$PKG: issue $key, $error.\n  (cited ";
     $msg .= "by $commit->{commit} " if $commit->{commit};
     $msg .= "in $ref)";
     return $msg;
@@ -113,21 +114,21 @@ sub check_codes {
 
     my @codes;
 
-    foreach my $check ($git->config($HOOK => 'check-code')) {
+    foreach my $check ($git->config($CFG => 'check-code')) {
         my $code;
         if ($check =~ s/^file://) {
             $code = do $check;
             unless ($code) {
-                die "$HOOK: couldn't parse option check-code ($check): $@\n" if $@;
-                die "$HOOK: couldn't do option check-code ($check): $!\n"    unless defined $code;
-                die "$HOOK: couldn't run option check-code ($check)\n"       unless $code;
+                die "$PKG: couldn't parse option check-code ($check): $@\n" if $@;
+                die "$PKG: couldn't do option check-code ($check): $!\n"    unless defined $code;
+                die "$PKG: couldn't run option check-code ($check)\n"       unless $code;
             }
         } else {
             $code = eval $check; ## no critic (BuiltinFunctions::ProhibitStringyEval)
-            die "$HOOK: couldn't parse option check-code value:\n$@\n" if $@;
+            die "$PKG: couldn't parse option check-code value:\n$@\n" if $@;
         }
         is_code_ref($code)
-            or die "$HOOK: option check-code must end with a code ref.\n";
+            or die "$PKG: option check-code must end with a code ref.\n";
         push @codes, $code;
     }
 
@@ -142,24 +143,24 @@ sub check_commit_msg {
 
     # Filter out JIRAs not belonging to any of the specific projects,
     # if any. We don't care about them.
-    if (my @projects = $git->config($HOOK => 'project')) {
+    if (my @projects = $git->config($CFG => 'project')) {
         my %projects = map {($_ => undef)} @projects;
         @keys = grep {/([^-]+)/ && exists $projects{$1}} @keys;
     }
 
     unless (@keys) {
-        if ($git->config($HOOK => 'require')) {
+        if ($git->config($CFG => 'require')) {
             my $shortid = substr $commit->{commit}, 0, 8;
             if (@keys == $nkeys) {
                 die <<"EOF";
-$HOOK: commit $shortid (in $ref) does not cite any JIRA in the message:
+$PKG: commit $shortid (in $ref) does not cite any JIRA in the message:
 $commit->{body}
 EOF
             } else {
-                my $project = join(' ', $git->config($HOOK => 'project'));
+                my $project = join(' ', $git->config($CFG => 'project'));
                 die <<"EOF";
-$HOOK: commit $shortid (in $ref) does not cite any JIRA from the expected
-$HOOK: projects ($project) in the message:
+$PKG: commit $shortid (in $ref) does not cite any JIRA from the expected
+$PKG: projects ($project) in the message:
 $commit->{body}
 EOF
             }
@@ -170,8 +171,8 @@ EOF
 
     my @issues;
 
-    my $unresolved  = $git->config($HOOK => 'unresolved');
-    my $by_assignee = $git->config($HOOK => 'by-assignee');
+    my $unresolved  = $git->config($CFG => 'unresolved');
+    my $by_assignee = $git->config($CFG => 'by-assignee');
 
     foreach my $key (@keys) {
         my $issue = get_issue($git, $key);
@@ -206,10 +207,10 @@ sub check_message_file {
     _setup_config($git);
 
     my $current_branch = 'refs/heads/' . $git->get_current_branch();
-    return unless is_ref_enabled($current_branch, $git->config($HOOK => 'ref'));
+    return unless is_ref_enabled($current_branch, $git->config($CFG => 'ref'));
 
     my $msg = read_file($commit_msg_file)
-        or die "$HOOK: Can't open file '$commit_msg_file' for reading: $!\n";
+        or die "$PKG: Can't open file '$commit_msg_file' for reading: $!\n";
 
     # Remove comment lines from the message file contents.
     $msg =~ s/^#[^\n]*\n//mgs;
@@ -226,7 +227,7 @@ sub check_message_file {
 sub check_ref {
     my ($git, $ref) = @_;
 
-    return unless is_ref_enabled($ref, $git->config($HOOK => 'ref'));
+    return unless is_ref_enabled($ref, $git->config($CFG => 'ref'));
 
     foreach my $commit ($git->get_affected_ref_commits($ref)) {
         check_commit_msg($git, $commit, $ref);
@@ -310,7 +311,7 @@ option:
 
 The plugin is configured by the following git options.
 
-=head2 CheckJira.ref REFSPEC
+=head2 githooks.checkjira.ref REFSPEC
 
 By default, the message of every commit is checked. If you want to
 have them checked only for some refs (usually some branch under
@@ -322,35 +323,35 @@ The refs can be specified as a complete ref name
 caret (C<^>), which is kept as part of the regexp
 (e.g. "^refs/heads/(master|fix)").
 
-=head2 CheckJira.userenv STRING
+=head2 githooks.checkjira.userenv STRING
 
 This variable is deprecated. Please, use the C<githooks.userenv>
 variable, which is defined in the Git::Hooks module. Please, see its
 documentation to understand it.
 
-=head2 CheckJira.admin USERSPEC
+=head2 githooks.checkjira.admin USERSPEC
 
 This variable is deprecated. Please, use the C<githooks.admin>
 variable, which is defined in the Git::Hooks module. Please, see its
 documentation to understand it.
 
-=head2 CheckJira.jiraurl URL
+=head2 githooks.checkjira.jiraurl URL
 
 This option specifies the JIRA server HTTP URL, used to construct the
 C<JIRA::Client> object which is used to interact with your JIRA
 server. Please, see the JIRA::Client documentation to know about them.
 
-=head2 CheckJira.jirauser USERNAME
+=head2 githooks.checkjira.jirauser USERNAME
 
 This option specifies the JIRA server username, used to construct the
 C<JIRA::Client> object.
 
-=head2 CheckJira.jirapass PASSWORD
+=head2 githooks.checkjira.jirapass PASSWORD
 
 This option specifies the JIRA server password, used to construct the
 C<JIRA::Client> object.
 
-=head2 CheckJira.matchkey REGEXP
+=head2 githooks.checkjira.matchkey REGEXP
 
 By default, JIRA keys are matched with the regex
 C</\b[A-Z][A-Z]+-\d+\b/>, meaning, a sequence of two or more capital
@@ -360,7 +361,7 @@ you customized your JIRA project keys
 you may need to customize how this hook is going to match them. Set
 this option to a suitable regex to match a complete JIRA issue key.
 
-=head2 CheckJira.matchlog REGEXP
+=head2 githooks.checkjira.matchlog REGEXP
 
 By default, JIRA keys are looked for in all of the commit
 message. However, this can lead to some false positives, since the
@@ -371,32 +372,32 @@ message where the keys are going to be looked for.
 For example, set it to C<\[([^]]+)\]> to require that JIRA keys be
 cited inside the first pair of brackets found in the message.
 
-=head2 CheckJira.project STRING
+=head2 githooks.checkjira.project STRING
 
 By default, the committer can reference any JIRA issue in the commit
 log. You can restrict the allowed keys to a set of JIRA projects by
 specifying a JIRA project key to this option. You can enable more than
 one project by specifying more than one value to this option.
 
-=head2 CheckJira.require [01]
+=head2 githooks.checkjira.require [01]
 
 By default, the log must reference at least one JIRA issue. You can
 make the reference optional by setting this option to 0.
 
-=head2 CheckJira.unresolved [01]
+=head2 githooks.checkjira.unresolved [01]
 
 By default, every issue referenced must be unresolved, i.e., it must
 not have a resolution. You can relax this requirement by setting this
 option to 0.
 
-=head2 CheckJira.by-assignee [01]
+=head2 githooks.checkjira.by-assignee [01]
 
 By default, the committer can reference any valid JIRA issue. Setting
 this value 1 requires that the user doing the push/commit (as
 specified by the C<userenv> configuration variable) be the current
 issue's assignee.
 
-=head2 CheckJira.check-code CODESPEC
+=head2 githooks.checkjira.check-code CODESPEC
 
 If the above checks aren't enough you can use this option to define a
 custom code to check your commits. The code may be specified directly

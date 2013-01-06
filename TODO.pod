@@ -4,39 +4,6 @@ The following list is in approximately my order of implementation
 intention. Any comments or other suggestion are welcome at gnustavo AT
 cpan.org.
 
-=head2 Move plugin config options to a githooks subsection
-
-Currently, each plugin defines a new configuration section for its own
-config options. This pollutes unnecessarily the configuration
-namespace. It would be better if each plugin used a subsection of the
-C<githooks> configuration section. For example, instead of
-C<checklog.spelling> we would use C<githooks.checklog.spelling>.
-
-=head2 Implement the Git::Hooks::SafeRewrite plugin
-
-Implement a plugin to check the safety of rewrites, by detecting when
-we're amending or rebasing commits that have already been pushed. Here
-are some discussion about this:
-
-=over
-
-=item L<http://git.661346.n2.nabble.com/pre-rebase-safety-hook-td1614613.html>
-
-=item L<http://git.apache.org/xmlbeans.git/hooks/pre-rebase.sample>
-
-=item L<http://www.mentby.com/Group/git/rfc-pre-rebase-refuse-to-rewrite-commits-that-are-reachable-from-upstream.html>
-
-=item L<http://git.661346.n2.nabble.com/RFD-Rewriting-safety-warn-before-when-rewriting-published-history-td7254708.html>
-
-=back
-
-The rebase check could be performed in a pre-rebase hook. But there is
-no way to check for an amended commit before it's done. One idea would
-be to record the HEAD's parents in a file during a pre-commit hook and
-produce an alert during a post-commit hook if the HEAD's parents are
-the same. In this case, the alert should provide the command that
-should be performed to revert the amend.
-
 =head2 Simplify plugin/hook integration
 
 Currently, if a plugin may be hooked to more than one hook, one must
@@ -63,6 +30,31 @@ plugin would be invoked in a commit and the other two in a push. But,
 on the server the user would probably link either the pre-receive or
 the update hook to the generic script, so that only one of them would
 be effectively invoked during the operation.)
+
+=head2 Implement the Git::Hooks::SafeRewrite plugin
+
+Implement a plugin to check the safety of rewrites, by detecting when
+we're amending or rebasing commits that have already been pushed. Here
+are some discussion about this:
+
+=over
+
+=item L<http://git.661346.n2.nabble.com/pre-rebase-safety-hook-td1614613.html>
+
+=item L<http://git.apache.org/xmlbeans.git/hooks/pre-rebase.sample>
+
+=item L<http://www.mentby.com/Group/git/rfc-pre-rebase-refuse-to-rewrite-commits-that-are-reachable-from-upstream.html>
+
+=item L<http://git.661346.n2.nabble.com/RFD-Rewriting-safety-warn-before-when-rewriting-published-history-td7254708.html>
+
+=back
+
+The rebase check could be performed in a pre-rebase hook. But there is
+no way to check for an amended commit before it's done. One idea would
+be to record the HEAD's parents in a file during a pre-commit hook and
+produce an alert during a post-commit hook if the HEAD's parents are
+the same. In this case, the alert should provide the command that
+should be performed to revert the amend.
 
 =head2 Find a substitute for App::gh::Git
 

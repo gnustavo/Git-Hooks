@@ -581,7 +581,11 @@ exit with an appropriate error message.
 Git::Hooks is configured via Git's own configuration
 infrastructure. There are a few global options which are described
 below. Each plugin may define other specific options which are
-described in their own documentation.
+described in their own documentation. The options specific to a plugin
+usually are contained in a configuration subsection of section
+C<githooks>, named after the plugin base name. For example, the
+C<Git::Hooks::CheckAcls> plugin has its options contained in the
+configuration subsection C<githooks.checkacls>.
 
 You should get comfortable with C<git config> command (read C<git help
 config>) to know how to configure Git::Hooks.

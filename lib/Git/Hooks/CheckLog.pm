@@ -26,7 +26,8 @@ use Git::Hooks qw/:DEFAULT :utils/;
 use File::Slurp;
 use List::MoreUtils qw/uniq/;
 
-(my $HOOK = __PACKAGE__) =~ s/.*:://;
+my $PKG = __PACKAGE__;
+(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
 #############
 # Grok hook configuration, check it and set defaults.
@@ -36,9 +37,9 @@ sub _setup_config {
 
     my $config = $git->get_config();
 
-    $config->{lc $HOOK} //= {};
+    $config->{lc $CFG} //= {};
 
-    my $default = $config->{lc $HOOK};
+    my $default = $config->{lc $CFG};
     $default->{'title-required'}  //= [1];
     $default->{'title-max-width'} //= [50];
     $default->{'title-period'}    //= ['deny'];
@@ -55,7 +56,7 @@ sub read_msg_encoded {
     my $encoding = $git->config(i18n => 'commitencoding') || 'utf-8';
 
     my $msg = read_file($msgfile, { binmode => ":encoding($encoding)", err_mode => 'carp' })
-        or die "$HOOK: Cannot read message file '$msgfile' with encoding '$encoding'\n";
+        or die "$PKG: Cannot read message file '$msgfile' with encoding '$encoding'\n";
 
     # Strip the patch data from the message.
     $msg =~ s:^diff --git a/.*::ms;
@@ -71,14 +72,14 @@ sub _spell_checker {
 
     my %extra_options;
 
-    if (my $lang = $git->config($HOOK => 'spelling-lang')) {
+    if (my $lang = $git->config($CFG => 'spelling-lang')) {
         $extra_options{lang} = $lang;
     }
 
     unless (state $tried_to_check) {
         unless (eval { require Text::SpellChecker; }) {
             my $message = $@ ? $@ : '';
-            die "$HOOK: Could not require Text::SpellChecker module to spell messages.\n$message\n";
+            die "$PKG: Could not require Text::SpellChecker module to spell messages.\n$message\n";
         }
 
         # Text::SpellChecker uses either Text::Hunspell or
@@ -91,7 +92,7 @@ sub _spell_checker {
         my $checker = Text::SpellChecker->new(text => 'a', %extra_options);
 
         my $word = eval { $checker->next_word(); };
-        die "$HOOK: Cannot spell check using Text::SpellChecker.\n$@\n" if $@;
+        die "$PKG: Cannot spell check using Text::SpellChecker.\n$@\n" if $@;
 
         $tried_to_check = 1;
     };
@@ -102,7 +103,7 @@ sub _spell_checker {
 sub check_spelling {
     my ($git, $id, $msg) = @_;
 
-    return unless $git->config($HOOK => 'spelling');
+    return unless $git->config($CFG => 'spelling');
 
     # Check all words comprised of at least three Unicode letters
     my $checker = _spell_checker($git, join("\n", uniq($msg =~ /\b(\p{Cased_Letter}{3,})\b/gi)));
@@ -110,7 +111,7 @@ sub check_spelling {
     my $errors = 0;
     foreach my $badword ($checker->next_word()) {
         unless ($errors++) {
-            warn "$HOOK: $id\'s log has the following spelling problems in it.\n";
+            warn "$PKG: $id\'s log has the following spelling problems in it.\n";
         }
         my @suggestions = $checker->suggestions($badword);
         if (defined $suggestions[0]) {
@@ -128,13 +129,13 @@ sub check_spelling {
 sub check_patterns {
     my ($git, $id, $msg) = @_;
 
-    foreach my $match ($git->config($HOOK => 'match')) {
+    foreach my $match ($git->config($CFG => 'match')) {
         if ($match =~ s/^!\s*//) {
             $msg !~ /$match/m
-                or die "$HOOK: $id\'s log SHOULD NOT match \Q$match\E.\n";
+                or die "$PKG: $id\'s log SHOULD NOT match \Q$match\E.\n";
         } else {
             $msg =~ /$match/m
-                or die "$HOOK: $id\'s log SHOULD match \Q$match\E.\n";
+                or die "$PKG: $id\'s log SHOULD match \Q$match\E.\n";
         }
     }
 
@@ -144,12 +145,12 @@ sub check_patterns {
 sub check_title {
     my ($git, $id, $title, $neck, $body) = @_;
 
-    return unless $git->config($HOOK => 'title-required');
+    return unless $git->config($CFG => 'title-required');
 
     {
         my $title_lines = ($title =~ tr/\n/\n/);
         $title_lines += 1 if defined $neck;
-        die "$HOOK: $id\'s log title has $title_lines lines but should have only 1!\n"
+        die "$PKG: $id\'s log title has $title_lines lines but should have only 1!\n"
             unless $title_lines == 1;
     }
 
@@ -159,18 +160,18 @@ sub check_title {
     # extra blank line in the original message before passing it to
     # the commit-msg hook.
 
-    if (my $max_width = $git->config($HOOK => 'title-max-width')) {
-        die "$HOOK: $id\'s log title should be at most $max_width characters wide, but it has ", length($title), "!\n"
+    if (my $max_width = $git->config($CFG => 'title-max-width')) {
+        die "$PKG: $id\'s log title should be at most $max_width characters wide, but it has ", length($title), "!\n"
             if length($title) > $max_width;
     }
 
-    if (my $period = $git->config($HOOK => 'title-period')) {
+    if (my $period = $git->config($CFG => 'title-period')) {
         if ($period eq 'deny') {
-            $title !~ /\.$/ or die "$HOOK: $id\'s log title SHOULD NOT end in a period.\n";
+            $title !~ /\.$/ or die "$PKG: $id\'s log title SHOULD NOT end in a period.\n";
         } elsif ($period eq 'require') {
-            $title =~ /\.$/ or die "$HOOK: $id\'s log title SHOULD end in a period.\n";
+            $title =~ /\.$/ or die "$PKG: $id\'s log title SHOULD end in a period.\n";
         } elsif ($period ne 'allow') {
-            die "$HOOK: Invalid value for the $HOOK.title-period option: '$period'.\n";
+            die "$PKG: Invalid value for the $CFG.title-period option: '$period'.\n";
         }
     }
 
@@ -180,10 +181,10 @@ sub check_title {
 sub check_body {
     my ($git, $id, $body) = @_;
 
-    if (my $max_width = $git->config($HOOK => 'body-max-width')) {
+    if (my $max_width = $git->config($CFG => 'body-max-width')) {
         while ($body =~ /^(.*)/gm) {
             my $line = $1;
-            die "$HOOK: $id\'s log body lines should be at most $max_width characters wide, but there is one with ", length($line), "!\n"
+            die "$PKG: $id\'s log body lines should be at most $max_width characters wide, but there is one with ", length($line), "!\n"
                 if length($line) > $max_width;
         }
     }
@@ -305,20 +306,20 @@ configuration option like one of these:
 
 The plugin is configured by the following git options.
 
-=head2 CheckLog.title-required [01]
+=head2 githooks.checklog..title-required [01]
 
 The first line of a Git commit log message is usually called the
 'title'. It must be separated by the rest of the message (it's 'body')
 by one empty line. This option, which is 1 by default, makes the
 plugin check if there is a proper title in the log message.
 
-=head2 CheckLog.title-max-width N
+=head2 githooks.checklog..title-max-width N
 
 This option specifies a limit to the width of the title's in
 characters. It's 50 by default. If you set it to 0 the plugin imposes
 no limit on the title's width.
 
-=head2 CheckLog.title-period [deny|allow|require]
+=head2 githooks.checklog..title-period [deny|allow|require]
 
 This option defines the policy regarding the title's ending in a
 period (a.k.a. full stop ('.')). It can take three values:
@@ -341,20 +342,20 @@ This means that the title SHOULD end in a period.
 
 =back
 
-=head2 CheckLog.body-max-width N
+=head2 githooks.checklog..body-max-width N
 
 This option specifies a limit to the width of the commit log message's
 body lines, in characters. It's 72 by default. If you set it to 0 the
 plugin imposes no limit on the body line's width.
 
-=head2 CheckLog.match [!]REGEXP
+=head2 githooks.checklog..match [!]REGEXP
 
 This option may be specified more than once. It defines a list of
 regular expressions that will be matched against the commit log
 messages. If the '!' prefix isn't used, the log has to match the
 REGEXP. Otherwise, the log must not match the REGEXP.
 
-=head2 CheckLog.spelling [01]
+=head2 githooks.checklog..spelling [01]
 
 This option makes the plugin spell check the commit log message using
 C<Text::SpellChecker>. Any spell error will cause the commit or push
@@ -366,7 +367,7 @@ check. Please, refer to the module's own documentation to see how to
 install it and its own dependencies (which are C<Text::Hunspell> or
 C<Text::Aspell>).
 
-=head2 CheckLog.spelling-lang ISO
+=head2 githooks.checklog..spelling-lang ISO
 
 The Text::SpellChecker module uses defaults to infer which language is
 must use to spell check the message. You can make it use a particular

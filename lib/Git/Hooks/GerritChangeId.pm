@@ -27,7 +27,8 @@ use File::Slurp;
 use File::Temp qw/tempfile/;
 use Error qw(:try);
 
-(my $HOOK = __PACKAGE__) =~ s/.*:://;
+my $PKG = __PACKAGE__;
+(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
 ##########
 
@@ -152,7 +153,7 @@ sub rewrite_message {
     my ($git, $commit_msg_file) = @_;
 
     my $msg = read_file($commit_msg_file);
-    defined $msg or die "$HOOK: Can't open file '$commit_msg_file' for reading: $!\n";
+    defined $msg or die "$PKG: Can't open file '$commit_msg_file' for reading: $!\n";
 
     my $new_msg = insert_change_id($git, $msg);
 
