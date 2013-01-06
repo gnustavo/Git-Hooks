@@ -2,6 +2,19 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.031     2013-01-05 23:33:50 America/Sao_Paulo
+
+        Move plugin config options to a githooks subsection. For
+        example, the CheckLog.spelling option now is called
+        githooks.checklog.spelling. The new scheme avoids unecessary
+        pollution of the configuration namespace. The plugins that
+        existed up to the previous release can still have their
+        options in the previous place, because we dynamically move
+        them. This is a temporary measure to avoid breaking old
+        configuration. It will probably be removed in the future.
+
+        Rename TODO to TODO.pod and update it with new ideas.
+
 0.030     2012-12-29 23:06:08 America/Sao_Paulo
 
         Fix two bugs. No new features.
