@@ -147,7 +147,7 @@ sub check_ref {
 
     # Check names of newly added files
     if (get_structure($git, 'file')) {
-        push @errors, check_added_files($git, $git->get_diff_files('--diff-filter=A', $old_commit, $new_commit));
+        push @errors, check_added_files($git, $git->get_diff_files({diff_filter => 'A'}, $old_commit, $new_commit));
     }
 
     die join("\n", "$PKG: errors in ref '$ref' commits", @errors), "\n" if @errors;
@@ -171,7 +171,7 @@ sub check_affected_refs {
 sub check_commit {
     my ($git) = @_;
 
-    my @errors = check_added_files($git, $git->get_diff_files('--diff-filter=A', '--cached'));
+    my @errors = check_added_files($git, $git->get_diff_files({diff_filter => 'A', cached => 1}));
 
     die join("\n", "$PKG: errors in commit", @errors), "\n" if @errors;
 

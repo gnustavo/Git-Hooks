@@ -11,7 +11,6 @@ use File::Slurp;
 use URI::file;
 use Config;
 use Git::More;
-use Error qw(:try);
 
 # Make sure the git messages come in English.
 $ENV{LC_MESSAGES} = 'C';
@@ -19,11 +18,15 @@ $ENV{LC_MESSAGES} = 'C';
 our $T;
 our $HooksDir = catfile(rel2abs(curdir()), 'hooks');
 
-our $git_version;
-try {
-    $git_version = App::gh::Git::command_oneline('version');
-} otherwise {
-    $git_version = 'unknown';
+our $git_version = do {
+    my $GIT = ( defined $ENV{GIT_WRAPPER_GIT} ) ? $ENV{GIT_WRAPPER_GIT} : 'git';
+    if (my $version = `$GIT version`) {
+        chomp $version;
+        $version =~ s/^git version //;
+        $version;
+    } else {
+        'unknown';
+    }
 };
 
 sub newdir {
@@ -36,7 +39,7 @@ sub newdir {
 sub debug_test {
     my ($git, $debug) = @_;
     $debug //= 1;
-    my $hook_pl = catfile($git->repo_path(), 'hooks', 'hook.pl');
+    my $hook_pl = catfile($git->git_dir(), 'hooks', 'hook.pl');
     my $pl = read_file($hook_pl);
     if (
 	   ! $debug && $pl =~ s/^([^\n]+) -d\n/$1\n/s
@@ -48,7 +51,7 @@ sub debug_test {
 
 sub install_hooks {
     my ($git, $extra_perl, @hooks) = @_;
-    my $hooks_dir = catfile($git->repo_path(), 'hooks');
+    my $hooks_dir = catfile($git->git_dir(), 'hooks');
     my $hook_pl   = catfile($hooks_dir, 'hook.pl');
     {
 	open my $fh, '>', $hook_pl or BAIL_OUT("Can't create $hook_pl: $!");
@@ -108,7 +111,7 @@ sub new_repos {
 	say $fh "first line";
     }
 
-    try {
+    my ($repo, $clone) = eval {
         # It would be easier to pass a directory argument to git-init
         # but it started to accept it only on v1.6.5. To support
         # previous gits we chdir to $repodir to avoid the need to pass
@@ -117,29 +120,29 @@ sub new_repos {
         chdir $repodir or die "cannot chdir $repodir: $!\n";
 	my ($ok, $exit, $stdout) = test_command(undef, 'init', '-q');
         chdir $cwd;
-	unless ($ok) {
-	    throw Error::Simple("'git init -q $repodir': exit=$exit, stdout=\n$stdout\n");
-	}
+        die "'git init -q $repodir': exit=$exit, stdout=\n$stdout\n" unless $ok;
 
-	my $repo = Git::More->repository(Directory => $repodir);
-	$repo->command(config => 'user.mail', 'myself@example.com');
-	$repo->command(config => 'user.name', 'My Self');
-	$repo->command(add    => $filename);
-	$repo->command(commit => '-mx');
+	my $repo = Git::More->new($repodir);
+	$repo->config('user.mail', 'myself@example.com');
+	$repo->config('user.name', 'My Self');
+	$repo->add($filename);
+	$repo->commit({m => 'x'});
 
 	($ok, $exit, $stdout) = test_command(undef, 'clone', '-q', '--bare', '--no-hardlinks', $repodir, $clonedir);
-	unless ($ok) {
-	    throw Error::Simple("'git clone -q --bare --no-hardlinks $repodir $clonedir': exit=$exit, stdout=\n$stdout\n");
-	}
-	my $clone = Git::More->repository(Directory => $clonedir);
+        die "'git clone -q --bare --no-hardlinks $repodir $clonedir': exit=$exit, stdout=\n$stdout\n" unless $ok;
 
-	return ($repo, $filename, $clone);
-    } otherwise {
-	my $E = shift;
-	my $ls = `find $T -ls`;	# FIXME: this is non-portable.
-	diag("Error setting up repos for test: $E\nRepos parent directory listing:\n$ls\ngit-version=$git_version\n\@INC=@INC\n");
-	BAIL_OUT('Cannot setup repos for testing');
+	my $clone = Git::More->new($clonedir);
+
+	return ($repo, $clone);
     };
+
+    if (my $E = $@) {
+        my $ls = `find $T -ls`;	# FIXME: this is non-portable.
+        diag("Error setting up repos for test: $E\nRepos parent directory listing:\n$ls\ngit-version=$git_version\n\@INC=@INC\n");
+        BAIL_OUT('Cannot setup repos for testing');
+    }
+
+    return ($repo, $filename, $clone);
 }
 
 sub new_commit {
@@ -147,8 +150,8 @@ sub new_commit {
 
     append_file($file, $msg || 'new commit');
 
-    $git->command(add => $file);
-    $git->command(commit => '-q', '-m', $msg || 'commit');
+    $git->add({}, $file);
+    $git->commit({q => 1, m => $msg || 'commit'});
 }
 
 sub test_command {
@@ -169,15 +172,9 @@ sub test_command {
 	}
     } else {
 	# child
-	if (defined $git && $git->repo_path()) {
-	    local $ENV{'GIT_DIR'} = $git->repo_path();
-	    if ($git->wc_path()) {
-		local $ENV{'GIT_WORK_TREE'} = $git->wc_path();
-		chdir($git->wc_path());
-	    }
-	    if ($git->wc_subdir()) {
-		chdir($git->wc_subdir());
-	    }
+	if (defined $git) {
+	    local $ENV{'GIT_DIR'} = $git->git_dir();
+            chdir $git->dir();
 	}
 	close STDERR;
 	open STDERR, '>&', \*STDOUT;

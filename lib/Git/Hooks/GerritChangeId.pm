@@ -64,22 +64,19 @@ sub gen_change_id {
     my ($fh, $filename) = tempfile(undef, UNLINK => 1);
 
     foreach my $info (
-        [ tree      => [qw/write-tree/] ],
-        [ parent    => [qw/rev-parse HEAD^0/] ],
-        [ author    => [qw/var GIT_AUTHOR_IDENT/] ],
-        [ committer => [qw/var GIT_COMMITTER_IDENT/] ],
+        [ tree      => ['write-tree' => {}]],
+        [ parent    => ['rev-parse'  => {}, 'HEAD^0']],
+        [ author    => [var          => {}, 'GIT_AUTHOR_IDENT']],
+        [ committer => [var          => {}, 'GIT_COMMITTER_IDENT']],
     ) {
-        try {
-            $fh->print($info->[0], ' ', $git->command($info->[1], {STDERR => 0}), "\n");
-        } otherwise {
-            # Can't find info. That's ok.
-        };
+        eval { $fh->print($info->[0], ' ', $git->RUN(@{$info->[1]}), "\n") }; ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
+        # It's ok if we can't grok info.
     }
 
     $fh->print("\n", $msg);
     $fh->close();
 
-    return $git->hash_object(commit => $filename);
+    return ($git->hash_object({t => 'commit'}, $filename))[0];
 }
 
 sub insert_change_id {

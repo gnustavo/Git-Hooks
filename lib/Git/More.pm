@@ -1,11 +1,11 @@
 package Git::More;
-# ABSTRACT: An extension of App::gh::Git with some goodies for hook developers.
-use parent 'App::gh::Git';
+# ABSTRACT: An extension of Git::Wrapper with some goodies for hook developers.
+use parent 'Git::Wrapper';
 
 use strict;
 use warnings;
-use Error qw(:try);
 use Carp;
+use File::Spec::Functions 'catfile';
 use Git::Hooks qw/:utils/;
 
 sub _compatibilize_config {
@@ -106,24 +106,15 @@ sub get_config {
 
     unless (exists $git->{more}{config}) {
         my %config;
-        my ($fh, $ctx) = $git->command_output_pipe(config => '--null', '--list');
-        {
-            local $/ = "\x0";
-            while (<$fh>) {
-                chop;           # final \x0
-                my ($option, $value) = split /\n/, $_, 2;
-                if ($option =~ /(.+)\.(.+)/) {
-                    push @{$config{lc $1}{lc $2}}, $value;
-                } else {
-                    die __PACKAGE__, ": Cannot grok config variable name '$option'.\n";
-                }
+        local $/ = "\x0";
+        foreach ($git->config({null => 1, list => 1})) {
+            my ($option, $value) = split /\n/, $_, 2;
+            if ($option =~ /(.+)\.(.+)/) {
+                push @{$config{lc $1}{lc $2}}, $value;
+            } else {
+                die __PACKAGE__, ": Cannot grok config variable name '$option'.\n";
             }
         }
-        try {
-            $git->command_close_pipe($fh, $ctx);
-        } otherwise {
-            # No config option found. That's ok.
-        };
 
         # Set default values for undefined ones.
         $config{githooks}{externals} //= [1];
@@ -164,23 +155,17 @@ sub get_commits {
 
     my @commits;
 
-    my ($pipe, $ctx) = $git->command_output_pipe(
-        'rev-list',
-        # See 'git help rev-list' to understand the --pretty argument
-        '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%s%n%n%b%x00',
-        "$old_commit..$new_commit");
-    {
-        local $/ = "\x00\n";
-        while (<$pipe>) {
-            my %commit;
-            @commit{qw/header commit tree parent
-                       author_name author_email author_date
-                       commmitter_name committer_email committer_date
-                       body/} = split /\n/, $_, 11;
-            push @commits, \%commit;
-        }
+    local $/ = "\x00\n";
+    # See 'git help rev-list' to understand the --pretty argument
+    foreach ($git->rev_list({pretty => 'format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%s%n%n%b%x00'},
+                            "$old_commit..$new_commit")) {
+        my %commit;
+        @commit{qw/header commit tree parent
+                   author_name author_email author_date
+                   commmitter_name committer_email committer_date
+                   body/} = split /\n/, $_, 11;
+        push @commits, \%commit;
     }
-    $git->command_close_pipe($pipe, $ctx);
 
     return @commits;
 }
@@ -188,27 +173,18 @@ sub get_commits {
 sub get_commit_msg {
     my ($git, $commit) = @_;
 
-    # We want to use the %B format to grok the commit message, but it
-    # was implemented only in Git v1.7.2. If we try to use it with
-    # rev-list in previous Gits we get back the same format
-    # unexpanded. In this case, we try the second best option which is
-    # to use the format %s%n%n%b. The difference is that this format
-    # unfolds the first sequence of non-empty lines in a single line
-    # which is considered the message's subject (or title).
-    foreach my $format (qw/%B %s%n%n%b/) {
-        my $body = $git->command('rev-list' => "--format=$format", '--max-count=1', $commit);
-        $body =~ s/^[^\n]*\n//; # strip first line, which contains the commit id
-        chomp $body;            # strip last newline
-        next if $body eq $format;
-        return $body;
+    if (my @logs = $git->log({n => ' 1'}, $commit)) {
+        return $logs[0]->message();
+    } else {
+        return;
     }
-    die __PACKAGE__, "::get_commit_msg: cannot get commit msg.\n";
 }
 
 sub get_diff_files {
-    my ($git, @args) = @_;
+    my ($git, $opts, @args) = @_;
+    $opts->{name_status} = 1;
     my %affected;
-    foreach ($git->command(diff => '--name-status', @args)) {
+    foreach ($git->diff($opts, @args)) {
         my ($status, $name) = split ' ', $_, 2;
         $affected{$name} = $status;
     }
@@ -256,7 +232,7 @@ sub get_affected_ref_commit_ids {
 
     unless (exists $affected->{$ref}{ids}) {
         my @range = $git->get_affected_ref_range($ref);
-        $affected->{$ref}{ids} = [$git->command('rev-list' => join('..', @range))];
+        $affected->{$ref}{ids} = [$git->rev_list(join('..', @range))];
     }
 
     return @{$affected->{$ref}{ids}};
@@ -303,10 +279,17 @@ sub authenticated_user {
 
 sub get_current_branch {
     my ($git) = @_;
-    foreach ($git->command(branch => '--no-color')) {
+    foreach ($git->branch()) {
         return $1 if /^\* (.*)/;
     }
     return;
+}
+
+sub git_dir {
+    my ($git) = @_;
+    my $dir = $git->dir();
+    my $dotgit = catfile($dir, '.git');
+    return -d $dotgit ? $dotgit : $dir;
 }
 
 
@@ -317,23 +300,29 @@ __END__
 
     use Git::More;
 
-    my $git = Git::More->repository();
+    my $git = Git::More->new($ENV{GIT_DIR});
 
     my $config  = $git->get_config();
     my $branch  = $git->get_current_branch();
     my $commits = $git->get_commits($oldcommit, $newcommit);
     my $message = $git->get_commit_msg('HEAD');
 
-    my $files_modified_by_commit = $git->get_diff_files('--diff-filter=AM', '--cached');
-    my $files_modified_by_push   = $git->get_diff_files('--diff-filter=AM', $oldcommit, $newcommit);
+    my $files_modified_by_commit = $git->get_diff_files({diff_filter => 'AM', cached => 1});
+    my $files_modified_by_push   = $git->get_diff_files({diff_filter => 'AM'}, $oldcommit, $newcommit);
 
 =head1 DESCRIPTION
 
-This is an extension of the C<App::gh::Git> class. It's meant to
+This is an extension of the C<Git::Wrapper> class. It's meant to
 implement a few extra methods commonly needed by Git hook developers.
 
 In particular, it's used by the standard hooks implemented by the
 C<Git::Hooks> framework.
+
+It's meant to convey the idea that this is an instance of Git::Wrapper
+that is used in the context of the execution of a Git hook. So, the
+majority of its own methods cache their results in order to speed up
+their use by different Git::Hooks plugins during the same hook
+invokation.
 
 =head1 METHODS
 
@@ -444,7 +433,7 @@ codes are explained in the C<git help rev-list> document):
 This method returns the commit message (a.k.a. body) of the commit
 identified by COMMIT_ID. The result is a string.
 
-=head2 get_diff_files DIFFARGS...
+=head2 get_diff_files DIFFARGS_HASH
 
 This method invokes the command C<git diff --name-status> with extra
 options and arguments as passed to it. It returns a reference to a
@@ -456,12 +445,12 @@ everything about its options.
 A common usage is to grok every file added or modified in a pre-commit
 hook:
 
-    my $hash_ref = $git->get_diff_files('--diff-filter=AM', '--cached');
+    my $hash_ref = $git->get_diff_files({diff_filter => 'AM', cached => 1});
 
 Another one is to grok every file added or modified in a pre-receive
 hook:
 
-    my $hash_ref = $git->get_diff_files('--diff-filter=AM', $old_commit, $new_commit);
+    my $hash_ref = $git->get_diff_files({diff_filter => 'AM'}, $old_commit, $new_commit);
 
 =head2 set_affected_ref REF OLDCOMMIT NEWCOMMIT
 
@@ -506,6 +495,13 @@ This method returns the repository's current branch name, as indicated
 by the C<git branch> command. Note that it's a ref short name, i.e.,
 it's usually sub-intended to reside under the 'refs/heads/' ref scope.
 
+=head2 git_dir
+
+This method returns the GIT_DIR directory of the repository. If it's a
+bare repository, it returns the same as the C<Git::Wrapper::dir>
+method. If it's a personal repository, it returns the C<.git>
+subdirectory of C<Git::Wrapper::dir>.
+
 =head1 SEE ALSO
 
-C<App::gh::Git>
+C<Git::Wrapper>

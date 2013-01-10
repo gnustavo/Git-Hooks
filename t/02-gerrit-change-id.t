@@ -30,7 +30,7 @@ my $msgfile = tmpnam();
 sub cannot_commit {
     my ($testname, $regex, $msg) = @_;
     append_file($filename, "new line\n");
-    $repo->command(add => $filename);
+    $repo->add($filename);
     write_file($msgfile, $msg);
     unless (test_nok_match($testname, $regex, $repo, 'commit', '-F', $msgfile)) {
 	diag_last_log();
@@ -40,13 +40,13 @@ sub cannot_commit {
 sub can_commit {
     my ($testname, $msg) = @_;
     append_file($filename, "new line\n");
-    $repo->command(add => $filename);
+    $repo->add($filename);
     write_file($msgfile, $msg);
     return test_ok("$testname [commit]", $repo, 'commit', '-F', $msgfile);
 }
 
 
-$repo->command(config => "githooks.commit-msg", 'GerritChangeId');
+$repo->config("githooks.commit-msg", 'GerritChangeId');
 
 # test EmptyMessages
 foreach my $test (
@@ -108,7 +108,7 @@ sub expected {
     write_file($msgfile, $msg);
 
     my $dir = getcwd;
-    chdir $repo->repo_path();
+    chdir $repo->dir();
     system(catfile($dir, 't', 'gerrit-commit-msg.sh'), $msgfile);
     chdir $dir;
 

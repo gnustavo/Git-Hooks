@@ -49,23 +49,23 @@ $INC{'JIRA/Client.pm'} = 'fake';
 EOF
     }
 
-    $$reporef->command(config => "githooks.$hook", 'check-jira');
-    $$reporef->command(config => 'check-jira.jiraurl', 'fake://url/');
-    $$reporef->command(config => 'check-jira.jirauser', 'user');
-    $$reporef->command(config => 'check-jira.jirapass', 'valid');
+    $$reporef->config("githooks.$hook", 'check-jira');
+    $$reporef->config('check-jira.jiraurl', 'fake://url/');
+    $$reporef->config('check-jira.jirauser', 'user');
+    $$reporef->config('check-jira.jirapass', 'valid');
 }
 
 sub check_can_commit {
     my ($testname) = @_;
     append_file($file, $testname);
-    $repo->command(add => $file);
+    $repo->add($file);
     test_ok($testname, $repo, 'commit', '-m', $testname);
 }
 
 sub check_cannot_commit {
     my ($testname, $regex) = @_;
     append_file($file, $testname);
-    $repo->command(add => $file);
+    $repo->add($file);
     if ($regex) {
 	test_nok_match($testname, $regex, $repo, 'commit', '-m', $testname);
     } else {
@@ -77,14 +77,14 @@ sub check_can_push {
     my ($testname, $ref) = @_;
     new_commit($repo, $file, $testname);
     test_ok($testname, $repo,
-	    'push', $clone->repo_path(), $ref || 'master');
+	    'push', $clone->dir(), $ref || 'master');
 }
 
 sub check_cannot_push {
     my ($testname, $regex, $ref) = @_;
     new_commit($repo, $file, $testname);
     test_nok_match($testname, $regex, $repo,
-		   'push', $clone->repo_path(), $ref || 'master');
+		   'push', $clone->dir(), $ref || 'master');
 }
 
 
@@ -92,29 +92,29 @@ setup_repos_for(\$repo, 'commit-msg');
 
 check_cannot_commit('deny commit by default without JIRAs');
 
-$repo->command(config => 'check-jira.ref', 'refs/heads/fix');
+$repo->config('check-jira.ref', 'refs/heads/fix');
 check_can_commit('allow commit on disabled ref even without JIRAs');
 
-$repo->command(checkout => '-q', '-b', 'fix');
+$repo->checkout({q => 1, b => 'fix'});
 check_cannot_commit('deny commit on enabled ref without JIRAs', qr/does not cite any JIRA/);
 
-$repo->command(config => '--unset', 'check-jira.ref');
-$repo->command(checkout => '-q', 'master');
+$repo->config({unset => 1}, 'check-jira.ref');
+$repo->checkout({q => 1}, 'master');
 
-$repo->command(config => 'check-jira.project', 'OTHER');
+$repo->config('check-jira.project', 'OTHER');
 check_cannot_commit('deny commit citing non-cared for projects [GIT-0]',
 		    qr/does not cite any JIRA/);
 
-$repo->command(config => 'check-jira.require', '0');
+$repo->config('check-jira.require', '0');
 check_can_commit('allow commit if JIRA is not required');
-$repo->command(config => '--unset-all', 'check-jira.require');
+$repo->config({unset_all => 1}, 'check-jira.require');
 
-$repo->command(config => '--replace-all', 'check-jira.project', 'GIT');
+$repo->config({replace_all => 1}, 'check-jira.project', 'GIT');
 
-$repo->command(config => '--replace-all', 'check-jira.jirapass', 'invalid');
+$repo->config({replace_all => 1}, 'check-jira.jirapass', 'invalid');
 check_cannot_commit('deny commit if cannot connect to JIRA [GIT-0]',
 		    qr/cannot connect to the JIRA server/);
-$repo->command(config => '--replace-all', 'check-jira.jirapass', 'valid');
+$repo->config({replace_all => 1}, 'check-jira.jirapass', 'valid');
 
 check_cannot_commit('deny commit if cannot get issue [GIT-0]',
 		    qr/cannot get issue/);
@@ -122,22 +122,22 @@ check_cannot_commit('deny commit if cannot get issue [GIT-0]',
 check_cannot_commit('deny commit if issue is already resolved [GIT-1]',
 		    qr/is already resolved/);
 
-$repo->command(config => '--replace-all', 'check-jira.unresolved', 0);
+$repo->config({replace_all => 1}, 'check-jira.unresolved', 0);
 check_can_commit('allow commit if issue can be resolved [GIT-1]');
-$repo->command(config => '--unset-all', 'check-jira.unresolved');
+$repo->config({unset_all => 1}, 'check-jira.unresolved');
 
-$repo->command(config => '--replace-all', 'check-jira.by-assignee', 1);
+$repo->config({replace_all => 1}, 'check-jira.by-assignee', 1);
 $ENV{USER} = 'other';
 check_cannot_commit('deny commit if not by-assignee [GIT-2]',
 		    qr/is currently assigned to 'user' but should be assigned to you \(other\)/);
 
 $ENV{USER} = 'user';
 check_can_commit('allow commit if by-assignee [GIT-2]');
-$repo->command(config => '--unset-all', 'check-jira.by-assignee');
+$repo->config({unset_all => 1}, 'check-jira.by-assignee');
 
 check_can_commit('allow commit if valid issue cited [GIT-2]');
 
-$repo->command(config => 'check-jira.check-code', <<'EOF');
+$repo->config('check-jira.check-code', <<'EOF');
 sub {
     my ($git, $commit_id, $jira, @issues) = @_;
     my $keys = join(', ', sort map {$_->{key}} @issues);
@@ -151,7 +151,7 @@ check_cannot_commit('deny commit if check_code does not pass [GIT-2]',
 
 check_can_commit('allow commit if check_code does pass [GIT-2 GIT-3]');
 
-$repo->command(config => '--unset-all', 'check-jira.check-code');
+$repo->config({unset_all => 1}, 'check-jira.check-code');
 
 
 setup_repos_for(\$clone, 'update');

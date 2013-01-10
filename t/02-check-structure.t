@@ -22,23 +22,23 @@ sub setup_repos {
 sub setup_structure {
     my ($git, $structure, $kind) = @_;
     $kind //= 'file';
-    my $filedef = catfile($git->repo_path(), 'hooks', "structure.$kind");
+    my $filedef = catfile($git->git_dir(), 'hooks', "structure.$kind");
     open my $fh, '>', "$filedef" or die "Can't create $filedef: $!\n";
     $fh->print($structure);
-    $git->command(config => '--replace-all', "check-structure.$kind", "file:$filedef");
+    $git->config({replace_all => 1}, "check-structure.$kind", "file:$filedef");
 }
 
 sub add_file {
     my ($testname, $file) = @_;
     my @path = split '/', $file;
-    my $filename = catfile($repo->wc_path(), @path);
+    my $filename = catfile($repo->dir(), @path);
     if (-e $filename) {
 	fail($testname);
 	diag("[TEST FRAMEWORK INTERNAL ERROR] File already exists: $filename\n");
     }
 
     pop @path;
-    my $dirname  = catfile($repo->wc_path(), @path);
+    my $dirname  = catfile($repo->dir(), @path);
     make_path($dirname);
 
     unless (write_file($filename, 'data')) {
@@ -46,7 +46,7 @@ sub add_file {
 	diag("[TEST FRAMEWORK INTERNAL ERROR] Cannot create file: $filename; $!\n");
     }
 
-    $repo->command(add => $filename);
+    $repo->add($filename);
     return $filename;
 }
 
@@ -64,21 +64,21 @@ sub check_cannot_commit {
     } else {
 	test_nok($testname, $repo, 'commit', '-m', $testname);
     }
-    $repo->command(reset => 'HEAD', $filename);
+    $repo->reset('HEAD', $filename);
 }
 
 sub check_can_push {
     my ($testname, $file) = @_;
     add_file($testname, $file);
-    $repo->command(commit => '-m', $testname);
-    test_ok($testname, $repo, 'push', $clone->repo_path(), 'master');
+    $repo->commit({m => $testname});
+    test_ok($testname, $repo, 'push', $clone->dir(), 'master');
 }
 
 sub check_cannot_push {
     my ($testname, $regex, $file) = @_;
     add_file($testname, $file);
-    $repo->command(commit => '-m', $testname);
-    test_nok_match($testname, $regex, $repo, 'push', $clone->repo_path(), 'master');
+    $repo->commit({m => $testname});
+    test_nok_match($testname, $regex, $repo, 'push', $clone->dir(), 'master');
 }
 
 
@@ -86,7 +86,7 @@ sub check_cannot_push {
 
 setup_repos();
 
-$repo->command(config => "githooks.pre-commit", 'check-structure');
+$repo->config("githooks.pre-commit", 'check-structure');
 
 setup_structure($repo, <<'EOF');
 {};
@@ -145,7 +145,7 @@ check_cannot_commit('commit deny custom error message', qr/custom error message/
 
 setup_repos();
 
-$clone->command(config => "githooks.pre-receive", 'check-structure');
+$clone->config("githooks.pre-receive", 'check-structure');
 
 setup_structure($clone, <<'EOF');
 [

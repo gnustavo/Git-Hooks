@@ -73,13 +73,8 @@ sub check_ref {
         $op = 'R';              # rewrite a non-branch
     } else {
         # This is an U if "merge-base(old, new) == old". Otherwise it's an R.
-        try {
-            chomp(my $merge_base = $git->command('merge-base' => $old_commit, $new_commit));
-            $op = ($merge_base eq $old_commit) ? 'U' : 'R';
-        } otherwise {
-            # Probably $old_commit and $new_commit do not have a common ancestor.
-            $op = 'R';
-        };
+        $op = eval { ($git->merge_base({}, $old_commit, $new_commit))[0] eq $old_commit ? 'U' : 'R' };
+        $op = 'R' unless defined $op; # Probably $old_commit and $new_commit do not have a common ancestor.
     }
 
     foreach my $acl (grok_acls($git)) {

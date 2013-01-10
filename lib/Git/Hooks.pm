@@ -211,7 +211,7 @@ sub run_hook {
 
     $hook_name = basename $hook_name;
 
-    my $git = Git::More->repository();
+    my $git = Git::More->new('.');
 
     # Some hooks (update, pre-receive, and post-receive) affect refs
     # and associated commit ranges. Let's grok them at once.
@@ -275,7 +275,7 @@ sub run_hook {
     if ($git->get_config(githooks => 'externals')) {
         foreach my $dir (
             grep {-e} map {catfile($_, $hook_name)}
-                ($git->get_config(githooks => 'hooks'), catfile($git->repo_path(), 'hooks.d'))
+                ($git->get_config(githooks => 'hooks'), catfile($git->git_dir(), 'hooks.d'))
         ) {
             opendir my $dh, $dir or die __PACKAGE__, ": cannot opendir $dir: $!\n";
             foreach my $file (grep {-f && -x} map {catfile($dir, $_)} readdir $dh) {
@@ -457,12 +457,11 @@ line. For example:
     PRE_COMMIT {
         my ($git) = @_;
 
-        my @changed = $git->command(qw/diff --cached --name-only --diff-filter=AM/);
+        my @changed = $git->diff({cached => 1, name_only => 1, diff_filter => 'AM'});
 
-        foreach ($git->command('ls-files' => '-s', @changed)) {
-            chomp;
+        foreach ($git->ls_files({s => 1}, @changed)) {
             my ($mode, $sha, $n, $name) = split / /;
-            my $size = $git->command('cat-file' => '-s', $sha);
+            my $size = $git->cat_file({s => 1}, $sha);
             $size <= $LIMIT
                 or die "File '$name' has $size bytes, more than our limit of $LIMIT.\n";
         }
@@ -475,14 +474,13 @@ line. For example:
         my ($git) = @_;
         my %violations;
 
-        my @changed = grep {/\.p[lm]$/} $git->command(qw/diff --cached --name-only --diff-filter=AM/);
+        my @changed = grep {/\.p[lm]$/} $git->diff({cached => 1, name_only => 1, diff_filter => 'AM'});
 
-        foreach ($git->command('ls-files' => '-s', @changed)) {
-            chomp;
+        foreach ($git->ls_files({s => 1}, @changed)) {
             my ($mode, $sha, $n, $name) = split / /;
             require Perl::Critic;
             state $critic = Perl::Critic->new(-severity => 'stern', -top => 10);
-            my $contents = $git->command('cat-file' => $sha);
+            my $contents = $git->cat_file({}, $sha);
             my @violations = $critic->critique(\$contents);
             $violations{$name} = \@violations if @violations;
         }

@@ -19,7 +19,7 @@ sub check_can_commit {
     my ($testname, $msg) = @_;
     write_file($msgfile, $msg);
     append_file($file, $testname);
-    $repo->command(add => $file);
+    $repo->add($file);
     test_ok($testname, $repo, 'commit', '-F', $msgfile);
 }
 
@@ -27,7 +27,7 @@ sub check_cannot_commit {
     my ($testname, $regex, $msg) = @_;
     write_file($msgfile, $msg);
     append_file($file, $testname);
-    $repo->command(add => $file);
+    $repo->add($file);
     if ($regex) {
 	test_nok_match($testname, $regex, $repo, 'commit', '-F', $msgfile);
     } else {
@@ -39,14 +39,14 @@ sub check_can_push {
     my ($testname, $ref) = @_;
     new_commit($repo, $file, $testname);
     test_ok($testname, $repo,
-	    'push', $clone->repo_path(), $ref || 'master');
+	    'push', $clone->dir(), $ref || 'master');
 }
 
 sub check_cannot_push {
     my ($testname, $regex, $ref) = @_;
     new_commit($repo, $file, $testname);
     test_nok_match($testname, $regex, $repo,
-		   'push', $clone->repo_path(), $ref || 'master');
+		   'push', $clone->dir(), $ref || 'master');
 }
 
 
@@ -54,7 +54,7 @@ sub check_cannot_push {
 
 install_hooks($repo, undef, 'commit-msg');
 
-$repo->command(config => "githooks.commit-msg", 'CheckLog');
+$repo->config("githooks.commit-msg", 'CheckLog');
 
 # title-required
 
@@ -73,14 +73,14 @@ check_can_commit('allow with required title only', <<'EOF');
 Title
 EOF
 
-$repo->command(config => 'CheckLog.title-required', 0);
+$repo->config('CheckLog.title-required', 0);
 
 check_can_commit('allow without non-required title', <<'EOF');
 No
 Title
 EOF
 
-$repo->command(config => 'CheckLog.title-required', 1);
+$repo->config('CheckLog.title-required', 1);
 
 # title-period
 
@@ -92,7 +92,7 @@ check_cannot_commit('deny with denied period', qr/log title SHOULD NOT end in a 
 Title.
 EOF
 
-$repo->command(config => 'CheckLog.title-period', 'require');
+$repo->config('CheckLog.title-period', 'require');
 
 check_cannot_commit('deny without required period', qr/log title SHOULD end in a period/, <<'EOF');
 Title
@@ -102,7 +102,7 @@ check_can_commit('allow with required period', <<'EOF');
 Title.
 EOF
 
-$repo->command(config => 'CheckLog.title-period', 'allow');
+$repo->config('CheckLog.title-period', 'allow');
 
 check_can_commit('allow without allowed period', <<'EOF');
 Title
@@ -112,13 +112,13 @@ check_can_commit('allow with allowed period', <<'EOF');
 Title.
 EOF
 
-$repo->command(config => 'CheckLog.title-period', 'invalid');
+$repo->config('CheckLog.title-period', 'invalid');
 
 check_cannot_commit('deny due to invalid value', qr/Invalid value for the/, <<'EOF');
 Title
 EOF
 
-$repo->command(config => 'CheckLog.title-period', 'deny');
+$repo->config('CheckLog.title-period', 'deny');
 
 # title-max-width
 
@@ -128,7 +128,7 @@ check_cannot_commit('deny large title', qr/log title should be at most 50 charac
 The above title has 51 characters.
 EOF
 
-$repo->command(config => 'CheckLog.title-max-width', 0);
+$repo->config('CheckLog.title-max-width', 0);
 
 check_can_commit('allow large title', <<'EOF');
 123456789012345678901234567890123456789012345678901
@@ -136,7 +136,7 @@ check_can_commit('allow large title', <<'EOF');
 The above title has 51 characters.
 EOF
 
-$repo->command(config => 'CheckLog.title-max-width', 50);
+$repo->config('CheckLog.title-max-width', 50);
 
 # body-max-width
 
@@ -149,7 +149,7 @@ Body first line.
 The previous line has 73 characters.
 EOF
 
-$repo->command(config => 'CheckLog.body-max-width', 0);
+$repo->config('CheckLog.body-max-width', 0);
 
 check_can_commit('allow large body', <<'EOF');
 Title
@@ -160,12 +160,12 @@ Body first line.
 The previous line has 73 characters.
 EOF
 
-$repo->command(config => 'CheckLog.body-max-width', 72);
+$repo->config('CheckLog.body-max-width', 72);
 
 # match
 
-$repo->command(config => 'CheckLog.match', '^has to have');
-$repo->command(config => '--add', 'CheckLog.match', '!^must not have');
+$repo->config('CheckLog.match', '^has to have');
+$repo->config({add => 1}, 'CheckLog.match', '!^must not have');
 
 check_can_commit('allow if matches', <<'EOF');
 Title
@@ -186,7 +186,7 @@ has to have
 must not have
 EOF
 
-$repo->command(config => '--unset-all', 'CheckLog.match');
+$repo->config({unset_all => 1}, 'CheckLog.match');
 
 # encoding
 
@@ -201,12 +201,12 @@ SKIP: {
 xytxuythiswordshouldnotspell
 EOF
 
-    $repo->command(config => '--add', 'CheckLog.spelling', 1);
+    $repo->config({add => 1}, 'CheckLog.spelling', 1);
 
     check_cannot_commit('deny misspelling with checking', qr/log has the following spelling problems in it/, <<'EOF');
 xytxuythiswordshouldnotspell
 EOF
 
-    $repo->command(config => '--unset-all', 'CheckLog.spelling');
+    $repo->config({unset_all => 1}, 'CheckLog.spelling');
 }
 
