@@ -102,7 +102,7 @@ sub _compatibilize_config {
 }
 
 sub get_config {
-    my ($git) = @_;
+    my ($git, $section, $var) = @_;
 
     unless (exists $git->{more}{config}) {
         my %config;
@@ -133,14 +133,17 @@ sub get_config {
         $git->{more}{config} = \%config;
     }
 
-    return $git->{more}{config};
-}
+    my $config = $git->{more}{config};
 
-sub config {
-    my ($git, $section, $var) = @_;
-    my $config = $git->get_config();
-    if (exists $config->{lc $section}{$var}) {
-        return wantarray ? @{$config->{lc $section}{$var}} : $config->{lc $section}{$var}[-1];
+    $section = lc $section if defined $section;
+
+    if (! defined $section) {
+        return $config;
+    } elsif (! defined $var) {
+        $config->{$section} = {} unless exists $config->{$section};
+        return $config->{$section};
+    } elsif (exists $config->{$section}{$var}) {
+        return wantarray ? @{$config->{$section}{$var}} : $config->{$section}{$var}[-1];
     } else {
         return wantarray ? () : undef;
     }
@@ -278,7 +281,7 @@ sub authenticated_user {
     my ($git) = @_;
 
     unless (exists $git->{more}{authenticated_user}) {
-        if (my $userenv = $git->config(githooks => 'userenv')) {
+        if (my $userenv = $git->get_config(githooks => 'userenv')) {
             if ($userenv =~ /^eval:(.*)/) {
                 $git->{more}{authenticated_user} = eval $1; ## no critic (BuiltinFunctions::ProhibitStringyEval)
                 die __PACKAGE__, ": error evaluating userenv value ($userenv): $@\n"
@@ -334,13 +337,16 @@ C<Git::Hooks> framework.
 
 =head1 METHODS
 
-=head2 get_config
+=head2 get_config [SECTION [VARIABLE]]
 
-This method groks the configuration options for the repository. It
-returns every option found by invoking C<git config --list>.
+This method groks the configuration options for the repository by
+invoking C<git config --list>. The configuration is cached during the
+first invokation in the object C<Git::More> object. So, if the
+configuration is changed afterwards, the method won't notice it. This
+is usually ok for hooks, though.
 
-The options are returned as a hash-ref pointing to a two-level
-hash. For example, if the config options are these:
+With no arguments, the options are returned as a hash-ref pointing to
+a two-level hash. For example, if the config options are these:
 
     section1.a=1
     section1.b=2
@@ -378,19 +384,30 @@ the last one being the local value.
 So, if you want to treat an option as single-valued, you should fetch
 it like this:
 
-     $h->{section1}{a}[-1]
-     $h->{'section2.x'}{a}[-1]
+    $h->{section1}{a}[-1]
+    $h->{'section2.x'}{a}[-1]
 
-=head2 config SECTION VARIABLE
+If the SECTION argument is passed, the method returns the second-level
+hash for it. So, following the example above, this call:
 
-This method fetches the configuration option SECTION.VARIABLE as a
-scalar or a list, depending on the context in which it was called.
+    $git->get_config('section1');
 
-In scalar context, if the option has more than one value, the last one
-is returned. If the option is undefined, it returns undef.
+This call would return this hash:
 
-In list context, all option values are returned in a list. If the
-option is undefined, it returns the empty list.
+    {
+        'a' => [1],
+        'b' => [2, 3],
+    }
+
+If the section don't exist an empty hash is returned. Any key/value
+added to the returned hash will be available in subsequent invokations
+of C<get_config>.
+
+If the VARIABLE argument is also passed, the method returns the
+value(s) of the configuration option C<SECTION.VARIABLE>. In list
+context the method returns the list of all values or the empty list,
+if the variable isn't defined. In scalar context, the method returns
+the variable's last value or C<undef>, if it's not defined.
 
 =head2 cache SECTION
 

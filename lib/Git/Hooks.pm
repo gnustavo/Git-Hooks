@@ -126,7 +126,7 @@ sub grok_groups {
     my $cache = $git->cache('githooks');
 
     unless (exists $cache->{groups}) {
-        my $groups = $git->config(githooks => 'groups')
+        my $groups = $git->get_config(githooks => 'groups')
             or die __PACKAGE__, ": you have to define the githooks.groups option to use groups.\n";
 
         if (my ($groupfile) = ($groups =~ /^file:(.*)/)) {
@@ -178,7 +178,7 @@ sub match_user {
 
 sub im_admin {
     my ($git) = @_;
-    foreach my $spec ($git->config(githooks => 'admin')) {
+    foreach my $spec ($git->get_config(githooks => 'admin')) {
         return 1 if match_user($git, $spec);
     }
     return 0;
@@ -229,7 +229,7 @@ sub run_hook {
     }
 
     # Invoke enabled plugins
-    if (my @enabled_plugins = $git->config(githooks => 'plugin')) {
+    if (my @enabled_plugins = $git->get_config(githooks => 'plugin')) {
         # Define the list of directories where we'll look for the hook
         # plugins. First the local directory 'githooks' under the
         # repository path, then the optional list of directories
@@ -237,7 +237,7 @@ sub run_hook {
         # finally, the Git::Hooks standard hooks directory.
         my @plugin_dirs = grep {-d} (
             'githooks',
-            $git->config(githooks => 'plugins'),
+            $git->get_config(githooks => 'plugins'),
             catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks'),
         );
 
@@ -272,10 +272,10 @@ sub run_hook {
     }
 
     # Invoke enabled external hooks
-    if ($git->config(githooks => 'externals')) {
+    if ($git->get_config(githooks => 'externals')) {
         foreach my $dir (
             grep {-e} map {catfile($_, $hook_name)}
-                ($git->config(githooks => 'hooks'), catfile($git->repo_path(), 'hooks.d'))
+                ($git->get_config(githooks => 'hooks'), catfile($git->repo_path(), 'hooks.d'))
         ) {
             opendir my $dh, $dir or die __PACKAGE__, ": cannot opendir $dir: $!\n";
             foreach my $file (grep {-f && -x} map {catfile($dir, $_)} readdir $dh) {

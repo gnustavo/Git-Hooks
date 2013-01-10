@@ -53,7 +53,7 @@ sub _setup_config {
 sub read_msg_encoded {
     my ($git, $msgfile) = @_;
 
-    my $encoding = $git->config(i18n => 'commitencoding') || 'utf-8';
+    my $encoding = $git->get_config(i18n => 'commitencoding') || 'utf-8';
 
     my $msg = read_file($msgfile, { binmode => ":encoding($encoding)", err_mode => 'carp' })
         or die "$PKG: Cannot read message file '$msgfile' with encoding '$encoding'\n";
@@ -72,7 +72,7 @@ sub _spell_checker {
 
     my %extra_options;
 
-    if (my $lang = $git->config($CFG => 'spelling-lang')) {
+    if (my $lang = $git->get_config($CFG => 'spelling-lang')) {
         $extra_options{lang} = $lang;
     }
 
@@ -103,7 +103,7 @@ sub _spell_checker {
 sub check_spelling {
     my ($git, $id, $msg) = @_;
 
-    return unless $git->config($CFG => 'spelling');
+    return unless $git->get_config($CFG => 'spelling');
 
     # Check all words comprised of at least three Unicode letters
     my $checker = _spell_checker($git, join("\n", uniq($msg =~ /\b(\p{Cased_Letter}{3,})\b/gi)));
@@ -129,7 +129,7 @@ sub check_spelling {
 sub check_patterns {
     my ($git, $id, $msg) = @_;
 
-    foreach my $match ($git->config($CFG => 'match')) {
+    foreach my $match ($git->get_config($CFG => 'match')) {
         if ($match =~ s/^!\s*//) {
             $msg !~ /$match/m
                 or die "$PKG: $id\'s log SHOULD NOT match \Q$match\E.\n";
@@ -145,7 +145,7 @@ sub check_patterns {
 sub check_title {
     my ($git, $id, $title, $neck, $body) = @_;
 
-    return unless $git->config($CFG => 'title-required');
+    return unless $git->get_config($CFG => 'title-required');
 
     {
         my $title_lines = ($title =~ tr/\n/\n/);
@@ -160,12 +160,12 @@ sub check_title {
     # extra blank line in the original message before passing it to
     # the commit-msg hook.
 
-    if (my $max_width = $git->config($CFG => 'title-max-width')) {
+    if (my $max_width = $git->get_config($CFG => 'title-max-width')) {
         die "$PKG: $id\'s log title should be at most $max_width characters wide, but it has ", length($title), "!\n"
             if length($title) > $max_width;
     }
 
-    if (my $period = $git->config($CFG => 'title-period')) {
+    if (my $period = $git->get_config($CFG => 'title-period')) {
         if ($period eq 'deny') {
             $title !~ /\.$/ or die "$PKG: $id\'s log title SHOULD NOT end in a period.\n";
         } elsif ($period eq 'require') {
@@ -181,7 +181,7 @@ sub check_title {
 sub check_body {
     my ($git, $id, $body) = @_;
 
-    if (my $max_width = $git->config($CFG => 'body-max-width')) {
+    if (my $max_width = $git->get_config($CFG => 'body-max-width')) {
         while ($body =~ /^(.*)/gm) {
             my $line = $1;
             die "$PKG: $id\'s log body lines should be at most $max_width characters wide, but there is one with ", length($line), "!\n"

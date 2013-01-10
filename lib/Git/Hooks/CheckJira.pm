@@ -57,8 +57,8 @@ sub _setup_config {
 sub grok_msg_jiras {
     my ($git, $msg) = @_;
 
-    my $matchkey = $git->config($CFG => 'matchkey');
-    my $matchlog = $git->config($CFG => 'matchlog');
+    my $matchkey = $git->get_config($CFG => 'matchkey');
+    my $matchlog = $git->get_config($CFG => 'matchlog');
 
     # Grok the JIRA issue keys from the commit log
     if ($matchlog) {
@@ -81,7 +81,7 @@ sub get_issue {
     unless (defined $JIRA) {
         my %jira;
         for my $option (qw/jiraurl jirauser jirapass/) {
-            $jira{$option} = $git->config($CFG => $option)
+            $jira{$option} = $git->get_config($CFG => $option)
                 or die "$PKG: Missing $CFG.$option configuration attribute.\n";
         }
         $jira{jiraurl} =~ s:/+$::; # trim trailing slashes from the URL
@@ -114,7 +114,7 @@ sub check_codes {
 
     my @codes;
 
-    foreach my $check ($git->config($CFG => 'check-code')) {
+    foreach my $check ($git->get_config($CFG => 'check-code')) {
         my $code;
         if ($check =~ s/^file://) {
             $code = do $check;
@@ -143,13 +143,13 @@ sub check_commit_msg {
 
     # Filter out JIRAs not belonging to any of the specific projects,
     # if any. We don't care about them.
-    if (my @projects = $git->config($CFG => 'project')) {
+    if (my @projects = $git->get_config($CFG => 'project')) {
         my %projects = map {($_ => undef)} @projects;
         @keys = grep {/([^-]+)/ && exists $projects{$1}} @keys;
     }
 
     unless (@keys) {
-        if ($git->config($CFG => 'require')) {
+        if ($git->get_config($CFG => 'require')) {
             my $shortid = substr $commit->{commit}, 0, 8;
             if (@keys == $nkeys) {
                 die <<"EOF";
@@ -157,7 +157,7 @@ $PKG: commit $shortid (in $ref) does not cite any JIRA in the message:
 $commit->{body}
 EOF
             } else {
-                my $project = join(' ', $git->config($CFG => 'project'));
+                my $project = join(' ', $git->get_config($CFG => 'project'));
                 die <<"EOF";
 $PKG: commit $shortid (in $ref) does not cite any JIRA from the expected
 $PKG: projects ($project) in the message:
@@ -171,8 +171,8 @@ EOF
 
     my @issues;
 
-    my $unresolved  = $git->config($CFG => 'unresolved');
-    my $by_assignee = $git->config($CFG => 'by-assignee');
+    my $unresolved  = $git->get_config($CFG => 'unresolved');
+    my $by_assignee = $git->get_config($CFG => 'by-assignee');
 
     foreach my $key (@keys) {
         my $issue = get_issue($git, $key);
@@ -207,7 +207,7 @@ sub check_message_file {
     _setup_config($git);
 
     my $current_branch = 'refs/heads/' . $git->get_current_branch();
-    return unless is_ref_enabled($current_branch, $git->config($CFG => 'ref'));
+    return unless is_ref_enabled($current_branch, $git->get_config($CFG => 'ref'));
 
     my $msg = read_file($commit_msg_file)
         or die "$PKG: Can't open file '$commit_msg_file' for reading: $!\n";
@@ -227,7 +227,7 @@ sub check_message_file {
 sub check_ref {
     my ($git, $ref) = @_;
 
-    return unless is_ref_enabled($ref, $git->config($CFG => 'ref'));
+    return unless is_ref_enabled($ref, $git->get_config($CFG => 'ref'));
 
     foreach my $commit ($git->get_affected_ref_commits($ref)) {
         check_commit_msg($git, $commit, $ref);

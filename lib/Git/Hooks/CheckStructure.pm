@@ -35,7 +35,7 @@ my $PKG = __PACKAGE__;
 sub get_structure {
     my ($git, $what) = @_;
 
-    if (my $value = $git->config($CFG => $what)) {
+    if (my $value = $git->get_config($CFG => $what)) {
         local $@ = undef;
         my $structure = eval {eval_gitconfig($value)};
         die "$PKG: $@\n" if $@;
