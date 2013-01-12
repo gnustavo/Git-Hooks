@@ -21,7 +21,7 @@ our $HooksDir = catfile(rel2abs(curdir()), 'hooks');
 
 our $git_version;
 try {
-    $git_version = App::gh::Git::command_oneline('version');
+    $git_version = Git::command_oneline('version');
 } otherwise {
     $git_version = 'unknown';
 };

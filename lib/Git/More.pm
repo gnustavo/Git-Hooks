@@ -1,9 +1,9 @@
 package Git::More;
-# ABSTRACT: An extension of App::gh::Git with some goodies for hook developers.
-use parent 'App::gh::Git';
+# ABSTRACT: A Git extension with some goodies for hook developers.
 
 use strict;
 use warnings;
+use parent 'Git';
 use Error qw(:try);
 use Carp;
 use Git::Hooks qw/:utils/;
@@ -329,8 +329,8 @@ __END__
 
 =head1 DESCRIPTION
 
-This is an extension of the C<App::gh::Git> class. It's meant to
-implement a few extra methods commonly needed by Git hook developers.
+This is an extension of the C<Git> class. It's meant to implement a
+few extra methods commonly needed by Git hook developers.
 
 In particular, it's used by the standard hooks implemented by the
 C<Git::Hooks> framework.
@@ -508,4 +508,4 @@ it's usually sub-intended to reside under the 'refs/heads/' ref scope.
 
 =head1 SEE ALSO
 
-C<App::gh::Git>
+C<Git>
