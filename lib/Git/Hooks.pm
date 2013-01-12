@@ -511,28 +511,28 @@ own documentation for more details.
 
 =over
 
-=item Git::Hooks::CheckAcls
+=item * Git::Hooks::CheckAcls
 
 Allow you to specify Access Control Lists to tell who can commit or
 push to the repository and affect which Git refs.
 
-=item Git::Hooks::CheckJira
+=item * Git::Hooks::CheckJira
 
 Integrate Git with the JIRA L<http://www.atlassian.com/software/jira/>phase
 ticketing system by requiring that every commit message cites valid
 JIRA issues.
 
-=item Git::Hooks::CheckLog
+=item * Git::Hooks::CheckLog
 
 Check commit log messages formatting.
 
-=item Git::Hooks::CheckStructure
+=item * Git::Hooks::CheckStructure
 
 Check if newly added files and references (branches and tags) comply
 with specified policies, so that you can impose a strict structure to
 the repository's file and reference hierarchies.
 
-=item Git::Hooks::GerritChangeId
+=item * Git::Hooks::GerritChangeId
 
 Inserts a C<Change-Id> line in the commit log message to allow
 integration with Gerrit's code review system.
@@ -570,13 +570,13 @@ directory, like this:
 
 =over
 
-=item C<.git/hooks.d/pre-auto-gc/pre-auto-gc-battery>
+=item * C<.git/hooks.d/pre-auto-gc/pre-auto-gc-battery>
 
-=item C<.git/hooks.d/pre-commit/setgitperms.perl>
+=item * C<.git/hooks.d/pre-commit/setgitperms.perl>
 
-=item C<.git/hooks.d/post-receive/post-receive-email>
+=item * C<.git/hooks.d/post-receive/post-receive-email>
 
-=item C<.git/hooks.d/update/update-paranoid>
+=item * C<.git/hooks.d/update/update-paranoid>
 
 =back
 
@@ -678,7 +678,7 @@ definitions in one of these ways:
 
 =over
 
-=item file:PATH/TO/FILE
+=item * file:PATH/TO/FILE
 
 As a text file named by PATH/TO/FILE, which may be absolute or
 relative to the hooks current directory, which is usually the
@@ -695,7 +695,7 @@ Note that a group can reference other groups by name. To make a group
 reference, simple prefix its name with an at sign (@). Group
 references must reference groups previously defined in the file.
 
-=item GROUPS
+=item * GROUPS
 
 If the option's value doesn't start with any of the above prefixes, it
 must contain the group definitions itself.
@@ -747,17 +747,17 @@ The value of each option is interpreted in one of these ways:
 
 =over
 
-=item username
+=item * username
 
 A C<username> specifying a single user. The username specification
 must match "/^\w+$/i" and will be compared to the authenticated user's
 name case sensitively.
 
-=item @groupname
+=item * @groupname
 
 A C<groupname> specifying a single group.
 
-=item ^regex
+=item * ^regex
 
 A C<regex> which will be matched against the authenticated user's name
 case-insensitively. The caret is part of the regex, meaning that it's
@@ -807,37 +807,37 @@ need to implement more than one specific hook.
 
 =over
 
-=item APPLYPATCH_MSG(GIT, commit-msg-file)
+=item * APPLYPATCH_MSG(GIT, commit-msg-file)
 
-=item PRE_APPLYPATCH(GIT)
+=item * PRE_APPLYPATCH(GIT)
 
-=item POST_APPLYPATCH(GIT)
+=item * POST_APPLYPATCH(GIT)
 
-=item PRE_COMMIT(GIT)
+=item * PRE_COMMIT(GIT)
 
-=item PREPARE_COMMIT_MSG(GIT, commit-msg-file [, msg-src [, SHA1]])
+=item * PREPARE_COMMIT_MSG(GIT, commit-msg-file [, msg-src [, SHA1]])
 
-=item COMMIT_MSG(GIT, commit-msg-file)
+=item * COMMIT_MSG(GIT, commit-msg-file)
 
-=item POST_COMMIT(GIT)
+=item * POST_COMMIT(GIT)
 
-=item PRE_REBASE(GIT)
+=item * PRE_REBASE(GIT)
 
-=item POST_CHECKOUT(GIT, prev-head-ref, new-head-ref, is-branch-checkout)
+=item * POST_CHECKOUT(GIT, prev-head-ref, new-head-ref, is-branch-checkout)
 
-=item POST_MERGE(GIT, is-squash-merge)
+=item * POST_MERGE(GIT, is-squash-merge)
 
-=item PRE_RECEIVE(GIT)
+=item * PRE_RECEIVE(GIT)
 
-=item UPDATE(GIT, updated-ref-name, old-object-name, new-object-name)
+=item * UPDATE(GIT, updated-ref-name, old-object-name, new-object-name)
 
-=item POST_RECEIVE(GIT)
+=item * POST_RECEIVE(GIT)
 
-=item POST_UPDATE(GIT, updated-ref-name, ...)
+=item * POST_UPDATE(GIT, updated-ref-name, ...)
 
-=item PRE_AUTO_GC(GIT)
+=item * PRE_AUTO_GC(GIT)
 
-=item POST_REWRITE(GIT, command)
+=item * POST_REWRITE(GIT, command)
 
 =back
 

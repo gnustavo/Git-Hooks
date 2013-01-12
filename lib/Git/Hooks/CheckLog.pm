@@ -267,18 +267,18 @@ policies on the commit log messages.
 
 =over
 
-=item C<commit-msg>
+=item * B<commit-msg>
 
 This hook is invoked during the commit, to check if the commit log
 message complies.
 
-=item C<update>
+=item * B<update>
 
 This hook is invoked multiple times in the remote repository during
 C<git push>, once per branch being updated, to check if the commit log
 messages of all commits being pushed comply.
 
-=item C<pre-receive>
+=item * B<pre-receive>
 
 This hook is invoked once in the remote repository during C<git push>,
 to check if the commit log messages of all commits being pushed
@@ -304,56 +304,56 @@ option:
 
 The plugin is configured by the following git options.
 
-=head2 githooks.checklog..title-required [01]
+=head2 githooks.checklog.title-required [01]
 
 The first line of a Git commit log message is usually called the
 'title'. It must be separated by the rest of the message (it's 'body')
 by one empty line. This option, which is 1 by default, makes the
 plugin check if there is a proper title in the log message.
 
-=head2 githooks.checklog..title-max-width N
+=head2 githooks.checklog.title-max-width N
 
 This option specifies a limit to the width of the title's in
 characters. It's 50 by default. If you set it to 0 the plugin imposes
 no limit on the title's width.
 
-=head2 githooks.checklog..title-period [deny|allow|require]
+=head2 githooks.checklog.title-period [deny|allow|require]
 
 This option defines the policy regarding the title's ending in a
 period (a.k.a. full stop ('.')). It can take three values:
 
 =over
 
-=item deny
+=item * B<deny>
 
 This means that the title SHOULD NOT end in a period. This is the
 default value of the option, as this is the most common policy.
 
-=item allow
+=item * B<allow>
 
 This means that the title MAY end in a period, i.e., it doesn't
 matter.
 
-=item require
+=item * B<require>
 
 This means that the title SHOULD end in a period.
 
 =back
 
-=head2 githooks.checklog..body-max-width N
+=head2 githooks.checklog.body-max-width N
 
 This option specifies a limit to the width of the commit log message's
 body lines, in characters. It's 72 by default. If you set it to 0 the
 plugin imposes no limit on the body line's width.
 
-=head2 githooks.checklog..match [!]REGEXP
+=head2 githooks.checklog.match [!]REGEXP
 
 This option may be specified more than once. It defines a list of
 regular expressions that will be matched against the commit log
 messages. If the '!' prefix isn't used, the log has to match the
 REGEXP. Otherwise, the log must not match the REGEXP.
 
-=head2 githooks.checklog..spelling [01]
+=head2 githooks.checklog.spelling [01]
 
 This option makes the plugin spell check the commit log message using
 C<Text::SpellChecker>. Any spell error will cause the commit or push
@@ -365,7 +365,7 @@ check. Please, refer to the module's own documentation to see how to
 install it and its own dependencies (which are C<Text::Hunspell> or
 C<Text::Aspell>).
 
-=head2 githooks.checklog..spelling-lang ISO
+=head2 githooks.checklog.spelling-lang ISO
 
 The Text::SpellChecker module uses defaults to infer which language is
 must use to spell check the message. You can make it use a particular
@@ -402,25 +402,25 @@ C<pre-receive> hooks. It needs a C<Git::More> object.
 
 =over
 
-=item git-commit(1) Manual Page
+=item * B<git-commit(1) Manual Page>
 
 (L<http://www.kernel.org/pub/software/scm/git/docs/git-commit.html>)
 This Git manual page has a section called DISCUSSION which discusses
 some common log message policies.
 
-=item Linus Torvalds GitHub rant
+=item * B<Linus Torvalds GitHub rant>
 
 (L<https://github.com/torvalds/linux/pull/17#issuecomment-5659933>) In
 this note, Linus says why he dislikes GitHub's pull request interface,
 mainly because it doesn't allow him to enforce log message formatting
 policies.
 
-=item MediaWiki Git/Commit message guidelines
+=item * B<MediaWiki Git/Commit message guidelines>
 
 (L<http://www.mediawiki.org/wiki/Git/Commit_message_guidelines>) This
 document defines the MediaWiki's project commit log message guidelines.
 
-=item Proper Git Commit Messages and an Elegant Git History
+=item * B<Proper Git Commit Messages and an Elegant Git History>
 
 (L<http://ablogaboutcode.com/2011/03/23/proper-git-commit-messages-and-an-elegant-git-history/>)
 This is a good discussion about commit log message formatting and the

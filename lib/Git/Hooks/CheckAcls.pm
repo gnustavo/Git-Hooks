@@ -138,13 +138,13 @@ branches.
 
 =over
 
-=item C<update>
+=item * B<update>
 
 This hook is invoked multiple times in the remote repository during
 C<git push>, once per branch being updated, checking if the user
 performing the push can update the branch in question.
 
-=item C<pre-receive>
+=item * B<pre-receive>
 
 This hook is invoked once in the remote repository during C<git push>,
 checking if the user performing the push can update every affected
@@ -198,21 +198,13 @@ specified as a string of one or more of the following opcodes:
 
 =over
 
-=item C
+=item * B<C> - Create a new ref.
 
-Create a new ref.
+=item * B<R> - Rewind/Rebase an existing ref. (With commit loss.)
 
-=item R
+=item * B<U> - Update an existing ref. (A fast-forward with no commit loss.)
 
-Rewind/Rebase an existing ref. (With commit loss.)
-
-=item U
-
-Update an existing ref. (A fast-forward with no commit loss.)
-
-=item D
-
-Delete an existing ref.
+=item * B<D> - Delete an existing ref.
 
 =back
 
@@ -224,17 +216,17 @@ be specified in one of these formats:
 
 =over
 
-=item ^REGEXP
+=item * B<^REGEXP>
 
 A regular expression anchored at the beginning of the reference name.
 For example, "^refs/heads", meaning every branch.
 
-=item !REGEXP
+=item * B<!REGEXP>
 
 A negated regular expression. For example, "!^refs/heads/master",
 meaning everything but the master branch.
 
-=item STRING
+=item * B<STRING>
 
 The complete name of a reference. For example, "refs/heads/master".
 
