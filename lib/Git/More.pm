@@ -3,7 +3,15 @@ package Git::More;
 
 use strict;
 use warnings;
-use parent 'Git';
+
+BEGIN {
+    # See http://git.661346.n2.nabble.com/better-way-to-find-Git-pm-officially-td7416362.html
+    local @INC = @INC;
+    unshift @INC, split(/:/, $ENV{GITPERLLIB}) if exists $ENV{GITPERLLIB};
+    require Git;
+    use parent -norequire, 'Git';
+}
+
 use Error qw(:try);
 use Carp;
 use Git::Hooks qw/:utils/;
