@@ -2,6 +2,30 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.033     2013-01-12 18:45:07 America/Sao_Paulo
+
+        Substitute Git for App::gh::Git as a parent for Git::More. The
+        major motivation for this was to get rid of some heavy
+        dependencies that were carried over by App::gh. This change
+        should be mostly transparent, as App::gh::Git is a copy of
+        Git.
+
+        Since Git isn't on CPAN we can't depend directly on it. The
+        user must guarantee that it is present on @INC in order to
+        install and use Git::Hooks. The environment variable
+        GITPERLLIB can be used to specify a list of directories
+        (besides the ones already in @INC) where the module will be
+        searched.
+
+        Consolidate the methods Git::More::get_config and
+        Git::More::config in a single method Git::More::get_config,
+        which returns ever more specialized configuration depending on
+        how many arguments it gets (zero, one, or two). This change
+        affects most plugins.
+
+        Make a change in the way we inkoke "git init" during test so
+        that we can use pre-v1.6.5 gits.
+
 0.032     2013-01-06 10:06:48 America/Sao_Paulo
 
 	Simplify plugin/hook integration
