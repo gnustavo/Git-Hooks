@@ -143,7 +143,7 @@ sub check_patterns {
 }
 
 sub check_title {
-    my ($git, $id, $title, $neck, $body) = @_;
+    my ($git, $id, $title, $neck) = @_;
 
     return unless $git->get_config($CFG => 'title-required');
 
@@ -205,7 +205,7 @@ sub check_message {
 
     my ($title, $neck, $body) = split /(\n\n+)/s, $msg, 2;
 
-    check_title($git, $id, $title, $neck, $body);
+    check_title($git, $id, $title, $neck);
 
     check_body($git, $id, $body);
 
