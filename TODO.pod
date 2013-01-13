@@ -130,3 +130,12 @@ allow it.
 
 This way, the options are fixed for any file. Would it be desirable to
 have different options for different kind of files?
+
+=head2 I18N
+
+Use Locale::TextDomain to internationalize it.
+
+=head2 L10N pt_BR
+
+As a first job after i18n I intend to nationalize it to Brazilian
+Portuguese.
