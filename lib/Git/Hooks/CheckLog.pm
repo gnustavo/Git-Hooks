@@ -181,6 +181,8 @@ sub check_title {
 sub check_body {
     my ($git, $id, $body) = @_;
 
+    return unless $body;
+
     if (my $max_width = $git->get_config($CFG => 'body-max-width')) {
         while ($body =~ /^(.*)/gm) {
             my $line = $1;
