@@ -9,6 +9,7 @@ CheckAcls
 CheckJira
 CheckLog
 CheckStructure
+checkwhitespace
 CODESPEC
 commit/M
 commitEncoding

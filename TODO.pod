@@ -98,3 +98,35 @@ This would allow for all kinds of checks specific for some kinds of
 files. Some interesting ideas here:
 L<http://tech.yipit.com/2011/11/16/183772396/>.
 
+=head2 Implement the Git::Hooks::CheckWhiteSpace plugin
+
+Some people (e.g. Linus Torvalds) prefer spaces, others prefer tabs.
+
+Some people prefer tab size at 8 characters, others prefer at 4.
+
+This plugin should be able to check these preferences for selected
+types of files. Some configuration would be like this:
+
+=over
+
+=item * githooks.checkwhitespace.indentation [tab|space|any]
+
+By default any kind of white-space should be allowed. But one could
+specify B<tab> for tabs only or B<space> for space only.
+
+Note that this checks only the indentation space in each line.
+
+=item * githooks.checkwhitespace.files REGEXP
+
+This multi-valued option defines the files that should be checked. By
+default, no file is checked.
+
+=item * githooks.checkwhitespace.trailing [allow|deny]
+
+By default trailing white space is denied. But one should be able to
+allow it.
+
+=back
+
+This way, the options are fixed for any file. Would it be desirable to
+have different options for different kind of files?
