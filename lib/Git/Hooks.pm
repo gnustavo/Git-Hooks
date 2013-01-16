@@ -821,7 +821,7 @@ need to implement more than one specific hook.
 
 =item * POST_COMMIT(GIT)
 
-=item * PRE_REBASE(GIT)
+=item * PRE_REBASE(GIT, upstream [, branch])
 
 =item * POST_CHECKOUT(GIT, prev-head-ref, new-head-ref, is-branch-checkout)
 
