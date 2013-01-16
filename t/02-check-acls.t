@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 26;
+use Test::More tests => 27;
 
 require "test-functions.pl";
 
@@ -33,6 +33,11 @@ $clone->command(config => 'githooks.update', 'check-acls');
 # Without any specific configuration all pushes are denied
 $ENV{USER} //= 'someone';	# guarantee that the user is known, at least.
 check_cannot_push('deny by default');
+
+# Check if disabling by ENV is working
+$ENV{CheckAcls} = 0;
+check_can_push('allow if plugin is disabled by ENV');
+delete $ENV{CheckAcls};
 
 # Configure admin environment variable
 $clone->command(config => 'check-acls.userenv', 'ACL_ADMIN');

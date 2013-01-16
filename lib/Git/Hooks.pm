@@ -243,6 +243,7 @@ sub run_hook {
 
       HOOK:
         foreach my $hook (uniq @enabled_plugins) {
+            next if exists $ENV{$hook} && ! $ENV{$hook}; # disabled by user
             my $exit = do {
                 if ($hook =~ /::/) {
                     # It must be a module name
@@ -646,6 +647,25 @@ the configuration, then it will be simply C<required> as a normal
 module. For example:
 
     $ git config --add githooks.plugin My::Hook::CheckSomething
+
+Finally, you may temporarily disable a plugin by assigning to "0" an
+environment variable with its name. This is useful sometimes, when you
+are denied some perfectly fine commit by one of the check plugins. For
+example, suppose you got an error from the CheckLog plugin because you
+used an uncommon word that is not in the system's dictionary yet. If
+you don't intend to use the word again you can bypass all CheckLog
+checks this way:
+
+    $ CheckLog=0 git commit
+
+This works for every hook. The environment variable name has to match
+exactly the plugin name as configured.
+
+Note, however, that this works for local hooks only. Remote hooks
+(like B<update> or B<pre-receive>) are run on the server. You can set
+up the server so that it defines the appropriate variable, but this
+isn't so useful as for the local hooks, as it's intended for
+once-in-a-while events.
 
 =head2 githooks.plugins DIR
 

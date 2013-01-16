@@ -2,6 +2,11 @@ Revision history for Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+        Provide for temporary disabling of plugins by setting to a
+        false value (e.g. '0') an environment variable named after the
+        plugin. This is useful for temporary disabling of pre-commit
+        hooks, for instance.
+
 0.034     2013-01-16 12:22:37 America/Sao_Paulo
 
         Implement the new Git::Hooks::CheckRewrite plugin to check the
