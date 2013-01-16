@@ -79,7 +79,10 @@ EOF
 
 	print $fh $extra_perl if defined $extra_perl;
 
+        # Not all hooks defined the GIT_DIR environment variable
+        # (e.g., pre-rebase doesn't).
 	print $fh <<EOF
+\$ENV{GIT_DIR}    = '.git' unless exists \$ENV{GIT_DIR};
 \$ENV{GIT_CONFIG} = "\$ENV{GIT_DIR}/config";
 run_hook(\$0, \@ARGV);
 EOF
@@ -137,6 +140,8 @@ sub new_repos {
 	    throw Error::Simple("'git clone -q --bare --no-hardlinks $repodir $clonedir': exit=$exit, stdout=\n$stdout\n");
 	}
 	my $clone = Git::More->repository(Directory => $clonedir);
+
+        $repo->command(remote => 'add', 'clone', $clonedir);
 
 	return ($repo, $filename, $clone, $T);
     } otherwise {
@@ -196,6 +201,23 @@ sub test_ok {
     my ($ok, $exit, $stdout) = test_command(@args);
     if ($ok) {
 	pass($testname);
+    } else {
+	fail($testname);
+	diag(" exit=$exit\n stdout=$stdout\n git-version=$git_version\n");
+    }
+    return $ok;
+}
+
+sub test_ok_match {
+    my ($testname, $regex, @args) = @_;
+    my ($ok, $exit, $stdout) = test_command(@args);
+    if ($ok) {
+        if ($stdout =~ $regex) {
+            pass($testname);
+        } else {
+            fail($testname);
+            diag(" did not match regex ($regex)\n stdout=$stdout\n git-version=$git_version\n");
+        }
     } else {
 	fail($testname);
 	diag(" exit=$exit\n stdout=$stdout\n git-version=$git_version\n");
