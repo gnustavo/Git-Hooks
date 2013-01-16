@@ -8,9 +8,60 @@ cpan.org.
 
 Currently we abort the build on C<Makefile.PL>.
 
+=head2 Support Gerrit hooks
+
+Gerrit is a "web based code review and project management tool for Git
+based projects" (L<https://code.google.com/p/gerrit/>). It's based on
+JGit (L<http://eclipse.org/jgit/>) which, as of 2012-01-14, still
+doesn't support git's standard hooks.
+
+But Gerrit has its own hook infrastructure and we should support it
+(L<http://gerrit-documentation.googlecode.com/svn/Documentation/2.5.1/config-hooks.html>).
+
+The two hooks that seem to be relevant to Git::Hooks's plugins are
+B<patchset-created> and B<ref-updated>.
 =head2 Implement the Scott Chacon example hooks
 
 In L<https://github.com/schacon/githooks>.
+
+=head2 Improve documentation
+
+We need:
+
+=over
+
+=item * A user-friendly README
+
+=item * A user tutorial
+
+=item * A plugin developer tutorial
+
+=item * Revise and uniformize the documentation
+
+=item * Follow the advice in
+L<http://blog.smartbear.com/software-quality/bid/256072>
+
+=back
+
+=head2 I18N
+
+Use Locale::TextDomain to internationalize it.
+
+=head2 L10N pt_BR
+
+As a first job after i18n I intend to nationalize it to Brazilian
+Portuguese.
+
+=head2 Let the user control which config files to read
+
+Let the user tell which configuration files Git::Hooks should
+consider. Currently it considers the three default ones (system,
+global, and local), without knowing which one sets what. Perhaps we
+could have a new option C<githooks.extra_config> that could be set
+with an array of filenames to invoke C<git config --file> with in
+succession. This option, if set in the default configuration files,
+could tell Git::Hooks to grok an extra set of configuration from
+specific files.
 
 =head2 In CheckAcls implement DENY for ACL operations
 
@@ -25,17 +76,6 @@ DenyFilenames and UpdateConfFile. Actually, I'm thinking that
 UpdateConfFile is too much specific. Perhaps something along the lines
 of this post-update hook would be more interesting:
 L<http://stackoverflow.com/questions/279169/deploy-a-project-using-git-push>.
-
-=head2 Let the user control which config files to read
-
-Let the user tell which configuration files Git::Hooks should
-consider. Currently it considers the three default ones (system,
-global, and local), without knowing which one sets what. Perhaps we
-could have a new option C<githooks.extra_config> that could be set
-with an array of filenames to invoke C<git config --file> with in
-succession. This option, if set in the default configuration files,
-could tell Git::Hooks to grok an extra set of configuration from
-specific files.
 
 =head2 In CheckLog allow for stop words
 
@@ -56,22 +96,6 @@ used here. Some other things to check:
 (L<https://github.com/icefox/git-hooks/blob/master/contrib/commit-msg/duplicate-signedoffby>)
 
 =back
-
-=head2 Implement the Git::Hooks::CheckFile plugin
-
-Implement a hook to make it easy to perform some checks on
-added/modified files. For instance, Perl files should be syntax
-checked. This could be configured somewhat like this:
-
-    CheckFile.rule "\.p[lm]$ perl -c"
-
-The first 'word' in the value would be a regexp used to match the
-files we're interested in. All that follows would be a command to
-which the filename would be passed.
-
-This would allow for all kinds of checks specific for some kinds of
-files. Some interesting ideas here:
-L<http://tech.yipit.com/2011/11/16/183772396/>.
 
 =head2 Implement the Git::Hooks::CheckWhiteSpace plugin
 
@@ -106,24 +130,19 @@ allow it.
 This way, the options are fixed for any file. Would it be desirable to
 have different options for different kind of files?
 
-=head2 I18N
+=head2 Implement the Git::Hooks::CheckFile plugin
 
-Use Locale::TextDomain to internationalize it.
+Implement a hook to make it easy to perform some checks on
+added/modified files. For instance, Perl files should be syntax
+checked. This could be configured somewhat like this:
 
-=head2 L10N pt_BR
+    CheckFile.rule "\.p[lm]$ perl -c"
 
-As a first job after i18n I intend to nationalize it to Brazilian
-Portuguese.
+The first 'word' in the value would be a regexp used to match the
+files we're interested in. All that follows would be a command to
+which the filename would be passed.
 
-=head2 Support Gerrit hooks
+This would allow for all kinds of checks specific for some kinds of
+files. Some interesting ideas here:
+L<http://tech.yipit.com/2011/11/16/183772396/>.
 
-Gerrit is a "web based code review and project management tool for Git
-based projects" (L<https://code.google.com/p/gerrit/>). It's based on
-JGit (L<http://eclipse.org/jgit/>) which, as of 2012-01-14, still
-doesn't support git's standard hooks.
-
-But Gerrit has its own hook infrastructure and we should support it
-(L<http://gerrit-documentation.googlecode.com/svn/Documentation/2.5.1/config-hooks.html>).
-
-The two hooks that seem to be relevant to Git::Hooks's plugins are
-B<patchset-created> and B<ref-updated>.
