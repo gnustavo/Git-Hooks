@@ -206,6 +206,28 @@ sub eval_gitconfig {
     return $value;
 }
 
+sub _prepare_receive {
+    my ($git) = @_;
+    # pre-receive and post-receive get the list of affected
+    # commits via STDIN.
+    while (<>) {
+        chomp;
+        my ($old_commit, $new_commit, $ref) = split;
+        $git->set_affected_ref($ref, $old_commit, $new_commit);
+    }
+    return;
+}
+
+my %prepare_hook = (
+    update => sub {
+        my ($git, $ref, $old_commit, $new_commit) = @_;
+        $git->set_affected_ref($ref, $old_commit, $new_commit);
+        return;
+    },
+    'pre-receive'  => \&_prepare_receive,
+    'post-receive' => \&_prepare_receive,
+);
+
 sub run_hook {
     my ($hook_name, @args) = @_;
 
@@ -213,19 +235,9 @@ sub run_hook {
 
     my $git = Git::More->repository();
 
-    # Some hooks (update, pre-receive, and post-receive) affect refs
-    # and associated commit ranges. Let's grok them at once.
-    if ($hook_name eq 'update') {
-        my ($ref, $old_commit, $new_commit) = @args;
-        $git->set_affected_ref($ref, $old_commit, $new_commit);
-    } elsif ($hook_name =~ /^(?:pre|post)-receive$/) {
-        # pre-receive and post-receive get the list of affected
-        # commits via STDIN.
-        while (<>) {
-            chomp;
-            my ($old_commit, $new_commit, $ref) = split;
-            $git->set_affected_ref($ref, $old_commit, $new_commit);
-        }
+    # Some hooks need some argument munging before we invoke them
+    if (my $prepare = $prepare_hook{$hook_name}) {
+        $prepare->($git, @args);
     }
 
     # Invoke enabled plugins
