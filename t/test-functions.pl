@@ -7,6 +7,7 @@ use Cwd;
 use File::Temp qw/tempdir/;
 use File::Spec::Functions ':ALL';
 use File::Copy;
+use File::Remove 'remove';
 use File::Slurp;
 use URI::file;
 use Config;
@@ -16,7 +17,16 @@ use Error qw(:try);
 # Make sure the git messages come in English.
 $ENV{LC_MESSAGES} = 'C';
 
-our $T;
+# It's better to perform all tests in a temporary directory because
+# otherwise the author runs the risk of messing with its local
+# Git::Hooks git repository.
+
+our $T = tempdir('githooks.XXXXX', TMPDIR => 1, CLEANUP => $ENV{REPO_CLEANUP} || 1);
+chdir $T or die "Can't chdir $T: $!";
+
+# Get out of the temp dir before removing it.
+END { chdir '/' }
+
 our $HooksDir = catfile(rel2abs(curdir()), 'hooks');
 
 our $git_version;
@@ -95,12 +105,12 @@ EOF
 }
 
 sub new_repos {
-    my $cleanup = exists $ENV{REPO_CLEANUP} ? $ENV{REPO_CLEANUP} : 1;
-    $T = tempdir('githooks.XXXXX', TMPDIR => 1, CLEANUP => $cleanup);
-
     my $repodir  = catfile($T, 'repo');
     my $filename = catfile($repodir, 'file.txt');
     my $clonedir = catfile($T, 'clone');
+
+    # Remove the directories recursively to create new ones.
+    remove(\1, $repodir, $clonedir);
 
     mkdir $repodir, 0777 or BAIL_OUT("can't mkdir $repodir: $!");
     {
@@ -133,7 +143,7 @@ sub new_repos {
 	}
 	my $clone = Git::More->repository(Directory => $clonedir);
 
-	return ($repo, $filename, $clone);
+	return ($repo, $filename, $clone, $T);
     } otherwise {
 	my $E = shift;
 	my $ls = `find $T -ls`;	# FIXME: this is non-portable.
