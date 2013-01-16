@@ -242,27 +242,27 @@ sub run_hook {
         );
 
       HOOK:
-        foreach my $hook (uniq @enabled_plugins) {
-            next if exists $ENV{$hook} && ! $ENV{$hook}; # disabled by user
+        foreach my $plugin (uniq @enabled_plugins) {
+            next if exists $ENV{$plugin} && ! $ENV{$plugin}; # disabled by user
             my $exit = do {
-                if ($hook =~ /::/) {
+                if ($plugin =~ /::/) {
                     # It must be a module name
-                    eval "require $hook"; ## no critic (BuiltinFunctions::ProhibitStringyEval ErrorHandling::RequireCheckingReturnValueOfEval)
+                    eval "require $plugin"; ## no critic (BuiltinFunctions::ProhibitStringyEval ErrorHandling::RequireCheckingReturnValueOfEval)
                 } else {
                     # Otherwise, it's a basename that we must look for
                     # in @plugin_dirs
-                    $hook .= '.pm' unless $hook =~ /\.p[lm]$/i;
-                    my @scripts = grep {-f} map {catfile($_, $hook)} @plugin_dirs;
+                    $plugin .= '.pm' unless $plugin =~ /\.p[lm]$/i;
+                    my @scripts = grep {-f} map {catfile($_, $plugin)} @plugin_dirs;
                     my $script = shift @scripts
-                        or die __PACKAGE__, ": can't find enabled hook $hook.\n";
-                    $hook = $script; # for the error messages below
+                        or die __PACKAGE__, ": can't find enabled hook $plugin.\n";
+                    $plugin = $script; # for the error messages below
                     do $script;
                 }
             };
             unless ($exit) {
-                die __PACKAGE__, ": couldn't parse $hook: $@\n" if $@;
-                die __PACKAGE__, ": couldn't do $hook: $!\n"    unless defined $exit;
-                die __PACKAGE__, ": couldn't run $hook\n";
+                die __PACKAGE__, ": couldn't parse $plugin: $@\n" if $@;
+                die __PACKAGE__, ": couldn't do $plugin: $!\n"    unless defined $exit;
+                die __PACKAGE__, ": couldn't run $plugin\n";
             }
         }
     }
