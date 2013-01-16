@@ -4,7 +4,7 @@ Revision history for Git-Hooks. -*- text -*-
 
 0.034     2013-01-16 12:22:37 America/Sao_Paulo
 
-        Implement the new Git::Hooks::SafeRewrite plugin to check the
+        Implement the new Git::Hooks::CheckRewrite plugin to check the
         safety of rewrites, by detecting when we're amending or
         rebasing commits that have already been pushed.
 
