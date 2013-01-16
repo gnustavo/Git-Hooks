@@ -7,6 +7,7 @@ use Cwd;
 use File::Temp qw/tempdir/;
 use File::Spec::Functions ':ALL';
 use File::Copy;
+use File::pushd;
 use File::Remove 'remove';
 use File::Slurp;
 use URI::file;
@@ -23,8 +24,6 @@ $ENV{LC_MESSAGES} = 'C';
 
 our $T = tempdir('githooks.XXXXX', TMPDIR => 1, CLEANUP => $ENV{REPO_CLEANUP} || 1);
 chdir $T or die "Can't chdir $T: $!";
-
-# Get out of the temp dir before removing it.
 END { chdir '/' }
 
 our $HooksDir = catfile(rel2abs(curdir()), 'hooks');
@@ -123,10 +122,10 @@ sub new_repos {
         # but it started to accept it only on v1.6.5. To support
         # previous gits we chdir to $repodir to avoid the need to pass
         # the argument. Then we have to go back to where we were.
-        my $cwd = cwd();
-        chdir $repodir or die "cannot chdir $repodir: $!\n";
-	my ($ok, $exit, $stdout) = test_command(undef, 'init', '-q');
-        chdir $cwd;
+        my ($ok, $exit, $stdout) = do {
+            my $dir = pushd($repodir);
+            test_command(undef, 'init', '-q');
+        };
 	unless ($ok) {
 	    throw Error::Simple("'git init -q $repodir': exit=$exit, stdout=\n$stdout\n");
 	}

@@ -6,6 +6,7 @@ use warnings;
 use lib 't';
 use Test::More tests => 44;
 use Cwd;
+use File::pushd;
 use File::Slurp;
 use File::Temp qw/tmpnam/;
 use Git::Hooks::GerritChangeId;
@@ -117,10 +118,9 @@ sub expected {
 
     write_file($msgfile, $msg);
 
-    my $dir = getcwd;
-    chdir $repo->repo_path();
+    my $dir = pushd($repo->repo_path());
+
     system($gerrit_script, $msgfile);
-    chdir $dir;
 
     return read_file($msgfile);
 }
