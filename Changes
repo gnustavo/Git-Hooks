@@ -1,346 +1,351 @@
-Revision history for Git-Hooks. -*- text -*-
+Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
-        Provide for temporary disabling of plugins by setting to a
-        false value (e.g. '0') an environment variable named after the
-        plugin. This is useful for temporary disabling of pre-commit
-        hooks, for instance.
+  [New]
+  - Provide for temporary disabling of plugins by setting to a false
+    value (e.g. '0') an environment variable named after the
+    plugin. This is useful for temporary disabling of pre-commit
+    hooks, for instance.
+
+  [Cleanup]
+  - Make the Change file conform to the Specification for CPAN Changes
+    files (CPAN::Changes::Spec).
 
-0.034     2013-01-16 12:22:37 America/Sao_Paulo
+0.034	  2013-01-16 12:22:37 America/Sao_Paulo
 
-        Implement the new Git::Hooks::CheckRewrite plugin to check the
-        safety of rewrites, by detecting when we're amending or
-        rebasing commits that have already been pushed.
+  [New]
+  - Implement the new Git::Hooks::CheckRewrite plugin to check the
+    safety of rewrites, by detecting when we're amending or rebasing
+    commits that have already been pushed.
 
-0.033     2013-01-12 18:45:07 America/Sao_Paulo
+0.033	  2013-01-12 18:45:07 America/Sao_Paulo
 
-        Substitute Git for App::gh::Git as a parent for Git::More. The
-        major motivation for this was to get rid of some heavy
-        dependencies that were carried over by App::gh. This change
-        should be mostly transparent, as App::gh::Git is a copy of
-        Git.
+  [Incompatible changes]
+  - Substitute Git for App::gh::Git as a parent for Git::More. The
+    major motivation for this was to get rid of some heavy
+    dependencies that were carried over by App::gh. This change should
+    be mostly transparent, as App::gh::Git is a copy of Git.
 
-        Since Git isn't on CPAN we can't depend directly on it. The
-        user must guarantee that it is present on @INC in order to
-        install and use Git::Hooks. The environment variable
-        GITPERLLIB can be used to specify a list of directories
-        (besides the ones already in @INC) where the module will be
-        searched.
+    Since Git isn't on CPAN we can't depend directly on it. The user
+    must guarantee that it is present on @INC in order to install and
+    use Git::Hooks. The environment variable GITPERLLIB can be used to
+    specify a list of directories (besides the ones already in @INC)
+    where the module will be searched.
 
-        Consolidate the methods Git::More::get_config and
-        Git::More::config in a single method Git::More::get_config,
-        which returns ever more specialized configuration depending on
-        how many arguments it gets (zero, one, or two). This change
-        affects most plugins.
+  - Consolidate the methods Git::More::get_config and
+    Git::More::config in a single method Git::More::get_config, which
+    returns ever more specialized configuration depending on how many
+    arguments it gets (zero, one, or two). This change affects most
+    plugins.
 
-        Make a change in the way we inkoke "git init" during test so
-        that we can use pre-v1.6.5 gits.
+  [Fix]
+  - Make a change in the way we inkoke "git init" during test so that
+    we can use pre-v1.6.5 gits.
 
-0.032     2013-01-06 10:06:48 America/Sao_Paulo
+0.032	  2013-01-06 10:06:48 America/Sao_Paulo
 
-	Simplify plugin/hook integration
+  [Incompatible change]
+  - Simplify plugin/hook integration. Previously, if a plugin could be
+    hooked to more than one hook, one should configure all the
+    integrations by hand. For instance, the CheckJira plugin can be
+    hooked to the update, the pre-receive, and the commit-msg hooks,
+    and the user had to know which hooks should be enabled. Now it's
+    easier because the plugins can hook themselves to all hooks
+    directly. In this way, for instance, instead of configuring
+    CheckJira specifically for one of those hooks with one of the
+    following configurations:
 
-	Previously, if a plugin could be hooked to more than one hook,
-	one should configure all the integrations by hand. For
-	instance, the CheckJira plugin can be hooked to the update,
-	the pre-receive, and the commit-msg hooks, and the user had to
-	know which hooks should be enabled. Now it's easier because
-	the plugins can hook themselves to all hooks directly. In this
-	way, for instance, instead of configuring CheckJira
-	specifically for one of those hooks with one of the following
-	configurations:
+        git config --add githooks.commig-msg  CheckJira
+        git config --add githooks.pre-receive CheckJira
+        git config --add githooks.update      CheckJira
 
-	    git config --add githooks.commig-msg  CheckJira
-	    git config --add githooks.pre-receive CheckJira
-	    git config --add githooks.update      CheckJira
+    One can simply do this:
 
-	One can simply do this:
+        git config --add githooks.plugin CheckJira
 
-	    git config --add githooks.plugin CheckJira
+    CheckJira will automatically be enabled for all plugins.
 
-	CheckJira will automatically be enabled for all plugins.
+    Also, the plugins can be referred to by their fully qualified
+    module names (e.g. Git::Hooks::CheckJira) to allow for third party
+    plugins.
 
-	Also, the plugins can be referred to by their fully qualified
-	module names (e.g. Git::Hooks::CheckJira) to allow for third
-	party plugins.
+    If the githooks.plugin option is not defined, the configuration
+    processing will try to build it from the old githooks.HOOK
+    configuration options that are not needed anymore, so to preserve
+    compatibility. This is a temporary measure.
 
-	If the githooks.plugin option is not defined, the
-	configuration processing will try to build it from the old
-	githooks.HOOK configuration options that are not needed
-	anymore, so to preserve compatibility. This is a temporary
-	measure.
+0.031	  2013-01-05 23:33:50 America/Sao_Paulo
 
-0.031     2013-01-05 23:33:50 America/Sao_Paulo
+  [Incompatible changes]
+  - Move plugin config options to a githooks subsection. For example,
+    the CheckLog.spelling option now is called
+    githooks.checklog.spelling. The new scheme avoids unecessary
+    pollution of the configuration namespace. The plugins that existed
+    up to the previous release can still have their options in the
+    previous place, because we dynamically move them. This is a
+    temporary measure to avoid breaking old configuration. It will
+    probably be removed in the future.
 
-        Move plugin config options to a githooks subsection. For
-        example, the CheckLog.spelling option now is called
-        githooks.checklog.spelling. The new scheme avoids unecessary
-        pollution of the configuration namespace. The plugins that
-        existed up to the previous release can still have their
-        options in the previous place, because we dynamically move
-        them. This is a temporary measure to avoid breaking old
-        configuration. It will probably be removed in the future.
+  [Cleanup]
+  - Rename TODO to TODO.pod and update it with new ideas.
 
-        Rename TODO to TODO.pod and update it with new ideas.
+0.030	  2012-12-29 23:06:08 America/Sao_Paulo
 
-0.030     2012-12-29 23:06:08 America/Sao_Paulo
+  [Fix]
+  - Fix two bugs. No new features.
 
-        Fix two bugs. No new features.
+0.029	  2012-12-26 23:12:17 America/Sao_Paulo
 
-0.029     2012-12-26 23:12:17 America/Sao_Paulo
+  [Fix]
+  - Fix test t/02-check-log.t requirement of Text::SpellChecker.
 
-        Fix test t/02-check-log.t requirement of Text::SpellChecker.
+  - Recommends Text::SpellChecker instead of requiring it, as it's
+    only needed for the Git::Hooks::CheckLog plugin.
 
-        Recommends Text::SpellChecker instead of requiring it, as it's
-        only needed for the Git::Hooks::CheckLog plugin.
+  [Cleanup]
+  - Update TODO file.
 
-        Update TODO file.
+0.028	  2012-12-25 22:47:34 America/Sao_Paulo
 
-0.028     2012-12-25 22:47:34 America/Sao_Paulo
+  [New]
+  - CheckLog implements spell checking of log messages.
 
-        CheckLog implements spell checking of log messages.
+  [Fix]
+  - Abort building on Windows. We're not ready yet.
 
-        Abort building on Windows. We're not ready yet.
+  - Git::More::get_commit_msg now supports pre-1.7.2 Gits.
 
-        Git::More::get_commit_msg now supports pre-1.7.2 Gits.
+0.026	  2012-12-22 20:23:22 America/Sao_Paulo
 
-0.026     2012-12-22 20:23:22 America/Sao_Paulo
+  [New]
+  - Implement a new plugin Git::Hooks::CheckLog to enforce formatting
+    policies for git commit log messages.
 
-        Implement a new plugin Git::Hooks::CheckLog to enforce
-        formatting policies for git commit log messages.
+  [Fix]
+  - Fix configuration grokking.
 
-        Fix configuration grokking.
+  - Recommends JIRA::Client instead of requiring it, as it is only
+    needed for the Git::Hooks::CheckJira plugin.
 
-        Recommends JIRA::Client instead of requiring it, as it is only
-        needed for the Git::Hooks::CheckJira plugin.
+0.025	  2012-12-21 08:06:04 America/Sao_Paulo
 
-0.025     2012-12-21 08:06:04 America/Sao_Paulo
+  - This version is another big refactoring. It introduces a few
+    incompatible changes as well, for good measure. ;-)
 
-        This version is another big refactoring. It introduces a few
-        incompatible changes as well, for good measure. ;-)
+  [Incompatible Changes Affecting Plugin Users]
+  - The CheckJira.by-assignee option previously required the name of
+    an environment variable. But this was duplicating poorly the
+    functionality of the githooks.userenv global option. So, I changed
+    its meaning to now require a boolean (integer). If true it now
+    checks if the authenticated_user (as inferred by the
+    githooks.userenv option) is the current issue's assignee.
 
-        * INCOMPATIBLE CHANGES AFFECTING PLUGIN USERS:
+  [Incompatible Changes Affecting Plugin Developers]
+  - The Git::Hooks routines grok_affected_refs, get_affected_refs,
+    get_affected_ref_range, get_affected_ref_commit_ids, and
+    get_affected_ref_commits were transformed in Git::More methods, so
+    that they can now keep the affected_refs information inside the
+    objects.
 
-        The CheckJira.by-assignee option previously required the name
-        of an environment variable. But this was duplicating poorly
-        the functionality of the githooks.userenv global option. So, I
-        changed its meaning to now require a boolean (integer). If
-        true it now checks if the authenticated_user (as inferred by
-        the githooks.userenv option) is the current issue's assignee.
+  - The Git::Hooks::grok_userenv routine was transformed into the
+    Git::More::authenticated_user method.
 
-        * INCOMPATIBLE CHANGES AFFECTING PLUGIN DEVELOPERS:
+  - The Git::Hooks::git_config routine was transformed into the
+    Git::More::config method.
 
-        The Git::Hooks routines grok_affected_refs, get_affected_refs,
-        get_affected_ref_range, get_affected_ref_commit_ids, and
-        get_affected_ref_commits were transformed in Git::More
-        methods, so that they can now keep the affected_refs
-        information inside the objects.
+  - The method Git::More::get_commits now returns a list of commits
+    and not an array-ref. This makes its usage simpler.
 
-        The Git::Hooks::grok_userenv routine was transformed into the
-        Git::More::authenticated_user method.
+  [Fixes]
+  - The tests are now performed out of the distribution directory.  By
+    performing them in the distribution directory we run the risk of
+    messing up with Git::Hooks own git repository, which can interfere
+    with the tests too.
 
-        The Git::Hooks::git_config routine was transformed into the
-        Git::More::config method.
+  [Refactorings]
+  - Got rid of global variables in Git::Hooks and all state variables
+    used throughout. This had a great impact in the code, adding
+    arguments to several routines, turning Git::Hooks routines into
+    Git::More methods, adding new methods
 
-        The method Git::More::get_commits now returns a list of
-        commits and not an array-ref. This makes its usage simpler.
+  - The tests now prepare only the hooks that will be tested. Earlier
+    we prepared all 16 hooks, which made the testing take longer.
 
-        * FIXES:
+  - The compatibility with old plugin names that was implemented some
+    commits ago was made more specific, affecting just the plugins
+    CheckAcls, CheckJira, and CheckStructure. Those were the plugins
+    that existed before the plugin name change.
 
-        The tests are now performed out of the distribution directory.
-        By performing them in the distribution directory we run the
-        risk of messing up with Git::Hooks own git repository, which
-        can interfere with the tests too.
+0.024	  2012-12-17 12:35:52 America/Sao_Paulo
 
-        * REFACTORINGS:
+  - Implement a new plugin Git::Hooks::GerritChangeId which is a
+    reimplementation of Gerrit's commit-msg official one
+    (http://tinyurl.com/cglobb4, at Gerrit's v2.5.1).
 
-        Got rid of global variables in Git::Hooks and all state
-        variables used throughout. This had a great impact in the
-        code, adding arguments to several routines, turning Git::Hooks
-        routines into Git::More methods, adding new methods
+  - Improve code and documentation with the help of Code::TidyAll,
+    Perl::Critic, Pod::Checker, and Pod::Spell.
 
-        The tests now prepare only the hooks that will be
-        tested. Earlier we prepared all 16 hooks, which made the
-        testing take longer.
+0.023	  2012-12-16 08:47:55 America/Sao_Paulo
 
-        The compatibility with old plugin names that was implemented
-        some commits ago was made more specific, affecting just the
-        plugins CheckAcls, CheckJira, and CheckStructure. Those were
-        the plugins that existed before the plugin name change.
+  - This version makes a large refactor in the code. The plugins were
+    rewritten as proper modules so that they can be used by
+    themselves, without the Git::Hooks framework. The only user
+    visible change is that from now on the preferred way to configure
+    plugins is by their CamelCase names (e.g. CheckJira instead of
+    check-jira). But the old flattened names are still valid to keep
+    compatibility with already set up repos.
 
-0.024     2012-12-17 12:35:52 America/Sao_Paulo
+  - This version starts to require App::gh::Git version 0.56 in order
+    to have a working App::gh::Git. It also starts to require
+    File::Path version 2.08 for the testing phase in order to have a
+    working make_path routine.
 
-        Implement a new plugin Git::Hooks::GerritChangeId which is a
-        reimplementation of Gerrit's commit-msg official one
-        (http://tinyurl.com/cglobb4, at Gerrit's v2.5.1).
+0.022	  2012-12-06 23:13:44 America/Sao_Paulo
 
-        Improve code and documentation with the help of Code::TidyAll,
-        Perl::Critic, Pod::Checker, and Pod::Spell.
+  - Implement a new plugin called check-structure.pl which enforces
+    the repository's file and reference structure.
 
-0.023     2012-12-16 08:47:55 America/Sao_Paulo
+0.021	  2012-12-06 08:52:34 America/Sao_Paulo
 
-	This version makes a large refactor in the code. The plugins
-	were rewritten as proper modules so that they can be used by
-	themselves, without the Git::Hooks framework. The only user
-	visible change is that from now on the preferred way to
-	configure plugins is by their CamelCase names (e.g. CheckJira
-	instead of check-jira). But the old flattened names are still
-	valid to keep compatibility with already set up repos.
+  - The configuration variables userenv and admin, which were
+    available in the check-acls and check-jira plugins were promoted
+    to the "githooks" configuration section. Along with them, the
+    functions grok_userenv, match_user, and im_admin were also
+    migrated to the Git::Hooks module so that they can be used by any
+    access control plugin.  The old configuration variables in the
+    plugins are still supported but are now documented as deprecated.
 
-	This version starts to require App::gh::Git version 0.56 in
-	order to have a working App::gh::Git. It also starts to
-	require File::Path version 2.08 for the testing phase in order
-	to have a working make_path routine.
+  - Also improved the documentation slightly.
 
-0.022     2012-12-06 23:13:44 America/Sao_Paulo
+0.020	  2012-11-20 21:56:51 America/Sao_Paulo
 
-	Implement a new plugin called check-structure.pl which
-	enforces the repository's file and reference structure.
+  - Implement routine Git::Hooks::eval_gitconfig to make it easier to
+    grok Perl expressions in config values.
 
-0.021     2012-12-06 08:52:34 America/Sao_Paulo
+  - Fix some problems in the test infrastructure.
 
-	The configuration variables userenv and admin, which were
-	available in the check-acls and check-jira plugins were
-	promoted to the "githooks" configuration section. Along with
-	them, the functions grok_userenv, match_user, and im_admin
-	were also migrated to the Git::Hooks module so that they can
-	be used by any access control plugin.  The old configuration
-	variables in the plugins are still supported but are now
-	documented as deprecated.
+0.019	  2012-11-10 23:56:44 America/Sao_Paulo
 
-	Also improved the documentation slightly.
+  - Fix the post-receive hook which now gets the same input as
+    pre-receive. This was reported to me by Mike South. Thanks again!
 
-0.020     2012-11-20 21:56:51 America/Sao_Paulo
+0.018	  2012-11-06 21:49:20 America/Sao_Paulo
 
-	Implement routine Git::Hooks::eval_gitconfig to make it easier
-	to grok Perl expressions in config values.
+  - Fix a bug that prevented installed hooks to be invoked in the
+    absence of any configured plugins. This was reported to me by Mike
+    South. Thanks!
 
-	Fix some problems in the test infrastructure.
+0.017	  2012-10-31 10:45:10 America/Sao_Paulo
 
-0.019     2012-11-10 23:56:44 America/Sao_Paulo
+  - Just a bunch of fixes.
 
-	Fix the post-receive hook which now gets the same input as
-	pre-receive. This was reported to me by Mike South. Thanks
-	again!
+0.016	  2012-09-13 22:34:05 America/Sao_Paulo
 
-0.018     2012-11-06 21:49:20 America/Sao_Paulo
+  - Interpolate environment variables in the whole ACL specification
+    for check-acls.
 
-	Fix a bug that prevented installed hooks to be invoked in the
-	absence of any configured plugins. This was reported to me by
-	Mike South. Thanks!
+  - Make the .pl extension optional in configuring plugins.
 
-0.017     2012-10-31 10:45:10 America/Sao_Paulo
+  - Make im_memberof an exported routine of Git::Hooks.
 
-	Just a bunch of fixes.
+  - The group specification is now given by the githooks.groups
+    variable. This is an incompatible change, since previously it was
+    given by the check-acls.groups variable.
 
-0.016     2012-09-13 22:34:05 America/Sao_Paulo
+  - Implement Git::More::get_affected_files. This routine returns a
+    hash mapping every affected file in a sequence of commits to a
+    letter telling its affected status.
 
-	Interpolate environment variables in the whole ACL
-	specification for check-acls.
+  - Allow check-acls.userenv be given by a code snippet to be
+    evaluated.
 
-	Make the .pl extension optional in configuring plugins.
+0.015	  2012-08-19 18:20:07 America/Sao_Paulo
 
-	Make im_memberof an exported routine of Git::Hooks.
+  - ACLs in check-acls.pl can have environment variables interpolated
+    in their refs components.
 
-	The group specification is now given by the githooks.groups
-	variable. This is an incompatible change, since previously it
-	was given by the check-acls.groups variable.
+0.014	  2012-08-16 23:00:38 America/Sao_Paulo
 
-	Implement Git::More::get_affected_files. This routine returns
-	a hash mapping every affected file in a sequence of commits to
-	a letter telling its affected status.
+  - Implement reference specification by negated regexes in ACLs.
 
-	Allow check-acls.userenv be given by a code snippet to be
-	evaluated.
+  - Clarify semantics of ACLs what component in the documentation.
 
-0.015     2012-08-19 18:20:07 America/Sao_Paulo
+  - Fix check-jira.matchlog usage.
 
-	ACLs in check-acls.pl can have environment variables
-	interpolated in their refs components.
+  - Provide different messages when there are JIRAs cited but not from
+    an expected project.
 
-0.014     2012-08-16 23:00:38 America/Sao_Paulo
+0.013	  2012-07-27 17:11:17 America/Sao_Paulo
 
-	Implement reference specification by negated regexes in ACLs.
+  - Require at least git 1.5 to work with.
 
-	Clarify semantics of ACLs what component in the documentation.
+0.012	  2012-07-26 12:11:10 America/Sao_Paulo
 
-	Fix check-jira.matchlog usage.
+  - Improve testing framework.
 
-	Provide different messages when there are JIRAs cited but not
-	from an expected project.
+0.011	  2012-07-25 11:12:01 America/Sao_Paulo
 
-0.013     2012-07-27 17:11:17 America/Sao_Paulo
+  - Improve testing framework.
 
-	Require at least git 1.5 to work with.
+0.010	  2012-07-23 11:25:09 America/Sao_Paulo
 
-0.012     2012-07-26 12:11:10 America/Sao_Paulo
+  - Check if we have git installed before generating Makefile from
+    Makefile.PL so that we avoid producing bogus cpantesters.org
+    reports.
 
-	Improve testing framework.
+0.009	  2012-07-22 11:21:18 America/Sao_Paulo
 
-0.011     2012-07-25 11:12:01 America/Sao_Paulo
+  - Show git version upon test failure.
 
-	Improve testing framework.
+0.008	  2012-07-20 17:19:17 America/Sao_Paulo
 
-0.010     2012-07-23 11:25:09 America/Sao_Paulo
+  - Fix check-acls.pl to detect ref rewrites to non-related commits.
 
-	Check if we have git installed before generating Makefile from
-	Makefile.PL so that we avoid producing bogus cpantesters.org
-	reports.
+0.007	  2012-07-17 08:59:31 America/Sao_Paulo
 
-0.009     2012-07-22 11:21:18 America/Sao_Paulo
+  - Fix still more errors detected by
+    http://cpantesters.org/distro/G/Git-Hooks.html.
 
-	Show git version upon test failure.
+0.006	  2012-07-16 17:29:12 America/Sao_Paulo
 
-0.008     2012-07-20 17:19:17 America/Sao_Paulo
+  - Enable pre 1.7.2 gits by using old-fashioned rev-list --pretty
+    formats.
 
-	Fix check-acls.pl to detect ref rewrites to non-related
-	commits.
+0.005	  2012-07-16 10:17:16 America/Sao_Paulo
 
-0.007     2012-07-17 08:59:31 America/Sao_Paulo
+  - Fix some errors detected by
+    http://cpantesters.org/distro/G/Git-Hooks.html.
 
-	Fix still more errors detected by
-	http://cpantesters.org/distro/G/Git-Hooks.html.
+0.004	  2012-07-15 22:01:36 America/Sao_Paulo
 
-0.006     2012-07-16 17:29:12 America/Sao_Paulo
+  - Fix missing required dependency.
 
-	Enable pre 1.7.2 gits by using old-fashioned rev-list --pretty
-	formats.
+0.003	  2012-07-15 18:33:20 America/Sao_Paulo
 
-0.005     2012-07-16 10:17:16 America/Sao_Paulo
+  - Fix dependency on App::gh::Git.
 
-	Fix some errors detected by
-	http://cpantesters.org/distro/G/Git-Hooks.html.
+0.002	   2012-07-11 America/Sao_Paulo
 
-0.004     2012-07-15 22:01:36 America/Sao_Paulo
+  - Implement support for driving external hooks.
 
-	Fix missing required dependency.
+  - Rename option githooks.hookdir to githooks.plugins.
 
-0.003     2012-07-15 18:33:20 America/Sao_Paulo
+  - Rename default local plugin directory from .git/hooks.d to
+    .git/githooks.
 
-	Fix dependency on App::gh::Git.
+  - Add option githooks.externals to disable external hooks processing.
 
-0.002      2012-07-11 America/Sao_Paulo
+  - Add option githooks.hooks to specify extra directories to look for
+    external hooks.
 
-	Implement support for driving external hooks.
+0.001	   2012-07-10 America/Sao_Paulo
 
-	Rename option githooks.hookdir to githooks.plugins.
+  - First release, with two hooks passing tests: check-acls.pl and
+    check-jira.pl.
 
-	Rename default local plugin directory from .git/hooks.d to
-	.git/githooks.
+  - I decided to incorporate Git::More in this distribution instead of
+    making it a separate module.
 
-	Add option githooks.externals to disable external hooks processing.
-
-	Add option githooks.hooks to specify extra directories to look for
-	external hooks.
-
-0.001      2012-07-10 America/Sao_Paulo
-
-	First release, with two hooks passing tests: check-acls.pl and
-	check-jira.pl.
-
-	I decided to incorporate Git::More in this distribution instead of
-	making it a separate module.
-
-	The documentation is lacking and the functionality needs to be
-	expanded.
+  - The documentation is lacking and the functionality needs to be
+    expanded.
