@@ -5,8 +5,8 @@ use strict;
 use warnings;
 use lib 't';
 use Test::More tests => 5;
-use File::Slurp;
 use Config;
+use File::Slurp;
 
 require "test-functions.pl";
 

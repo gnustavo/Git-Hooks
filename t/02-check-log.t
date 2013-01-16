@@ -6,14 +6,13 @@ use warnings;
 use lib 't';
 use Test::More tests => 20;
 use File::Slurp;
-use File::Temp qw/tmpnam/;
+use File::Spec::Functions 'catfile';
 
 require "test-functions.pl";
 
-my ($repo, $file, $clone);
+my ($repo, $file, $clone, $T) = new_repos();
 
-my $msgfile = tmpnam();
-END { unlink $msgfile; };
+my $msgfile = catfile($T, 'msg.txt');
 
 sub check_can_commit {
     my ($testname, $msg) = @_;
@@ -50,8 +49,6 @@ sub check_cannot_push {
 }
 
 
-($repo, $file, $clone) = new_repos();
-
 install_hooks($repo, undef, 'commit-msg');
 
 $repo->command(config => "githooks.commit-msg", 'CheckLog');

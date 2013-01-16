@@ -3,17 +3,15 @@
 use 5.010;
 use strict;
 use warnings;
-use Cwd;
-use File::Temp qw/tempdir/;
-use File::Spec::Functions ':ALL';
-use File::Copy;
-use File::pushd;
+use Config;
 use File::Remove 'remove';
 use File::Slurp;
+use File::Spec::Functions qw/catdir catfile/;
+use File::Temp 'tempdir';
+use File::pushd;
 use URI::file;
-use Config;
 use Git::More;
-use Error qw(:try);
+use Error qw':try';
 
 # Make sure the git messages come in English.
 $ENV{LC_MESSAGES} = 'C';
@@ -25,8 +23,6 @@ $ENV{LC_MESSAGES} = 'C';
 our $T = tempdir('githooks.XXXXX', TMPDIR => 1, CLEANUP => $ENV{REPO_CLEANUP} || 1);
 chdir $T or die "Can't chdir $T: $!";
 END { chdir '/' }
-
-our $HooksDir = catfile(rel2abs(curdir()), 'hooks');
 
 our $git_version;
 try {

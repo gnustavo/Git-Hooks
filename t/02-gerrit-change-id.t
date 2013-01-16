@@ -5,10 +5,8 @@ use strict;
 use warnings;
 use lib 't';
 use Test::More tests => 44;
-use Cwd;
 use File::pushd;
 use File::Slurp;
-use File::Temp qw/tmpnam/;
 use Git::Hooks::GerritChangeId;
 
 require "test-functions.pl";
@@ -36,7 +34,7 @@ sub diag_last_log {
     diag(" LAST LOG[", length($last_log), "]<<<$last_log>>>\n");
 }
 
-my $msgfile = tmpnam();
+my $msgfile = catfile($T, 'msg.txt');
 
 sub cannot_commit {
     my ($testname, $regex, $msg) = @_;
