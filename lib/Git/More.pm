@@ -285,6 +285,11 @@ sub get_affected_ref_commits {
     return @{$affected->{$ref}{commits}};
 }
 
+sub set_authenticated_user {
+    my ($git, $user) = @_;
+    return $git->{more}{authenticated_user} = $user;
+}
+
 sub authenticated_user {
     my ($git) = @_;
 
@@ -534,6 +539,13 @@ This method returns the username of the authenticated user performing
 the Git action. It groks it from the C<githooks.userenv> configuration
 variable specification, which is described in the C<Git::Hooks>
 documentation. It's useful for most access control check plugins.
+
+=head2 set_authenticated_user USERNAME
+
+This method can be used to set the username of the authenticated user
+when the default heristics defined above aren't enough. The name will
+be cached so that subsequent invokations of B<authenticated_user> will
+return this.
 
 =head2 get_current_branch
 
