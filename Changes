@@ -2,11 +2,27 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.035     2013-01-18 08:44:20 America/Sao_Paulo
+
   [New]
   - Provide for temporary disabling of plugins by setting to a false
     value (e.g. '0') an environment variable named after the
     plugin. This is useful for temporary disabling of pre-commit
     hooks, for instance.
+
+  - Add method Git::More::set_authenticated_user
+    
+    This method can be used to set the username of the authenticated user
+    when the default heristics used by the method authenticated_user
+    aren't enough. The name is cached so that subsequent invokations of
+    authenticated_user will return it.
+
+  [Fix]
+  - CheckRewrite was invoking 'git branch --all' but old versions of
+    git didn't support the long option name. Now it uses '-a' instead.
+
+  - CheckRewrite error messages showed branch names with two character
+    prefix.
 
   [Cleanup]
   - Make the Change file conform to the Specification for CPAN Changes
