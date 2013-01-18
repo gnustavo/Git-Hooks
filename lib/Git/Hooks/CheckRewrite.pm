@@ -45,7 +45,7 @@ sub _record_filename {
 # we have to get rid of using substr.
 sub _branches_containing {
     my ($git, $commit) = @_;
-    return map { substr($_, 2) } $git->command('branch', '--all', '--contains', $commit);
+    return map { substr($_, 2) } $git->command('branch', '-a', '--contains', $commit);
 }
 
 sub record_commit_parents {
