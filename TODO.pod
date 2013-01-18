@@ -4,10 +4,6 @@ The following list is in approximately my order of implementation
 intention. Any comments or other suggestion are welcome at gnustavo AT
 cpan.org.
 
-=head2 Support the WIN32 Platform
-
-Currently we abort the build on C<Makefile.PL>.
-
 =head2 Collect errors from every hook
 
 Currently, when a plugin detects a problem it calls die and the hook
@@ -41,9 +37,9 @@ But Gerrit has its own hook infrastructure and we should support it
 The two hooks that seem to be relevant to Git::Hooks's plugins are
 B<patchset-created> and B<ref-updated>.
 
-=head2 Implement the Scott Chacon example hooks
+=head2 Support the WIN32 Platform
 
-In L<https://github.com/schacon/githooks>.
+Currently we abort the build on C<Makefile.PL>.
 
 =head2 Improve documentation
 
@@ -97,6 +93,10 @@ DenyFilenames and UpdateConfFile. Actually, I'm thinking that
 UpdateConfFile is too much specific. Perhaps something along the lines
 of this post-update hook would be more interesting:
 L<http://stackoverflow.com/questions/279169/deploy-a-project-using-git-push>.
+
+=head2 Implement the Scott Chacon example hooks
+
+In L<https://github.com/schacon/githooks>.
 
 =head2 In CheckLog allow for stop words
 
