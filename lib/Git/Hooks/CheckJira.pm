@@ -160,37 +160,8 @@ sub check_codes {
     return @codes;
 }
 
-sub check_commit_msg {
-    my ($git, $commit, $ref) = @_;
-
-    my @keys  = uniq(grok_msg_jiras($git, $commit->{body}));
-    my $nkeys = @keys;
-
-    # Filter out JIRAs not belonging to any of the specific projects,
-    # if any. We don't care about them.
-    if (my @projects = $git->get_config($CFG => 'project')) {
-        my %projects = map {($_ => undef)} @projects;
-        @keys = grep {/([^-]+)/ && exists $projects{$1}} @keys;
-    }
-
-    unless (@keys) {
-        if ($git->get_config($CFG => 'require')) {
-            my $shortid = substr $commit->{commit}, 0, 8;
-            if (@keys == $nkeys) {
-                $git->error($PKG, "commit $shortid (in $ref) does not cite any JIRA in its message.\n");
-                return 0;
-            } else {
-                my $project = join(' ', $git->get_config($CFG => 'project'));
-                $git->error($PKG, <<"EOF");
-commit $shortid (in $ref) does not cite any JIRA from the expected
-projects ($project) in its message.
-EOF
-                return 0;
-            }
-        } else {
-            return 1;
-        }
-    }
+sub _check_jira_keys {
+    my ($git, $commit, $ref, @keys) = @_;
 
     my @issues;
 
@@ -238,6 +209,41 @@ EOF
     }
 
     return $errors == 0;
+}
+
+sub check_commit_msg {
+    my ($git, $commit, $ref) = @_;
+
+    my @keys  = uniq(grok_msg_jiras($git, $commit->{body}));
+    my $nkeys = @keys;
+
+    # Filter out JIRAs not belonging to any of the specific projects,
+    # if any. We don't care about them.
+    if (my @projects = $git->get_config($CFG => 'project')) {
+        my %projects = map {($_ => undef)} @projects;
+        @keys = grep {/([^-]+)/ && exists $projects{$1}} @keys;
+    }
+
+    unless (@keys) {
+        if ($git->get_config($CFG => 'require')) {
+            my $shortid = substr $commit->{commit}, 0, 8;
+            if (@keys == $nkeys) {
+                $git->error($PKG, "commit $shortid (in $ref) does not cite any JIRA in its message.\n");
+                return 0;
+            } else {
+                my $project = join(' ', $git->get_config($CFG => 'project'));
+                $git->error($PKG, <<"EOF");
+commit $shortid (in $ref) does not cite any JIRA from the expected
+projects ($project) in its message.
+EOF
+                return 0;
+            }
+        } else {
+            return 1;
+        }
+    }
+
+    return _check_jira_keys($git, $commit, $ref, @keys);
 }
 
 sub check_message_file {

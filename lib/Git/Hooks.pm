@@ -233,6 +233,52 @@ my %prepare_hook = (
     'post-receive' => \&_prepare_receive,
 );
 
+sub _load_plugins {
+    my ($git) = @_;
+
+    my @enabled_plugins = $git->get_config(githooks => 'plugin');
+
+    return () unless @enabled_plugins; # no one configured
+
+    # Define the list of directories where we'll look for the hook
+    # plugins. First the local directory 'githooks' under the
+    # repository path, then the optional list of directories
+    # specified by the githooks.plugins config option, and,
+    # finally, the Git::Hooks standard hooks directory.
+    my @plugin_dirs = grep {-d} (
+        'githooks',
+        $git->get_config(githooks => 'plugins'),
+        catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks'),
+    );
+
+  HOOK:
+    foreach my $plugin (uniq @enabled_plugins) {
+        next if exists $ENV{$plugin} && ! $ENV{$plugin}; # disabled by user
+        my $exit = do {
+            if ($plugin =~ /::/) {
+                # It must be a module name
+                eval "require $plugin"; ## no critic (BuiltinFunctions::ProhibitStringyEval ErrorHandling::RequireCheckingReturnValueOfEval)
+            } else {
+                # Otherwise, it's a basename that we must look for
+                # in @plugin_dirs
+                $plugin .= '.pm' unless $plugin =~ /\.p[lm]$/i;
+                my @scripts = grep {-f} map {catfile($_, $plugin)} @plugin_dirs;
+                my $script = shift @scripts
+                    or die __PACKAGE__, ": can't find enabled hook $plugin.\n";
+                $plugin = $script; # for the error messages below
+                do $script;
+            }
+        };
+        unless ($exit) {
+            die __PACKAGE__, ": couldn't parse $plugin: $@\n" if $@;
+            die __PACKAGE__, ": couldn't do $plugin: $!\n"    unless defined $exit;
+            die __PACKAGE__, ": couldn't run $plugin\n";
+        }
+    }
+
+    return;
+}
+
 sub run_hook {
     my ($hook_name, @args) = @_;
 
@@ -245,44 +291,7 @@ sub run_hook {
         $prepare->($git, @args);
     }
 
-    # Invoke enabled plugins
-    if (my @enabled_plugins = $git->get_config(githooks => 'plugin')) {
-        # Define the list of directories where we'll look for the hook
-        # plugins. First the local directory 'githooks' under the
-        # repository path, then the optional list of directories
-        # specified by the githooks.plugins config option, and,
-        # finally, the Git::Hooks standard hooks directory.
-        my @plugin_dirs = grep {-d} (
-            'githooks',
-            $git->get_config(githooks => 'plugins'),
-            catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks'),
-        );
-
-      HOOK:
-        foreach my $plugin (uniq @enabled_plugins) {
-            next if exists $ENV{$plugin} && ! $ENV{$plugin}; # disabled by user
-            my $exit = do {
-                if ($plugin =~ /::/) {
-                    # It must be a module name
-                    eval "require $plugin"; ## no critic (BuiltinFunctions::ProhibitStringyEval ErrorHandling::RequireCheckingReturnValueOfEval)
-                } else {
-                    # Otherwise, it's a basename that we must look for
-                    # in @plugin_dirs
-                    $plugin .= '.pm' unless $plugin =~ /\.p[lm]$/i;
-                    my @scripts = grep {-f} map {catfile($_, $plugin)} @plugin_dirs;
-                    my $script = shift @scripts
-                        or die __PACKAGE__, ": can't find enabled hook $plugin.\n";
-                    $plugin = $script; # for the error messages below
-                    do $script;
-                }
-            };
-            unless ($exit) {
-                die __PACKAGE__, ": couldn't parse $plugin: $@\n" if $@;
-                die __PACKAGE__, ": couldn't do $plugin: $!\n"    unless defined $exit;
-                die __PACKAGE__, ": couldn't run $plugin\n";
-            }
-        }
-    }
+    _load_plugins($git);
 
     my $errors = 0;
 
