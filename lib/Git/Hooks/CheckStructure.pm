@@ -119,63 +119,68 @@ sub check_structure {
 
 sub check_added_files {
     my ($git, $files) = @_;
-    my @errors;
+
+    my $errors = 0;
+
     foreach my $file (sort keys %$files) {
         # Split the $file path in its components. We prefix $file with
         # a slash to make it look like an absolute path for
         # check_structure.
         my ($code, $error) = check_structure(get_structure($git, 'file'), [split '/', "/$file"]);
-        push @errors, "$error: $file" if $code == 0;
+        unless ($code) {
+            $git->error($PKG, "$error: $file\n");
+            $errors++;
+        }
     }
-    return @errors;
+
+    return $errors == 0;
 }
 
 sub check_ref {
     my ($git, $ref) = @_;
 
-    my @errors;
-
     my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
+
+    my $errors = 0;
 
     # Check names of newly created refs
     if (my $structure = get_structure($git, 'ref')) {
         if ($old_commit eq '0' x 40) {
             check_structure($structure, [split '/', "/$ref"])
-                or push @errors, "reference name '$ref' not allowed";
+                or $git->error($PKG, "reference name '$ref' not allowed\n")
+                    and $errors++;
         }
     }
 
     # Check names of newly added files
     if (get_structure($git, 'file')) {
-        push @errors, check_added_files($git, $git->get_diff_files('--diff-filter=A', $old_commit, $new_commit));
+        check_added_files($git, $git->get_diff_files('--diff-filter=A', $old_commit, $new_commit))
+            or $errors++;
     }
 
-    die join("\n", "$PKG: errors in ref '$ref' commits", @errors), "\n" if @errors;
-
-    return;
+    return $errors == 0;
 }
 
 # This routine can act both as an update or a pre-receive hook.
 sub check_affected_refs {
     my ($git) = @_;
 
-    return if im_admin($git);
+    return 1 if im_admin($git);
+
+    my $errors = 0;
 
     foreach my $ref ($git->get_affected_refs()) {
-        check_ref($git, $ref);
+        check_ref($git, $ref)
+            or $errors++;
     }
 
-    return;
+    return $errors == 0;
 }
 
 sub check_commit {
     my ($git) = @_;
 
-    my @errors = check_added_files($git, $git->get_diff_files('--diff-filter=A', '--cached'));
-
-    die join("\n", "$PKG: errors in commit", @errors), "\n" if @errors;
-
-    return;
+    return check_added_files($git, $git->get_diff_files('--diff-filter=A', '--cached'));
 }
 
 # Install hooks

@@ -64,7 +64,7 @@ sub record_commit_parents {
     write_file(_record_filename($git),
                scalar($git->command(qw/rev-list --pretty=format:%P -n 1 HEAD/)));
 
-    return;
+    return 1;
 }
 
 sub check_commit_amend {
@@ -72,8 +72,9 @@ sub check_commit_amend {
 
     my $record_file = _record_filename($git);
 
-    die "$PKG: Can't read $record_file. You probably forgot to symlink the pre-commmit hook.\n"
-        unless -r $record_file;
+    -r $record_file
+        or $git->error($PKG, "Can't read $record_file. You probably forgot to symlink the pre-commmit hook.\n")
+            and return 0;
 
     my ($old_commit, $old_parents) = read_file($record_file);
 
@@ -89,7 +90,7 @@ sub check_commit_amend {
 
     my $new_parents = ($git->command(qw/rev-list --pretty=format:%P -n 1 HEAD/))[1];
 
-    return unless $new_parents eq $old_parents;
+    return 1 if $new_parents ne $old_parents;
 
     # Find all branches containing $old_commit
     my @branches = _branches_containing($git, $old_commit);
@@ -98,11 +99,10 @@ sub check_commit_amend {
         # $old_commit is reachable by at least one branch, which means
         # the amend was unsafe.
         local $, = "  \n";
-        warn <<"EOF";
+        $git->error($PKG, <<"EOF");
 
-$PKG: You've just performed un unsafe commit --amend because your
-original HEAD ($old_commit) is still
-reachable by the following branch(es):
+You've just performed un unsafe commit --amend because your original
+HEAD ($old_commit) is still reachable by the following branch(es):
 
     @branches
 
@@ -111,9 +111,10 @@ You can revert the amend with the following command:
     git reset --soft $old_commit
 
 EOF
+        return 0;
     }
 
-    return;
+    return 1;
 }
 
 sub check_rebase {
@@ -128,7 +129,7 @@ sub check_rebase {
             # The command git symbolic-ref fails if we're in a
             # detached HEAD. In this situation we don't care about the
             # rewriting.
-            return;
+            return 1;
         };
     }
 
@@ -145,16 +146,17 @@ sub check_rebase {
         # means the rewrite is unsafe.
         @branches = grep {$_ ne $branch} @branches;
         local $, = "  \n";
-        die <<"EOF";
-$PKG: This is an unsafe rebase because it would rewrite commits
-shared by $branch and the following other branch(es):
+        $git->error($PKG, <<"EOF");
+This is an unsafe rebase because it would rewrite commits shared by
+$branch and the following other branch(es):
 
     @branches
 
 EOF
+        return 0;
     }
 
-    return;
+    return 1;
 }
 
 # Install hooks

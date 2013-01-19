@@ -141,7 +141,7 @@ $repo->command(config => 'check-jira.check-code', <<'EOF');
 sub {
     my ($git, $commit_id, $jira, @issues) = @_;
     my $keys = join(', ', sort map {$_->{key}} @issues);
-    return if $keys eq 'GIT-2, GIT-3';
+    return 1 if $keys eq 'GIT-2, GIT-3';
     die "You must cite issues GIT-2 and GIT-3 only: not '$keys'\n";
 }
 EOF

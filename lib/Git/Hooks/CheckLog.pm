@@ -50,13 +50,16 @@ sub _setup_config {
 
 ##########
 
+# Return the message or undef.
+
 sub read_msg_encoded {
     my ($git, $msgfile) = @_;
 
     my $encoding = $git->get_config(i18n => 'commitencoding') || 'utf-8';
 
     my $msg = read_file($msgfile, { binmode => ":encoding($encoding)", err_mode => 'carp' })
-        or die "$PKG: Cannot read message file '$msgfile' with encoding '$encoding'\n";
+        or $git->error($PKG, "Cannot read message file '$msgfile' with encoding '$encoding'\n")
+            and return;
 
     # Strip the patch data from the message.
     $msg =~ s:^diff --git a/.*::ms;
@@ -66,6 +69,8 @@ sub read_msg_encoded {
 
     return $msg;
 }
+
+# Return a Text::SpellChecker object or undef.
 
 sub _spell_checker {
     my ($git, $msg) = @_;
@@ -77,10 +82,10 @@ sub _spell_checker {
     }
 
     unless (state $tried_to_check) {
-        unless (eval { require Text::SpellChecker; }) {
-            my $message = $@ ? $@ : '';
-            die "$PKG: Could not require Text::SpellChecker module to spell messages.\n$message\n";
-        }
+        eval { require Text::SpellChecker; };
+        length $@
+            and $git->error($PKG, "Could not require Text::SpellChecker module to spell messages.\n$@\n")
+                and return;
 
         # Text::SpellChecker uses either Text::Hunspell or
         # Text::Aspell to perform the checks. But it doesn't try to
@@ -92,7 +97,9 @@ sub _spell_checker {
         my $checker = Text::SpellChecker->new(text => 'a', %extra_options);
 
         my $word = eval { $checker->next_word(); };
-        die "$PKG: Cannot spell check using Text::SpellChecker.\n$@\n" if $@;
+        length $@
+            and $git->error($PKG, "Cannot spell check using Text::SpellChecker.\n$@\n")
+                and return;
 
         $tried_to_check = 1;
     };
@@ -103,55 +110,62 @@ sub _spell_checker {
 sub check_spelling {
     my ($git, $id, $msg) = @_;
 
-    return unless $git->get_config($CFG => 'spelling');
+    return 1 unless $git->get_config($CFG => 'spelling');
 
     # Check all words comprised of at least three Unicode letters
-    my $checker = _spell_checker($git, join("\n", uniq($msg =~ /\b(\p{Cased_Letter}{3,})\b/gi)));
+    my $checker = _spell_checker($git, join("\n", uniq($msg =~ /\b(\p{Cased_Letter}{3,})\b/gi)))
+        or return 0;
 
     my $errors = 0;
+
     foreach my $badword ($checker->next_word()) {
         unless ($errors++) {
-            warn "$PKG: $id\'s log has the following spelling problems in it.\n";
+            $git->error($PKG, "$id\'s log has the following spelling problems in it.\n");
         }
         my @suggestions = $checker->suggestions($badword);
         if (defined $suggestions[0]) {
-            warn "  $badword (suggestions: ", join(', ', @suggestions), ")\n";
+            $git->error($PKG, "  $badword (suggestions: ", join(', ', @suggestions), ")\n");
         } else {
-            warn "  $badword (no suggestions)\n";
+            $git->error($PKG, "  $badword (no suggestions)\n");
         }
     }
 
-    die "\n" if $errors;
-
-    return;
+    return $errors == 0;
 }
 
 sub check_patterns {
     my ($git, $id, $msg) = @_;
 
+    my $errors = 0;
+
     foreach my $match ($git->get_config($CFG => 'match')) {
         if ($match =~ s/^!\s*//) {
             $msg !~ /$match/m
-                or die "$PKG: $id\'s log SHOULD NOT match \Q$match\E.\n";
+                or $git->error($PKG, "$id\'s log SHOULD NOT match \Q$match\E.\n")
+                    and $errors++;
         } else {
             $msg =~ /$match/m
-                or die "$PKG: $id\'s log SHOULD match \Q$match\E.\n";
+                or $git->error($PKG, "$id\'s log SHOULD match \Q$match\E.\n")
+                    and $errors++;
         }
     }
 
-    return;
+    return $errors == 0;
 }
 
 sub check_title {
     my ($git, $id, $title, $neck) = @_;
 
-    return unless $git->get_config($CFG => 'title-required');
+    return 1 unless $git->get_config($CFG => 'title-required');
+
+    my $errors = 0;
 
     {
         my $title_lines = ($title =~ tr/\n/\n/);
         $title_lines += 1 if defined $neck;
-        die "$PKG: $id\'s log title has $title_lines lines but should have only 1!\n"
-            unless $title_lines == 1;
+        $title_lines == 1
+            or $git->error($PKG, "$id\'s log title has $title_lines lines but should have only 1!\n")
+                and $errors++;
     }
 
     # Here I was going to check the $neck length to make sure there is
@@ -161,37 +175,44 @@ sub check_title {
     # the commit-msg hook.
 
     if (my $max_width = $git->get_config($CFG => 'title-max-width')) {
-        die "$PKG: $id\'s log title should be at most $max_width characters wide, but it has ", length($title), "!\n"
-            if length($title) > $max_width;
+        length($title) <= $max_width
+            or $git->error($PKG, "$id\'s log title should be at most $max_width characters wide, but it has " . length($title) . "!\n")
+                and $errors++;
     }
 
     if (my $period = $git->get_config($CFG => 'title-period')) {
         if ($period eq 'deny') {
-            $title !~ /\.$/ or die "$PKG: $id\'s log title SHOULD NOT end in a period.\n";
+            $title !~ /\.$/
+                or $git->error($PKG, "$id\'s log title SHOULD NOT end in a period.\n")
+                    and $errors++;
         } elsif ($period eq 'require') {
-            $title =~ /\.$/ or die "$PKG: $id\'s log title SHOULD end in a period.\n";
+            $title =~ /\.$/
+                or $git->error($PKG, "$id\'s log title SHOULD end in a period.\n")
+                    and $errors++;
         } elsif ($period ne 'allow') {
-            die "$PKG: Invalid value for the $CFG.title-period option: '$period'.\n";
+            $git->error($PKG, "Invalid value for the $CFG.title-period option: '$period'.\n")
+                and $errors++;
         }
     }
 
-    return;
+    return $errors == 0;
 }
 
 sub check_body {
     my ($git, $id, $body) = @_;
 
-    return unless $body;
+    return 1 unless $body;
 
     if (my $max_width = $git->get_config($CFG => 'body-max-width')) {
         while ($body =~ /^(.*)/gm) {
             my $line = $1;
-            die "$PKG: $id\'s log body lines should be at most $max_width characters wide, but there is one with ", length($line), "!\n"
-                if length($line) > $max_width;
+            length($line) <= $max_width
+                or $git->error($PKG, "$id\'s log body lines should be at most $max_width characters wide, but there is one with " . length($line) . "!\n")
+                    and return 0;
         }
     }
 
-    return;
+    return 1;
 }
 
 sub check_message {
@@ -199,17 +220,19 @@ sub check_message {
 
     my $id = defined $commit ? substr($commit->{commit}, 0, 7) : 'commit';
 
-    check_spelling($git, $id, $msg);
+    my $errors = 0;
 
-    check_patterns($git, $id, $msg);
+    check_spelling($git, $id, $msg) or $errors++;
+
+    check_patterns($git, $id, $msg) or $errors++;
 
     my ($title, $neck, $body) = split /(\n\n+)/s, $msg, 2;
 
-    check_title($git, $id, $title, $neck);
+    check_title($git, $id, $title, $neck) or $errors++;
 
-    check_body($git, $id, $body);
+    check_body($git, $id, $body) or $errors++;
 
-    return;
+    return $errors == 0;
 }
 
 sub check_message_file {
@@ -217,19 +240,23 @@ sub check_message_file {
 
     _setup_config($git);
 
-    check_message($git, undef, read_msg_encoded($git, $commit_msg_file));
+    my $msg = read_msg_encoded($git, $commit_msg_file)
+        or return 0;
 
-    return;
+    return check_message($git, undef, $msg);
 }
 
 sub check_ref {
     my ($git, $ref) = @_;
 
+    my $errors = 0;
+
     foreach my $commit ($git->get_affected_ref_commits($ref)) {
-        check_message($git, $commit, $commit->{body});
+        check_message($git, $commit, $commit->{body})
+            or $errors++;
     }
 
-    return;
+    return $errors == 0;
 }
 
 # This routine can act both as an update or a pre-receive hook.
@@ -238,13 +265,16 @@ sub check_affected_refs {
 
     _setup_config($git);
 
-    return if im_admin($git);
+    return 1 if im_admin($git);
+
+    my $errors = 0;
 
     foreach my $ref ($git->get_affected_refs()) {
-        check_ref($git, $ref);
+        check_ref($git, $ref)
+            or $errors++;
     }
 
-    return;
+    return $errors == 0;
 }
 
 # Install hooks
