@@ -167,6 +167,12 @@ sub cache {
     return $git->{more}{cache}{$section};
 }
 
+sub clean_cache {
+    my ($git, $section) = @_;
+    delete $git->{more}{cache}{$section};
+    return;
+}
+
 sub get_commits {
     my ($git, $old_commit, $new_commit) = @_;
 
@@ -462,6 +468,12 @@ the context of a Git::More object. SECTION is a string (usually a
 plugin name) that is associated with a hash-ref. The method simply
 returns the hash-ref, which can be used by the caller to store any
 kind of information.
+
+=head2 clean_cache SECTION
+
+This method deletes the cache entry for SECTION. It may be used by
+hooks just before returning to B<Git::Hooks::run_hooks> in order to
+get rid of any value kept in the SECTION's cache.
 
 =head2 get_commits OLDCOMMIT NEWCOMMIT
 
