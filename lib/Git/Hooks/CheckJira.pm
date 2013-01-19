@@ -72,15 +72,13 @@ sub grok_msg_jiras {
     }
 }
 
-my $JIRA;
+sub _jira {
+    my ($git) = @_;
 
-# Returns a JIRA::Client object or undef if there is any problem
-
-sub get_issue {
-    my ($git, $key) = @_;
+    my $cache = $git->cache($PKG);
 
     # Connect to JIRA if not yet connected
-    unless (defined $JIRA) {
+    unless (exists $cache->{jira}) {
         my %jira;
         for my $option (qw/jiraurl jirauser jirapass/) {
             $jira{$option} = $git->get_config($CFG => $option)
@@ -88,23 +86,35 @@ sub get_issue {
                     and return;
         }
         $jira{jiraurl} =~ s:/+$::; # trim trailing slashes from the URL
-        $JIRA = eval {JIRA::Client->new($jira{jiraurl}, $jira{jirauser}, $jira{jirapass})};
+
+        my $jira = eval { JIRA::Client->new($jira{jiraurl}, $jira{jirauser}, $jira{jirapass}) };
         length $@
             and $git->error($PKG, "cannot connect to the JIRA server at '$jira{jiraurl}' as '$jira{jirauser}': $@\n")
                 and return;
+        $cache->{jira} = $jira;
     }
+
+    return $cache->{jira};
+}
+
+# Returns a JIRA::Client object or undef if there is any problem
+
+sub get_issue {
+    my ($git, $key) = @_;
+
+    my $jira = _jira($git);
 
     my $cache = $git->cache($PKG);
 
     # Try to get the issue from the cache
-    unless (exists $cache->{$key}) {
-        $cache->{$key} = eval {$JIRA->getIssue($key)};
+    unless (exists $cache->{keys}{$key}) {
+        $cache->{keys}{$key} = eval { $cache->{jira}->getIssue($key) };
         length $@
             and $git->error($PKG, "cannot get issue $key: $@\n")
                 and return;
     }
 
-    return $cache->{$key};
+    return $cache->{keys}{$key};
 }
 
 sub ferror {
@@ -218,7 +228,7 @@ EOF
     }
 
     foreach my $code (check_codes($git)) {
-        my $ok = eval { $code->($git, $commit, $JIRA, @issues) };
+        my $ok = eval { $code->($git, $commit, _jira($git), @issues) };
         if (defined $ok) {
             $errors++ unless $ok;
         } elsif (length $@) {
@@ -264,6 +274,9 @@ sub check_ref {
             or $errors++;
     }
 
+    # Disconnect from JIRA
+    $git->clean_cache($PKG);
+
     return $errors == 0;
 }
 
@@ -281,6 +294,9 @@ sub check_affected_refs {
         check_ref($git, $ref)
             or $errors++;
     }
+
+    # Disconnect from JIRA
+    $git->clean_cache($PKG);
 
     return $errors == 0;
 }
