@@ -483,14 +483,14 @@ a call to C<run_hook> passing to it the name with which it was called
 You may implement your own hooks using one of the hook I<directives>
 described in the HOOK DIRECTIVES section below. Your hooks may be
 implemented in the generic script you have created. They must be
-defined after the C<use Git::Hooks> line and before the C<run_hooks()>
+defined after the C<use Git::Hooks> line and before the C<run_hook()>
 line.
 
 A hook should return a boolean value indicating if it was
-successful. B<run_hooks> dies after invoking all hooks if at least one
+successful. B<run_hook> dies after invoking all hooks if at least one
 of them returned false.
 
-B<run_hooks> invokes the hooks inside an eval block to catch any
+B<run_hook> invokes the hooks inside an eval block to catch any
 exception, such as if a B<die> is used inside them. When an exception
 is detected the hook is considered to have failed and the exception
 string (B<$@>) is showed to the user.
@@ -559,7 +559,7 @@ be executed when Git invokes the generic script during the pre-commit
 phase.
 
 You may implement different kinds of hooks in the same generic
-script. The function C<run_hooks()> will activate just the ones for
+script. The function C<run_hook()> will activate just the ones for
 the current Git phase.
 
 =head2 Using Plugins
@@ -650,7 +650,7 @@ Note that you may install more than one script under the same
 hook-named directory. The driver will execute all of them in a
 non-specified order.
 
-If any of them exits abnormally, B<run_hooks> dies with an appropriate
+If any of them exits abnormally, B<run_hook> dies with an appropriate
 error message.
 
 =head1 CONFIGURATION
