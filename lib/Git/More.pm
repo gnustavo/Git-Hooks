@@ -322,6 +322,12 @@ sub get_current_branch {
     return;
 }
 
+sub error {
+    my ($git, $prefix, $message) = @_;
+    warn "\n[$prefix] ", $message, "\n";
+    return 1;
+}
+
 
 1; # End of Git::More
 __END__
@@ -354,7 +360,7 @@ default directories in @INC. You have to find it and make it available
 to your Perl in order to install Git::Hooks and to use it. Here are a
 few options to do that:
 
-=over 
+=over
 
 =item * Move it to one of the directories already in @INC.
 
@@ -552,6 +558,15 @@ return this.
 This method returns the repository's current branch name, as indicated
 by the C<git branch> command. Note that it's a ref short name, i.e.,
 it's usually sub-intended to reside under the 'refs/heads/' ref scope.
+
+=head2 error PREFIX MESSAGE
+
+This method should be used by plugins to produce consistent error or
+warning messages. It gets two arguments: a PREFIX and the error
+MESSAGE. The PREFIX is usually the plugin's package name.
+
+The method simply produces the error message and returns. It doesn't
+die.
 
 =head1 SEE ALSO
 
