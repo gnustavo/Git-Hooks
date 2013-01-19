@@ -57,9 +57,11 @@ sub read_msg_encoded {
 
     my $encoding = $git->get_config(i18n => 'commitencoding') || 'utf-8';
 
-    my $msg = read_file($msgfile, { binmode => ":encoding($encoding)", err_mode => 'carp' })
-        or $git->error($PKG, "Cannot read message file '$msgfile' with encoding '$encoding'\n")
-            and return;
+    my $msg = eval { read_file($msgfile, { binmode => ":encoding($encoding)", err_mode => 'carp' }) };
+    unless (defined $msg) {
+        $git->error($PKG, "Cannot read message file '$msgfile' with encoding '$encoding': $@\n");
+        return;
+    }
 
     # Strip the patch data from the message.
     $msg =~ s:^diff --git a/.*::ms;
@@ -109,6 +111,8 @@ sub _spell_checker {
 
 sub check_spelling {
     my ($git, $id, $msg) = @_;
+
+    return 1 unless $msg;
 
     return 1 unless $git->get_config($CFG => 'spelling');
 
@@ -218,6 +222,8 @@ sub check_body {
 sub check_message {
     my ($git, $commit, $msg) = @_;
 
+    # assert(defined $msg)
+
     my $id = defined $commit ? substr($commit->{commit}, 0, 7) : 'commit';
 
     my $errors = 0;
@@ -227,6 +233,9 @@ sub check_message {
     check_patterns($git, $id, $msg) or $errors++;
 
     my ($title, $neck, $body) = split /(\n\n+)/s, $msg, 2;
+
+    # If $msg is empty split makes $title undef
+    $title = '' unless defined $title;
 
     check_title($git, $id, $title, $neck) or $errors++;
 
@@ -240,8 +249,9 @@ sub check_message_file {
 
     _setup_config($git);
 
-    my $msg = read_msg_encoded($git, $commit_msg_file)
-        or return 0;
+    my $msg = read_msg_encoded($git, $commit_msg_file);
+
+    return 0 unless defined $msg;
 
     return check_message($git, undef, $msg);
 }

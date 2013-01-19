@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 20;
+use Test::More tests => 21;
 use File::Slurp;
 use File::Spec::Functions 'catfile';
 
@@ -54,6 +54,8 @@ install_hooks($repo, undef, 'commit-msg');
 $repo->command(config => "githooks.commit-msg", 'CheckLog');
 
 # title-required
+
+check_cannot_commit('deny an empty message', qr/log title has 0 lines but should have only 1/, '');
 
 check_cannot_commit('deny without required title', qr/log title has 2 lines but should have only 1/, <<'EOF');
 No
