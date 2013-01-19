@@ -585,6 +585,13 @@ JIRA issues.
 
 Check commit log messages formatting.
 
+=item * Git::Hooks::CheckRewrite
+
+Check if a B<git rebase> or a B<git commit --amend> is safe, meaning
+that no rewritten commit is contained by any other branch besides the
+current one. This is useful, for instance, to prevent rebasing commits
+already pushed.
+
 =item * Git::Hooks::CheckStructure
 
 Check if newly added files and references (branches and tags) comply
