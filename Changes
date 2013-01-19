@@ -2,6 +2,37 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.036     2013-01-19 16:41:16 America/Sao_Paulo
+
+  [Interface changes]
+  - Internal hooks now shouldn't die directly when they detect a
+    problem. Instead, they should invoke the new Git::More::error
+    method to produce the error message and return a boolean value
+    indicating if they have succeeded. This way they don't need to
+    stop at the first error, but can detect many more and generate
+    more information to the user.
+
+    In order to support old hooks, run_hooks checks their return
+    values. If they return a boolean, they're treated as modern
+    hooks. If they return undef (and $@ is empty, so that it wasn't an
+    exception) they are considered to have succeeded.
+    
+  [New]
+  - Git::Hooks::run_hooks only dies after having run every internal
+    and external hooks and seeing that not every one of them
+    succeeded. This way the user gets informed of every problem and
+    not just the first one found.
+
+  - Add method Git::More::error to be used by plugins to produce
+    consistent error and warning messages to the user.
+
+  - Add method Git::More::clean_cache to delete a cache entry. It may
+    be used by hooks just before returning to Git::Hooks::run_hooks in
+    order to get rid of any value kept in the SECTION's entry.
+
+  [Fix]
+  - CheckLog did not treat empty commit messages correctly.
+
 0.035     2013-01-18 08:44:20 America/Sao_Paulo
 
   [New]
