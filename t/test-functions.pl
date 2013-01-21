@@ -117,38 +117,42 @@ sub new_repos {
     }
 
     try {
-        # It would be easier to pass a directory argument to git-init
-        # but it started to accept it only on v1.6.5. To support
-        # previous gits we chdir to $repodir to avoid the need to pass
-        # the argument. Then we have to go back to where we were.
-        my ($ok, $exit, $stdout) = do {
+	my ($repo, $clone);
+
+        {
+	    # It would be easier to pass a directory argument to
+	    # git-init but it started to accept it only on v1.6.5. To
+	    # support previous gits we chdir to $repodir to avoid the
+	    # need to pass the argument. Then we have to go back to
+	    # where we were.
             my $dir = pushd($repodir);
-            test_command(undef, 'init', '-q');
-        };
-	unless ($ok) {
-	    throw Error::Simple("'git init -q $repodir': exit=$exit, stdout=\n$stdout\n");
+            Git::command(qw/init -q/);
+
+	    $repo = Git::More->repository(Directory => '.');
+
+	    $repo->command(config => 'user.mail', 'myself@example.com');
+	    $repo->command(config => 'user.name', 'My Self');
+	    $repo->command(add    => $filename);
+	    $repo->command(commit => '-mx');
 	}
 
-	my $repo = Git::More->repository(Directory => $repodir);
-	$repo->command(config => 'user.mail', 'myself@example.com');
-	$repo->command(config => 'user.name', 'My Self');
-	$repo->command(add    => $filename);
-	$repo->command(commit => '-mx');
+        Git::command(qw/clone -q --bare --no-hardlinks/, $repodir, $clonedir);
 
-	($ok, $exit, $stdout) = test_command(undef, 'clone', '-q', '--bare', '--no-hardlinks', $repodir, $clonedir);
-	unless ($ok) {
-	    throw Error::Simple("'git clone -q --bare --no-hardlinks $repodir $clonedir': exit=$exit, stdout=\n$stdout\n");
-	}
-	my $clone = Git::More->repository(Directory => $clonedir);
+	$clone = Git::More->repository(Repository => $clonedir);
 
-        $repo->command(remote => 'add', 'clone', $clonedir);
+        $repo->command(qw:remote add clone ../clone:);
 
 	return ($repo, $filename, $clone, $T);
     } otherwise {
-	my $E = shift;
-	my $ls = `find $T -ls`;	# FIXME: this is non-portable.
-	diag("Error setting up repos for test: $E\nRepos parent directory listing:\n$ls\ngit-version=$git_version\n\@INC=@INC\n");
-	BAIL_OUT('Cannot setup repos for testing');
+        local $, = ':';
+	BAIL_OUT(<<"EOF");
+Error setting up repos for test:
+* Exception: $_[0]
+* CWD: $T
+* git-version: $git_version
+* \@INC: @INC
+
+EOF
     };
 }
 
@@ -161,76 +165,76 @@ sub new_commit {
     $git->command(commit => '-q', '-m', $msg || 'commit');
 }
 
+
+# Executes a git command with arguments and return a four-elements
+# list containing: (a) a boolean indication of success, (b) the exit
+# code, (c) the command's STDOUT, and (d) the command's STDERR.
 sub test_command {
     my ($git, $cmd, @args) = @_;
 
-    my $pid = open my $pipe, '-|';
-    if (! defined $pid) {
-	return (0, undef, "Can't fork: $!\n");
-    } elsif ($pid) {
-	# parent
-	local $/ = undef;
-	my $stdout = <$pipe>;
-	my $exit = close $pipe;
-	if ($exit) {
-	    return (1, undef, $stdout);
-	} else {
-	    return (0, $!, $stdout);
-	}
+    # Redirect STDERR to a temporary file
+    open my $oldstderr, '>&', \*STDERR
+        or die "Can't dup STDERR: $!";
+    open STDERR, '>', 'stderr'
+        or die "Can't redirect STDERR to temporary directory: $!";
+
+    my ($stdout, $exception);
+
+    try {
+	$stdout = $git->command($cmd, @args);
+    } otherwise {
+	$exception = "$_[0]";	# stringify the exception
+    };
+
+    # Redirect STDERR back to its original value
+    open STDERR, '>&', $oldstderr
+        or die "Can't redirect STDERR back to its original value: $!";
+
+    # Grok the subcomand's STDERR
+    my $stderr = read_file('stderr');
+
+    if (defined $stdout) {
+	return (1, 0, $stdout, $stderr);
     } else {
-	# child
-	if (defined $git && $git->repo_path()) {
-	    local $ENV{'GIT_DIR'} = $git->repo_path();
-	    if ($git->wc_path()) {
-		local $ENV{'GIT_WORK_TREE'} = $git->wc_path();
-		chdir($git->wc_path());
-	    }
-	    if ($git->wc_subdir()) {
-		chdir($git->wc_subdir());
-	    }
-	}
-	close STDERR;
-	open STDERR, '>&', \*STDOUT;
-	exec(git => $cmd, @args)
-	    or BAIL_OUT("Can't exec git (version=$git_version) $cmd: $!\n");
+	return (0, $?, $exception, $stderr);
     }
 }
 
 sub test_ok {
     my ($testname, @args) = @_;
-    my ($ok, $exit, $stdout) = test_command(@args);
+    my ($ok, $exit, $stdout, $stderr) = test_command(@args);
     if ($ok) {
 	pass($testname);
     } else {
 	fail($testname);
-	diag(" exit=$exit\n stdout=$stdout\n git-version=$git_version\n");
+	diag(" exit=$exit\n stdout=$stdout\n stderr=$stderr\n git-version=$git_version\n");
     }
     return $ok;
 }
 
 sub test_ok_match {
     my ($testname, $regex, @args) = @_;
-    my ($ok, $exit, $stdout) = test_command(@args);
+    my ($ok, $exit, $stdout, $stderr) = test_command(@args);
     if ($ok) {
-        if ($stdout =~ $regex) {
+        if ($stdout =~ $regex || $stderr =~ $regex) {
             pass($testname);
         } else {
             fail($testname);
-            diag(" did not match regex ($regex)\n stdout=$stdout\n git-version=$git_version\n");
+            diag(" did not match regex ($regex)\n stdout=$stdout\n stderr=$stderr\n git-version=$git_version\n");
         }
     } else {
 	fail($testname);
-	diag(" exit=$exit\n stdout=$stdout\n git-version=$git_version\n");
+	diag(" exit=$exit\n stdout=$stdout\n stderr=$stderr\n git-version=$git_version\n");
     }
     return $ok;
 }
 
 sub test_nok {
     my ($testname, @args) = @_;
-    my ($ok, $exit, $stdout) = test_command(@args);
+    my ($ok, $exit, $stdout, $stderr) = test_command(@args);
     if ($ok) {
 	fail($testname);
-	diag(" succeeded without intention\n stdout=$stdout\n git-version=$git_version\n");
+	diag(" succeeded without intention\n stdout=$stdout\n stderr=$stderr\n git-version=$git_version\n");
     } else {
 	pass($testname);
     }
@@ -239,17 +243,17 @@ sub test_nok {
 
 sub test_nok_match {
     my ($testname, $regex, @args) = @_;
-    my ($ok, $exit, $stdout) = test_command(@args);
+    my ($ok, $exit, $stdout, $stderr) = test_command(@args);
     if ($ok) {
 	fail($testname);
-	diag(" succeeded without intention\n stdout=$stdout\n git-version=$git_version\n");
+	diag(" succeeded without intention\n stdout=$stdout\n stderr=$stderr\n git-version=$git_version\n");
 	return 0;
-    } elsif ($stdout =~ $regex) {
+    } elsif ($stdout =~ $regex || $stderr =~ $regex) {
 	pass($testname);
 	return 1;
     } else {
 	fail($testname);
-	diag(" did not match regex ($regex)\n exit=$exit\n stdout=$stdout\n git-version=$git_version\n");
+	diag(" did not match regex ($regex)\n exit=$exit\n stdout=$stdout\n stderr=$stderr\n git-version=$git_version\n");
 	return 0;
     }
 }
