@@ -10,8 +10,24 @@ use File::Spec::Functions qw/catdir catfile/;
 use File::Temp 'tempdir';
 use File::pushd;
 use URI::file;
-use Git::More;
 use Error qw':try';
+
+# The distribution's Makefile.PL might have created a GITPERLLIB file
+# inside the test directory if it detected that we can't find Git with
+# the default @INC.
+
+BEGIN {
+    if (my $gitperllib = read_file(catfile(qw/t GITPERLLIB/), err_mode => 'quiet')) {
+        chomp($ENV{GITPERLLIB} = $gitperllib);
+    }
+    eval { require Git::More }
+        or BAIL_OUT(<<"EOF");
+ERROR: I coundn't find the Git module anywhere. If you find it in a
+directory, please set the GITPERLLIB environment variable to it or add
+it to the \@INC.
+
+EOF
+};
 
 # Make sure the git messages come in English.
 $ENV{LC_MESSAGES} = 'C';
@@ -72,6 +88,10 @@ EOF
 		say $fh "use lib '$path';" if $path;
 	    }
 	}
+
+        if (my $gitperllib = $ENV{GITPERLLIB}) {
+            say $fh "BEGIN { \$ENV{GITPERLLIB} = '$ENV{GITPERLLIB}' };";
+        }
 
 	print $fh <<EOF;
 use Git::Hooks;

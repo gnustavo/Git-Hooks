@@ -8,7 +8,7 @@ use Test::More tests => 5;
 use Config;
 use File::Slurp;
 
-require "test-functions.pl";
+BEGIN { require "test-functions.pl" };
 
 my ($repo, $file, $clone) = new_repos();
 install_hooks($repo, undef, qw/pre-commit/);

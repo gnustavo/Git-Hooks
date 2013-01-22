@@ -8,7 +8,7 @@ use Test::More tests => 19;
 use File::Path 2.08 qw'make_path';
 use File::Slurp;
 
-require "test-functions.pl";
+BEGIN { require "test-functions.pl" };
 
 my ($repo, $clone);
 

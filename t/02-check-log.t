@@ -8,7 +8,7 @@ use Test::More tests => 21;
 use File::Slurp;
 use File::Spec::Functions 'catfile';
 
-require "test-functions.pl";
+BEGIN { require "test-functions.pl" };
 
 my ($repo, $file, $clone, $T) = new_repos();
 

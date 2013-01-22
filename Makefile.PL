@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use File::Spec::Functions;
+use File::Slurp;
 
 ##{ $perl_prereq ? qq[use $perl_prereq;] : ''; ##}
 
@@ -39,15 +40,18 @@ if (my ($major, $minor) = ($git_version =~ /(\d+)\.(\d+)/)) {
 {
     local @INC = @INC;
     unshift @INC, split(/:/, $ENV{GITPERLLIB}) if exists $ENV{GITPERLLIB};
-    unless (eval {require Git}) {
-        local $, = ' ';
-        warn <<"EOF";
+    eval {require Git};
+}
 
-I can't find Git.pm in your \@INC: ( @INC ).
+unless (exists $::INC{'Git'}) {
+    my $INC = join ' ', @INC;
+    warn <<"EOF";
 
-The Git.pm module is distributed with git and is not at CPAN yet. So,
+I can't find Git.pm in your \@INC: ( $INC ).
+
+The Git module is distributed with git and is not at CPAN yet. So,
 Git::Hooks can't depend on it directly. Since I already detected that
-you have git you most probably have it installed somewhere.
+you have git you most probably have Git installed somewhere.
 
 Once you find Git.pm, you have to make it available to your Perl in
 order to install Git::Hooks and to use it. Here are a few options to
@@ -66,6 +70,8 @@ do that:
 
 EOF
 
+        my @inc;                # other places to find it
+
         # Try to grok it from a git perl script.
         chomp(my $exec_path = git('--exec-path'));
         my $gitsvn = catfile($exec_path, 'git-svn');
@@ -73,26 +79,35 @@ EOF
             my $line;
             $line = <$fh> for 1..2; # read the second line
             if ($line =~ m:^use lib .*? \|\| "([^"]+)":) {
-                my $git_pm = catfile($1, 'Git.pm');
-                if (-f $git_pm) {
-                    warn "Look, I noticed that you have it at $git_pm.\n\n"
-                }
-                exit 0;
+                push @inc, $1;
             }
         }
 
-        # Try to find it on usual places
-        if (-f '/usr/share/perl5/Git.pm') {
-            warn <<"EOF";
-Look, I noticed that you have it at /usr/share/perl5/Git.pm. This is
-the usual place for it in Debian derived Linux distributions.
+        # Usual place for Debian distributions
+        push @inc, '/usr/share/perl5' if $^O eq 'linux';
+
+        my $found;
+
+        foreach my $inc (@inc) {
+            my $git_pm = catfile($inc, 'Git.pm');
+            if (-r $git_pm) {
+                write_file(catfile(qw/t GITPERLLIB/), $inc);
+                warn <<"EOF";
+Hey, you're lucky. I just found it at:
+
+    $git_pm
+
+I'm going to use this during the tests and allow you to install
+Git::Hooks. But you'll still have to make Git available to your own
+scripts following the instructions above.
 
 EOF
-            exit 0;
+                $found = 1;
+                last;
+            }
         }
 
-        exit 0;
-    }
+        exit 0 unless $found;
 }
 
 use ExtUtils::MakeMaker ##{ $eumm_version ##};

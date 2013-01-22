@@ -6,7 +6,7 @@ use warnings;
 use lib 't';
 use Test::More tests => 27;
 
-require "test-functions.pl";
+BEGIN { require "test-functions.pl" };
 
 my ($repo, $file, $clone) = new_repos();
 foreach my $git ($repo, $clone) {

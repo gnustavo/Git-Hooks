@@ -7,7 +7,7 @@ use lib 't';
 use Test::More tests => 6;
 use File::Slurp;
 
-require "test-functions.pl";
+BEGIN { require "test-functions.pl" };
 
 my ($repo, $file, $clone) = new_repos();
 

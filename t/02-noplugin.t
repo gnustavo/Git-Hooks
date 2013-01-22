@@ -6,7 +6,7 @@ use warnings;
 use lib 't';
 use Test::More tests => 1;
 
-require "test-functions.pl";
+BEGIN { require "test-functions.pl" };
 
 my ($repo, $file, $clone) = new_repos();
 install_hooks($repo, <<'EOF');

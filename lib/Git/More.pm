@@ -9,8 +9,9 @@ BEGIN {
     local @INC = @INC;
     unshift @INC, split(/:/, $ENV{GITPERLLIB}) if exists $ENV{GITPERLLIB};
     require Git;
-    use parent -norequire, 'Git';
 }
+
+use parent -norequire, 'Git';
 
 use Error qw(:try);
 use Carp;

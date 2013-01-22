@@ -7,9 +7,10 @@ use lib 't';
 use Test::More tests => 44;
 use File::pushd;
 use File::Slurp;
-use Git::Hooks::GerritChangeId;
 
-require "test-functions.pl";
+BEGIN { require "test-functions.pl" };
+
+use Git::Hooks::GerritChangeId;
 
 my ($repo, $filename, undef, $T) = new_repos();
 
