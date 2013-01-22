@@ -84,10 +84,10 @@ sub _spell_checker {
     }
 
     unless (state $tried_to_check) {
-        eval { require Text::SpellChecker; };
-        length $@
-            and $git->error($PKG, "Could not require Text::SpellChecker module to spell messages.\n$@\n")
-                and return;
+        unless (eval { require Text::SpellChecker; }) {
+            $git->error($PKG, "Could not require Text::SpellChecker module to spell messages.\n$@\n");
+            return;
+        }
 
         # Text::SpellChecker uses either Text::Hunspell or
         # Text::Aspell to perform the checks. But it doesn't try to
