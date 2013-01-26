@@ -215,7 +215,7 @@ sub _prepare_receive {
     my ($git) = @_;
     # pre-receive and post-receive get the list of affected
     # commits via STDIN.
-    while (<>) {
+    while (<STDIN>) { ## no critic (InputOutput::ProhibitExplicitStdin)
         chomp;
         my ($old_commit, $new_commit, $ref) = split;
         $git->set_affected_ref($ref, $old_commit, $new_commit);
