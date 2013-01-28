@@ -11,7 +11,7 @@ if ($^O eq 'MSWin32') {
 
 sub git {
     my ($args) = @_;
-    my $output = eval "`git $args`";
+    my $output = `git $args`;
     if ($? == -1) {
         warn "Failed to execute 'git $args': $!\n";
         exit 0;
