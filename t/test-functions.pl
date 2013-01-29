@@ -21,12 +21,7 @@ BEGIN {
         chomp($ENV{GITPERLLIB} = $gitperllib);
     }
     eval { require Git::More }
-        or BAIL_OUT(<<"EOF");
-ERROR: I coundn't find the Git module anywhere. If you find it in a
-directory, please set the GITPERLLIB environment variable to it or add
-it to the \@INC.
-
-EOF
+      or BAIL_OUT("Can't require Git::More: $@");
 };
 
 # Make sure the git messages come in English.
