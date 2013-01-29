@@ -10,7 +10,6 @@ use File::Spec::Functions qw/catdir catfile/;
 use File::Temp 'tempdir';
 use File::pushd;
 use URI::file;
-use Error qw':try';
 
 # The distribution's Makefile.PL might have created a GITPERLLIB file
 # inside the test directory if it detected that we can't find Git with
@@ -23,6 +22,9 @@ BEGIN {
     eval { require Git::More }
       or BAIL_OUT("Can't require Git::More: $@");
 };
+
+# use Error after Git::More to use the same module distributed along with Git
+use Error qw':try';
 
 # Make sure the git messages come in English.
 $ENV{LC_MESSAGES} = 'C';
