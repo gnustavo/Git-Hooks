@@ -34,6 +34,7 @@ $ENV{LC_MESSAGES} = 'C';
 # Git::Hooks git repository.
 
 our $T = tempdir('githooks.XXXXX', TMPDIR => 1, CLEANUP => $ENV{REPO_CLEANUP} || 1);
+use Cwd; our $cwd = cwd;
 chdir $T or die "Can't chdir $T: $!";
 END { chdir '/' }
 
@@ -71,7 +72,7 @@ sub install_hooks {
     {
 	open my $fh, '>', $hook_pl or BAIL_OUT("Can't create $hook_pl: $!");
 	state $debug = $ENV{DBG} ? '-d' : '';
-	state $bliblib = catdir('blib', 'lib');
+	state $bliblib = catdir($cwd, 'blib', 'lib');
 	print $fh <<EOF;
 #!$Config{perlpath} $debug
 use strict;
@@ -157,7 +158,7 @@ sub new_repos {
 
 	$clone = Git::More->repository(Repository => $clonedir);
 
-        $repo->command(qw:remote add clone ../clone:);
+        $repo->command(qw/remote add clone/, $clonedir);
 
 	return ($repo, $filename, $clone, $T);
     } otherwise {
