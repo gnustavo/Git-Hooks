@@ -99,7 +99,7 @@ EOF
 
         # Not all hooks defined the GIT_DIR environment variable
         # (e.g., pre-rebase doesn't).
-	print $fh <<EOF
+	print $fh <<"EOF";
 \$ENV{GIT_DIR}    = '.git' unless exists \$ENV{GIT_DIR};
 \$ENV{GIT_CONFIG} = "\$ENV{GIT_DIR}/config";
 run_hook(\$0, \@ARGV);
