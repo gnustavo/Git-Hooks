@@ -310,8 +310,8 @@ sub run_hook {
         }
     }
 
-    # Invoke enabled external hooks
-    if ($git->get_config(githooks => 'externals')) {
+    # Invoke enabled external hooks. This doesn't work in Windows yet.
+    if ($^O ne 'MSWin32' && $git->get_config(githooks => 'externals')) {
         foreach my $dir (
             grep {-e} map {catfile($_, $hook_name)}
                 ($git->get_config(githooks => 'hooks'), catfile($git->repo_path(), 'hooks.d'))

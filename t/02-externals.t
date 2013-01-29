@@ -4,9 +4,14 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 5;
 use Config;
 use File::Slurp;
+use Test::More;
+if ($^O eq 'MSWin32') {
+    plan skip_all => 'External hooks are not implemented for Windows yet.';
+} else {
+    plan tests => 5;
+}
 
 BEGIN { require "test-functions.pl" };
 
