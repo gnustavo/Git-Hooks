@@ -200,6 +200,7 @@ sub test_command {
 
     try {
 	$stdout = $git->command($cmd, @args);
+	$stdout = '' unless defined $stdout;
     } otherwise {
 	$exception = "$_[0]";	# stringify the exception
     };
@@ -211,10 +212,10 @@ sub test_command {
     # Grok the subcomand's STDERR
     my $stderr = read_file('stderr');
 
-    if (defined $stdout) {
-	return (1, 0, $stdout, $stderr);
-    } else {
+    if (defined $exception) {
 	return (0, $?, $exception, $stderr);
+    } else {
+	return (1, 0, $stdout, $stderr);
     }
 }
 
