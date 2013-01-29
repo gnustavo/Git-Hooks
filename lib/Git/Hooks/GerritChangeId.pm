@@ -52,8 +52,8 @@ sub clean_message {
 
     return '' unless length $msg;
 
-    # remove empty lines from the end
-    $msg =~ s/\n{2,}$/\n/;
+    # remove empty lines from the end, leaving a \n there
+    $msg =~ s/(?<=\n)\n+$//;
 
     return $msg;
 }
@@ -70,7 +70,7 @@ sub gen_change_id {
         [ committer => [qw/var GIT_COMMITTER_IDENT/] ],
     ) {
         try {
-            $fh->print($info->[0], ' ', $git->command($info->[1], {STDERR => 0}), "\n");
+            $fh->print($info->[0], ' ', scalar($git->command($info->[1], {STDERR => 0})));
         } otherwise {
             # Can't find info. That's ok.
         };
