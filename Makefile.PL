@@ -69,18 +69,18 @@ do that:
 
 EOF
 
-        my @inc;                # other places to find it
+    my @inc;                    # other places to find it
 
-        # Try to grok it from a git perl script.
-        chomp(my $exec_path = git('--exec-path'));
-        my $gitsvn = catfile($exec_path, 'git-svn');
-        if (open my $fh, '<', $gitsvn) {
-            my $line;
-            $line = <$fh> for 1..2; # read the second line
-            if ($line =~ m:^use lib .*? \|\| "([^"]+)":) {
-                push @inc, $1;
-            }
+    # Try to grok it from a git perl script.
+    chomp(my $exec_path = git('--exec-path'));
+    my $gitsvn = catfile($exec_path, 'git-svn');
+    if (open my $fh, '<', $gitsvn) {
+        my $line;
+        $line = <$fh> for 1..2; # read the second line
+        if ($line =~ m:^use lib .*? \|\| "([^"]+)":) {
+            push @inc, $1;
         }
+    }
 
     # Usual places for some OSs
     if ($^O eq 'linux') {
@@ -90,13 +90,13 @@ EOF
         push @inc, "$pfiles\\Git\\lib\\perl5\\site_perl";
     }
 
-        my $found;
+    my $found;
 
-        foreach my $inc (@inc) {
-            my $git_pm = catfile($inc, 'Git.pm');
-            if (-r $git_pm) {
-                write_file(catfile(qw/t GITPERLLIB/), $inc);
-                warn <<"EOF";
+    foreach my $inc (@inc) {
+        my $git_pm = catfile($inc, 'Git.pm');
+        if (-r $git_pm) {
+            write_file(catfile(qw/t GITPERLLIB/), $inc);
+            warn <<"EOF";
 Hey, you're lucky. I just found it at:
 
     $git_pm
@@ -106,12 +106,12 @@ Git::Hooks. But you'll still have to make Git available to your own
 scripts following the instructions above.
 
 EOF
-                $found = 1;
-                last;
-            }
+            $found = 1;
+            last;
         }
+    }
 
-        exit 0 unless $found;
+    exit 0 unless $found;
 }
 
 use ExtUtils::MakeMaker ##{ $eumm_version ##};
