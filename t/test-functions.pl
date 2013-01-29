@@ -102,8 +102,19 @@ EOF
 	print $fh <<"EOF";
 \$ENV{GIT_DIR}    = '.git' unless exists \$ENV{GIT_DIR};
 \$ENV{GIT_CONFIG} = "\$ENV{GIT_DIR}/config";
+EOF
+
+        # Hooks on Windows are invoked indirectly.
+        if ($^O eq 'MSWin32') {
+            print $fh <<"EOF";
+my \$hook = shift;
+run_hook(\$hook, \@ARGV);
+EOF
+        } else {
+            print $fh <<"EOF";
 run_hook(\$0, \@ARGV);
 EOF
+        }
     }
 	    chmod 0755 => $hook_pl;
 
@@ -114,9 +125,21 @@ EOF
 		 pre-auto-gc post-rewrite /
                      unless @hooks;
 
-    foreach (@hooks) {
-	symlink 'hook.pl', catfile($hooks_dir, $_)
-	    or BAIL_OUT("can't symlink '$hooks_dir', '$_': $!");
+    foreach my $hook (@hooks) {
+	my $hookfile = catfile($hooks_dir, $hook);
+	if ($^O eq 'MSWin32') {
+            (my $perl = $^X) =~ tr:\\:/:;
+            $hook_pl =~ tr:\\:/:;
+            my $d = $ENV{DBG} ? '-d' : '';
+            write_file($hookfile, <<"EOF");
+#!/bin/sh
+$perl $d $hook_pl $hook \"\$@\"
+EOF
+	    chmod 0755 => $hookfile;
+	} else {
+            symlink 'hook.pl', $hookfile
+                or BAIL_OUT("can't symlink '$hooks_dir', '$hook': $!");
+        }
     }
 }
 
