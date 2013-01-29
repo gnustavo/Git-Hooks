@@ -192,7 +192,10 @@ $repo->command(config => '--unset-all', 'CheckLog.match');
 # spelling
 SKIP: {
     use Git::Hooks::CheckLog;
-    my $checker = eval { Git::Hooks::CheckLog::_spell_checker($repo, 'word'); };
+    my $checker = eval {
+        local $SIG{__WARN__} = sub {}; # supress warnings in this block
+        Git::Hooks::CheckLog::_spell_checker($repo, 'word');
+    };
 
     skip "Text::SpellChecker isn't properly installed", 2 unless $checker;
 
