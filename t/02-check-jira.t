@@ -9,12 +9,12 @@ use File::Slurp;
 
 BEGIN { require "test-functions.pl" };
 
-my ($repo, $file, $clone);
+my ($repo, $file, $clone, $T);
 
 sub setup_repos_for {
     my ($reporef, $hook) = @_;
 
-    ($repo, $file, $clone) = new_repos();
+    ($repo, $file, $clone, $T) = new_repos();
 
     foreach my $git ($repo, $clone) {
 	# Inject a fake JIRA::Client class definition in order to be able
@@ -137,7 +137,8 @@ $repo->command(config => '--unset-all', 'check-jira.by-assignee');
 
 check_can_commit('allow commit if valid issue cited [GIT-2]');
 
-$repo->command(config => 'check-jira.check-code', <<'EOF');
+my $codefile = catfile($T, 'codefile');
+write_file($codefile, <<'EOF');
 sub {
     my ($git, $commit_id, $jira, @issues) = @_;
     my $keys = join(', ', sort map {$_->{key}} @issues);
@@ -145,6 +146,8 @@ sub {
     die "You must cite issues GIT-2 and GIT-3 only: not '$keys'\n";
 }
 EOF
+
+$repo->command(config => 'check-jira.check-code', "file:$codefile");
 
 check_cannot_commit('deny commit if check_code does not pass [GIT-2]',
 		    qr/You must cite issues GIT-2 and GIT-3 only/);
