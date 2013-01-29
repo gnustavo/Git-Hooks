@@ -16,7 +16,7 @@ my ($repo, $filename, undef, $T) = new_repos();
 
 # Save Gerrit's standard shell commit-msg hook in our test temporary
 # directory.
-my $gerrit_script = catfile($T, 'gerrit-commit-msg.sh');
+my $gerrit_script = catfile($T, 'gerrit-commit-msg');
 {
     local $/ = undef;
     write_file($gerrit_script, <DATA>);
@@ -119,7 +119,7 @@ sub expected {
 
     my $dir = pushd($repo->repo_path());
 
-    system($gerrit_script, $msgfile);
+    system('sh', $gerrit_script, $msgfile);
 
     return read_file($msgfile);
 }
