@@ -37,14 +37,13 @@ if (my ($major, $minor) = ($git_version =~ /(\d+)\.(\d+)/)) {
 
 # Check if we can use Git.pm
 # See http://git.661346.n2.nabble.com/better-way-to-find-Git-pm-officially-td7416362.html
-{
-    local @INC = @INC;
-    unshift @INC, split(/:/, $ENV{GITPERLLIB}) if exists $ENV{GITPERLLIB};
-    eval {require Git};
-}
+my $pathsep = $^O eq 'MSWin32' ? ';' : ':';
+unshift @INC, split("$pathsep", $ENV{GITPERLLIB}) if exists $ENV{GITPERLLIB};
+my $INC = join ' ', @INC;
+my $require = eval {require Git};
+shift @INC if exists $ENV{GITPERLLIB};
 
-unless (exists $::INC{'Git'}) {
-    my $INC = join ' ', @INC;
+unless (defined $require) {
     warn <<"EOF";
 
 I can't find Git.pm in your \@INC: ( $INC ).
@@ -83,8 +82,13 @@ EOF
             }
         }
 
-        # Usual place for Debian distributions
-        push @inc, '/usr/share/perl5' if $^O eq 'linux';
+    # Usual places for some OSs
+    if ($^O eq 'linux') {
+        push @inc, '/usr/share/perl5';
+    } elsif ($^O eq 'MSWin32') {
+        my $pfiles = exists $ENV{'ProgramFiles(x86)'} ? $ENV{'ProgramFiles(x86)'} : 'C:\Program Files (x86)';
+        push @inc, "$pfiles\\Git\\lib\\perl5\\site_perl";
+    }
 
         my $found;
 
