@@ -265,7 +265,7 @@ sub test_nok_match {
     my ($ok, $exit, $stdout, $stderr) = test_command(@args);
     if ($ok) {
 	fail($testname);
-	diag(" succeeded without intention\n stdout=$stdout\n stderr=$stderr\n git-version=$git_version\n");
+	diag(" succeeded without intention\n exit=$exit\n stdout=$stdout\n stderr=$stderr\n git-version=$git_version\n");
 	return 0;
     } elsif ($stdout =~ $regex || $stderr =~ $regex) {
 	pass($testname);
