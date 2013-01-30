@@ -2,6 +2,37 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.037     2013-01-29 22:14:25 America/Sao_Paulo
+
+  [New features]
+  - Makefile.PL now tries to find Git.pm on some usual places if it
+    can't require it using the standard @INC. This allows for
+    installation and testing on systems where Git cannot be required
+    directly.
+
+  - GerritChangeId wasn't calculating the Change-Id correctly in some
+    cases.
+
+  [Fixes]
+  - CheckRewrite wasn't showing the names reaching branch names
+    correctly.
+
+  [Refactorings for a future port to Windows (We're not there yet!)]
+  - The testing framework now uses Git::command to invoke git instead
+    of using directly an open pipe.
+
+  - Git::More used Git::command_output_pipe in a way that wasn't
+    working on Windows.
+
+  - External hooks won't be supported on Windows for a while. Hence,
+    some tests are skipped.
+
+  - The testing framework uses sh-scripts to indirectly invoke the
+    Perl hooks on Windows, because that OS does not follow the
+    shee-bang Unix conventions.
+
+  - Several other small changes.
+
 0.036     2013-01-19 16:41:16 America/Sao_Paulo
 
   [Interface changes]
