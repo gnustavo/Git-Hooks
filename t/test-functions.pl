@@ -186,14 +186,7 @@ sub new_repos {
 	return ($repo, $filename, $clone, $T);
     } otherwise {
         local $, = ':';
-	BAIL_OUT(<<"EOF");
-Error setting up repos for test:
-* Exception: $_[0]
-* CWD: $T
-* git-version: $git_version
-* \@INC: @INC
-
-EOF
+	BAIL_OUT("Error setting up repos for test: Exception=$_[0]; CWD=$T; git-version=$git_version; \@INC=(@INC).\n");
     };
 }
 
