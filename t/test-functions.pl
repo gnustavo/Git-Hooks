@@ -118,10 +118,12 @@ EOF
             (my $perl = $^X) =~ tr:\\:/:;
             $hook_pl =~ tr:\\:/:;
             my $d = $ENV{DBG} ? '-d' : '';
-            write_file($hookfile, <<"EOF");
+            my $script = <<"EOF";
 #!/bin/sh
 $perl $d $hook_pl $hook \"\$@\"
 EOF
+            write_file($hookfile, {err_mode => 'carp'}, $script)
+                or BAIL_OUT("can't write_file('$hookfile', '$script')\n");
 	    chmod 0755 => $hookfile;
 	} else {
             symlink 'hook.pl', $hookfile

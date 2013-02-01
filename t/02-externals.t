@@ -44,13 +44,15 @@ mkdir $hookd or die "Can't mkdir $hookd: $!";
 my $hook   = catfile($hookd, 'script.pl');
 my $mark   = catfile($hooksd, 'mark');
 
-write_file($hook, <<"EOF");
+my $hook_script = <<"EOF";
 #!$Config{perlpath}
 open FH, '>', '$mark' or die "Can't create mark: \$!";
 print FH "line\\n";
 close FH;
 exit 0;
 EOF
+write_file($hook, {err_mode => 'carp'}, $hook_script)
+    or BAIL_OUT("can't write_file('$hook', <hook_script 1>)\n");
 
 chmod 0755, $hook or die "Cannot chmod $hook: $!\n";
 
@@ -61,10 +63,12 @@ check_can_commit('execute a hook that succeeds');
 ok(-f $mark, 'mark exists now');
 
 # install a hook that fails
-write_file($hook, <<"EOF");
+$hook_script = <<"EOF";
 #!$Config{perlpath}
 die "external hook failure\n";
 EOF
+write_file($hook, {err_mode => 'carp'}, $hook_script)
+    or BAIL_OUT("can't write_file('$hook', <hook_script 2>)\n");
 
 check_cannot_commit('execute a hook that fails', qr/external hook failure/);
 

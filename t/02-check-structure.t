@@ -41,7 +41,7 @@ sub add_file {
     my $dirname  = catfile($repo->wc_path(), @path);
     make_path($dirname);
 
-    unless (write_file($filename, 'data')) {
+    unless (write_file($filename, {err_mode => 'carp'}, 'data')) {
 	fail($testname);
 	diag("[TEST FRAMEWORK INTERNAL ERROR] Cannot create file: $filename; $!\n");
     }

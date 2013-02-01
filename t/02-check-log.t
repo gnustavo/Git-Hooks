@@ -16,16 +16,20 @@ my $msgfile = catfile($T, 'msg.txt');
 
 sub check_can_commit {
     my ($testname, $msg) = @_;
-    write_file($msgfile, $msg);
-    append_file($file, $testname);
+    write_file($msgfile, {err_mode => 'carp'}, $msg)
+        or BAIL_OUT("check_can_commit: can't write_file('$msgfile', '$msg')\n");
+    append_file($file, {err_mode => 'carp'}, $testname)
+        or BAIL_OUT("check_can_commit: can't append_file('$file', '$testname')\n");
     $repo->command(add => $file);
     test_ok($testname, $repo, 'commit', '-F', $msgfile);
 }
 
 sub check_cannot_commit {
     my ($testname, $regex, $msg) = @_;
-    write_file($msgfile, $msg);
-    append_file($file, $testname);
+    write_file($msgfile, {err_mode => 'carp'}, $msg)
+        or BAIL_OUT("check_cannot_commit: can't write_file('$msgfile', '$msg')\n");
+    append_file($file, {err_mode => 'carp'}, $testname)
+        or BAIL_OUT("check_cannot_commit: can't append_file('$file', '$testname')\n");
     $repo->command(add => $file);
     if ($regex) {
 	test_nok_match($testname, $regex, $repo, 'commit', '-F', $msgfile);

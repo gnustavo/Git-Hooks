@@ -19,7 +19,8 @@ my ($repo, $filename, undef, $T) = new_repos();
 my $gerrit_script = catfile($T, 'gerrit-commit-msg');
 {
     local $/ = undef;
-    write_file($gerrit_script, <DATA>);
+    write_file($gerrit_script, {err_mode => 'carp'}, <DATA>)
+        or BAIL_OUT("can't write_file('$gerrit_script', <DATA>)\n");
     chmod 0755, $gerrit_script;
 };
 
@@ -41,7 +42,8 @@ sub cannot_commit {
     my ($testname, $regex, $msg) = @_;
     append_file($filename, "new line\n");
     $repo->command(add => $filename);
-    write_file($msgfile, $msg);
+    write_file($msgfile, {err_mode => 'carp'}, $msg)
+        or BAIL_OUT("cannot_commit: can't write_file('$msgfile', '$msg')\n");
     unless (test_nok_match($testname, $regex, $repo, 'commit', '-F', $msgfile)) {
 	diag_last_log();
     }
@@ -51,7 +53,8 @@ sub can_commit {
     my ($testname, $msg) = @_;
     append_file($filename, "new line\n");
     $repo->command(add => $filename);
-    write_file($msgfile, $msg);
+    write_file($msgfile, {err_mode => 'carp'}, $msg)
+        or BAIL_OUT("can_commit: can't write_file('$msgfile', '$msg')\n");
     return test_ok("$testname [commit]", $repo, 'commit', '-F', $msgfile);
 }
 
@@ -115,7 +118,8 @@ foreach my $test (
 sub expected {
     my ($msg) = @_;
 
-    write_file($msgfile, $msg);
+    write_file($msgfile, {err_mode => 'carp'}, $msg)
+        or BAIL_OUT("check_can_commit: can't write_file('$msgfile', '$msg')\n");
 
     my $dir = pushd($repo->repo_path());
 
@@ -128,7 +132,8 @@ sub produced {
     my ($msg) = @_;
 
     # Check how our hook change the message
-    write_file($msgfile, $msg);
+    write_file($msgfile, {err_mode => 'carp'}, $msg)
+        or BAIL_OUT("check_can_commit: can't write_file('$msgfile', '$msg')\n");
     Git::Hooks::GerritChangeId::rewrite_message($repo, $msgfile);
     read_file($msgfile);
 }

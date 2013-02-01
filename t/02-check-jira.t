@@ -138,7 +138,7 @@ $repo->command(config => '--unset-all', 'check-jira.by-assignee');
 check_can_commit('allow commit if valid issue cited [GIT-2]');
 
 my $codefile = catfile($T, 'codefile');
-write_file($codefile, <<'EOF');
+my $code = <<'EOF';
 sub {
     my ($git, $commit_id, $jira, @issues) = @_;
     my $keys = join(', ', sort map {$_->{key}} @issues);
@@ -146,6 +146,8 @@ sub {
     die "You must cite issues GIT-2 and GIT-3 only: not '$keys'\n";
 }
 EOF
+write_file($codefile, {err_mode => 'carp'}, $code)
+    or BAIL_OUT("can't write_file('$codefile', <>code>)\n");
 
 $repo->command(config => 'check-jira.check-code', "file:$codefile");
 
