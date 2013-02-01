@@ -2,6 +2,18 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.038     2013-02-01 16:25:00 America/Sao_Paulo
+
+  [Updates]
+  - Remove "beta status" warning from README.
+
+  [Fixes]
+  - The dzil configuration now correctly detects build-time
+    dependencies.
+
+  - The testing framework now produces some more intelligent error
+    messages.
+
 0.037     2013-01-29 22:14:25 America/Sao_Paulo
 
   [New features]
