@@ -270,5 +270,6 @@ C<pre-receive> hooks. It needs a C<Git::More> object.
 =head1 REFERENCES
 
 This script is heavily inspired (and, in some places, derived) from
-the update-paranoid example hook which comes with the Git distribution
-(L<https://github.com/gitster/git/blob/b12905140a8239ac687450ad43f18b5f0bcfb62e/contrib/hooks/update-paranoid>).
+the
+L<update-paranoid|https://github.com/gitster/git/blob/b12905140a8239ac687450ad43f18b5f0bcfb62e/contrib/hooks/update-paranoid>
+example hook which comes with the Git distribution.

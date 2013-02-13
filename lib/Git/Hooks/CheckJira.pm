@@ -410,8 +410,8 @@ C<JIRA::Client> object.
 By default, JIRA keys are matched with the regex
 C</\b[A-Z][A-Z]+-\d+\b/>, meaning, a sequence of two or more capital
 letters, followed by an hyphen, followed by a sequence of digits. If
-you customized your JIRA project keys
-(L<https://confluence.atlassian.com/display/JIRA/Configuring+Project+Keys>),
+you customized your L<JIRA project
+keys|https://confluence.atlassian.com/display/JIRA/Configuring+Project+Keys>,
 you may need to customize how this hook is going to match them. Set
 this option to a suitable regex to match a complete JIRA issue key.
 
@@ -518,4 +518,4 @@ B<JIRA::Client>
 =head1 REFERENCES
 
 This script is heavily inspired (and sometimes derived) from Joyjit
-Nath's git-jira-hook (L<https://github.com/joyjit/git-jira-hook>).
+Nath's L<git-jira-hook|https://github.com/joyjit/git-jira-hook>.

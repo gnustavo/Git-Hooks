@@ -373,20 +373,21 @@ options. (More on this later.)
 "Git is a fast, scalable, distributed revision control system with an
 unusually rich command set that provides both high-level operations
 and full access to
-internals. (L<https://github.com/gitster/git#readme>)"
+internals. (L<Git README|https://github.com/gitster/git#readme>)"
 
 In order to really understand what this is all about you need to
-understand Git L<http://git-scm.org/> and its hooks. You can read
-everything about this in the documentation references on that site
-L<http://git-scm.com/documentation>.
+understand L<Git|http://git-scm.org/> and its hooks. You can read
+everything about this in the
+L<documentation|http://git-scm.com/documentation> references on that
+site.
 
-A hook is a specifically named program that is called by the git
-program during the execution of some operations. At the last count,
-there were exactly 16 different hooks which can be used
-(L<http://schacon.github.com/git/githooks.html>). They must reside
-under the C<.git/hooks> directory in the repository. When you create a
-new repository, you get some template files in this directory, all of
-them having the C<.sample> suffix and helpful instructions inside
+A L<Git hook|http://schacon.github.com/git/githooks.html> is a
+specifically named program that is called by the git program during
+the execution of some operations. At the last count, there were
+exactly 16 different hooks which can be used. They must reside under
+the C<.git/hooks> directory in the repository. When you create a new
+repository, you get some template files in this directory, all of them
+having the C<.sample> suffix and helpful instructions inside
 explaining how to convert them into working hooks.
 
 When Git is performing a commit operation, for example, it calls these
@@ -419,7 +420,7 @@ This arrangement is inefficient in two ways. First because each script
 runs as a separate process, which usually have a high start up cost
 because they are, well, scripts and not binaries. (For a dissent view
 on this, see
-L<http://gnustavo.wordpress.com/2012/06/28/programming-languages-start-up-times/>.)
+L<this|http://gnustavo.wordpress.com/2012/06/28/programming-languages-start-up-times/>.)
 And second, because as each script is called in turn they have no
 memory of the scripts called before and have to gather the information
 about the transaction again and again, normally by calling the C<git>
@@ -586,7 +587,7 @@ push to the repository and affect which Git refs.
 
 =item * Git::Hooks::CheckJira
 
-Integrate Git with the JIRA L<http://www.atlassian.com/software/jira/>phase
+Integrate Git with the L<JIRA|http://www.atlassian.com/software/jira/>
 ticketing system by requiring that every commit message cites valid
 JIRA issues.
 
@@ -638,10 +639,10 @@ another level of directories, named after the default hook names,
 under which you can drop your external hooks.
 
 For example, let's say you want to use some of the hooks in the
-standard Git package
-(L<https://github.com/gitster/git/blob/b12905140a8239ac687450ad43f18b5f0bcfb62e/contrib/hooks/update-paranoid>). You
-should copy each of those scripts to a file under the appropriate hook
-directory, like this:
+L<standard Git
+package|https://github.com/gitster/git/blob/b12905140a8239ac687450ad43f18b5f0bcfb62e/contrib/hooks/>).
+You should copy each of those scripts to a file under the appropriate
+hook directory, like this:
 
 =over
 
@@ -812,7 +813,7 @@ if it can't figure it out.
 If the user name is not directly available in an environment variable
 you may set this option to a code snippet by prefixing it with
 C<eval:>. The code will be evaluated and its value will be used as the
-user name. For example, RhodeCode's (L<http://rhodecode.org/>) up to
+user name. For example, L<RhodeCode's|http://rhodecode.org/> up to
 version 1.3.6 used to pass the authenticated user name in the
 C<RHODECODE_USER> environment variable. From version 1.4.0 on it
 stopped using this variable and started to use another variable with
