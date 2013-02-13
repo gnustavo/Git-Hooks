@@ -316,18 +316,15 @@ sub run_hook {
 
     _load_plugins($git);
 
-    my $errors = 0;
-
     # Call every hook function installed by the hook scripts before.
     foreach my $hook (values %{$Hooks{$hook_name}}) {
         my $ok = eval { $hook->($git, @args) };
         if (defined $ok) {
             # Modern hooks return a boolean value indicating their success.
-            $errors++ unless $ok;
+            # If they fail they invoke Git::More::error.
         } elsif (length $@) {
             # Old hooks die when they fail...
             $git->error(__PACKAGE__ . "($hook_name)", $@);
-            $errors++;
         } else {
             # ...and return undef when they succeed.
         }
@@ -341,16 +338,15 @@ sub run_hook {
         ) {
             opendir my $dh, $dir
                 or $git->error(__PACKAGE__, ": cannot opendir $dir: $!\n")
-                    and $errors++
-                        and next;
+                    and next;
             foreach my $file (grep {-f && -x} map {catfile($dir, $_)} readdir $dh) {
                 spawn_external_file($git, $file, $hook_name, @args)
-                    or $errors++;
+                    or $git->error(__PACKAGE__, ": error in external hook '$file'\n");
             }
         }
     }
 
-    die "\n" if $errors;
+    die "\n" if scalar($git->get_errors());
 
     return;
 }

@@ -329,8 +329,19 @@ sub get_current_branch {
 
 sub error {
     my ($git, $prefix, $message) = @_;
-    warn "\n[$prefix] ", $message, "\n";
+    my $fmtmsg = "\n[$prefix] $message";
+    push @{$git->{more}{errors}}, "$fmtmsg\n";
+    warn "$fmtmsg\n";
     return 1;
+}
+
+sub get_errors {
+    my ($git) = @_;
+    if (exists $git->{more}{errors}) {
+        return @{$git->{more}{errors}};
+    } else {
+        return ();
+    }
 }
 
 
