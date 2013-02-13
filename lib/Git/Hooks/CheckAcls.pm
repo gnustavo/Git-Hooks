@@ -120,13 +120,13 @@ sub check_affected_refs {
         check_ref($git, $ref)
             or return 0;
     }
-
     return 1;
 }
 
 # Install hooks
 UPDATE      \&check_affected_refs;
 PRE_RECEIVE \&check_affected_refs;
+REF_UPDATE  \&check_affected_refs;
 
 1;
 
@@ -157,6 +157,12 @@ performing the push can update the branch in question.
 This hook is invoked once in the remote repository during C<git push>,
 checking if the user performing the push can update every affected
 branch.
+
+=item * B<ref-update>
+
+This hook is invoked when a push request is received by Gerrit Code
+Review, to check if the user performing the push can update the branch
+in question.
 
 =back
 

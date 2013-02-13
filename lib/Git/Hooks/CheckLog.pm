@@ -244,6 +244,17 @@ sub check_message {
     return $errors == 0;
 }
 
+sub check_patchset {
+    my ($git, $opts) = @_;
+
+    _setup_config($git);
+
+    my $sha1   = $opts->{'--commit'};
+    my $commit = ($git->get_commits("$sha1^", $sha1))[-1];
+
+    return check_message($git, $commit, $commit->{body});
+}
+
 sub check_message_file {
     my ($git, $commit_msg_file) = @_;
 
@@ -288,9 +299,11 @@ sub check_affected_refs {
 }
 
 # Install hooks
-COMMIT_MSG  \&check_message_file;
-UPDATE      \&check_affected_refs;
-PRE_RECEIVE \&check_affected_refs;
+COMMIT_MSG       \&check_message_file;
+UPDATE           \&check_affected_refs;
+PRE_RECEIVE      \&check_affected_refs;
+REF_UPDATE       \&check_affected_refs;
+PATCHSET_CREATED \&check_patchset;
 
 1;
 
@@ -325,6 +338,18 @@ messages of all commits being pushed comply.
 This hook is invoked once in the remote repository during C<git push>,
 to check if the commit log messages of all commits being pushed
 comply.
+
+=item * B<ref-update>
+
+This hook is invoked when a push request is received by Gerrit Code
+Review, to check if the commit log messages of all commits being
+pushed comply.
+
+=item * B<patchset-created>
+
+This hook is invoked when a push request is received by Gerrit Code
+Review for a virtual branch (refs/for/*), to check if the commit log
+messages of all commits being pushed comply.
 
 =back
 
@@ -439,6 +464,12 @@ message.
 
 This is the routing used to implement the C<update> and the
 C<pre-receive> hooks. It needs a C<Git::More> object.
+
+=head2 check_patchset GIT, HASH
+
+This is the routine used to implement the C<patchset-created> Gerrit
+hook. It needs a C<Git::More> object and the hash containing the
+arguments passed to the hook by Gerrit.
 
 =head1 REFERENCES
 

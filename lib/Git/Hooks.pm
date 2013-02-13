@@ -12,7 +12,7 @@ use File::Spec::Functions;
 use List::MoreUtils qw/uniq/;
 
 our (@EXPORT, @EXPORT_OK, %EXPORT_TAGS); ## no critic (Modules::ProhibitAutomaticExportation)
-my %Hooks;
+my (%Hooks, @PostHooks);
 
 BEGIN {                ## no critic (Subroutines::RequireArgUnpacking)
     my @installers =
@@ -20,7 +20,10 @@ BEGIN {                ## no critic (Subroutines::RequireArgUnpacking)
             PRE_COMMIT PREPARE_COMMIT_MSG COMMIT_MSG
             POST_COMMIT PRE_REBASE POST_CHECKOUT POST_MERGE
             PRE_RECEIVE UPDATE POST_RECEIVE POST_UPDATE
-            PRE_AUTO_GC POST_REWRITE /;
+            PRE_AUTO_GC POST_REWRITE
+
+            REF_UPDATE PATCHSET_CREATED
+          /;
 
     for my $installer (@installers) {
         my $hook = lc $installer;
@@ -37,12 +40,23 @@ BEGIN {                ## no critic (Subroutines::RequireArgUnpacking)
     @EXPORT      = (@installers, 'run_hook');
 
     @EXPORT_OK = qw/is_ref_enabled im_memberof match_user im_admin
-                    eval_gitconfig /;
+                    eval_gitconfig post_hook/;
 
     %EXPORT_TAGS = (utils => \@EXPORT_OK);
 }
 
 use Git::More;
+
+##############
+# The following routines are invoked after all hooks have been
+# processed. Some hooks may need to take a global action depending on
+# the overall result of all hooks.
+
+sub post_hook {
+    my ($sub) = @_;
+    push @PostHooks, $sub;
+    return;
+}
 
 sub is_ref_enabled {
     my ($ref, @specs) = @_;
@@ -249,13 +263,131 @@ sub _prepare_update {
     return;
 }
 
+# Gerrit hooks get a list of option/value pairs. Here we convert the
+# list into a hash and change the original argument list into a single
+# hash-ref. We also record information about the user performing the
+# push. Based on:
+# http://gerrit-documentation.googlecode.com/svn/Documentation/2.6/config-hooks.html
+
+sub _prepare_gerrit_args {
+    my ($git, $args) = @_;
+
+    my %opt = @$args;
+
+    # Each Gerrit hook receive the full name and email of the user
+    # performing the hooked operation via a specific option in the
+    # format "User Name (email@example.net)". Here we grok it.
+    my $user =
+        $opt{'--uploader'}  ||
+        $opt{'--author'}    ||
+        $opt{'--submitter'} ||
+        $opt{'--abandoner'} ||
+        $opt{'--restorer'}  ||
+        $opt{'--reviewer'}  ||
+        undef;
+
+    # Here we make the name and email available in two environment
+    # variables (GERRIT_USER_NAME and GERRIT_USER_EMAIL) so that
+    # Git::More::authenticated_user can more easily grok the userid
+    # from them later.
+    if ($user && $user =~ /([^\(]+)\s+\(([^\)]+)\)/) {
+        $ENV{GERRIT_USER_NAME}  = $1; ## no critic (Variables::RequireLocalizedPunctuationVars)
+        $ENV{GERRIT_USER_EMAIL} = $2; ## no critic (Variables::RequireLocalizedPunctuationVars)
+    }
+
+    # Now we create a Gerrit::REST object connected to the Gerrit
+    # server and tack it to the hook arguments so that Gerrit plugins
+    # can interact with it.
+
+    # We 'require' the module instead of 'use' it because it's only
+    # used if one sets up Gerrit hooks, which may not be the most
+    # common usage of Git::Hooks.
+    eval {require Gerrit::REST}
+        or die __PACKAGE__, ": Can't require Gerrit::REST module.\n";
+
+    $opt{gerrit} = do {
+        my %info;
+        foreach my $arg (qw/url username password/) {
+            $info{$arg} = $git->get_config('githooks.gerrit' => $arg)
+                or die __PACKAGE__, ": Missing githooks.gerrit.$arg configuration variable.\n";
+        }
+
+        Gerrit::REST->new(@info{qw/url username password/});
+    };
+
+    @$args = (\%opt);
+    return;
+}
+
+# Gerrit's patchset-created hook is invoked when a commit is pushed to
+# a refs/for/* branch for revision. It's invoked asynchronously, i.e.,
+# it can't stop the push to happen. Instead, if it detects any
+# problem, we must reject the commit via Gerrit's own revision
+# process. So, we prepare a post hook action in which we see if there
+# were errors that should be signalled via as code review action.
+
+sub _prepare_gerrit_patchset_created {
+    my ($git, $args) = @_;
+
+    _prepare_gerrit_args($git, $args);
+    post_hook(
+        sub {
+            my ($hook_name, $git, $args) = @_; ## no critic (Variables::ProhibitReusedNames)
+
+            my $resource = do {
+                my $change   = $args->{'--change'}
+                    or die __PACKAGE__, ": Missing --change argument to Gerrit's patchset_created hook.\n";
+                my $patchset = $args->{'--patchset'}
+                    or die __PACKAGE__, ": Missing --patchset argument to Gerrit's patchset_created hook.\n";
+
+                "/changes/$change/revisions/$patchset/review";
+            };
+
+            my $review_label = $git->get_config('githooks.gerrit' => 'review_label') || 'Code-Review';
+
+            if (my @errors = $git->get_errors()) {
+                $args->{gerrit}->POST($resource, {
+                    labels  => {$review_label => $git->get_config('githooks.gerrit' => 'vote_nok') || -1},
+                    message => join("\n\n", @errors),
+                });
+            } else {
+                $args->{gerrit}->POST($resource, {
+                    labels  => {$review_label => $git->get_config('githooks.gerrit' => 'vote_ok')  || +1},
+                });
+            }
+
+            return;
+        }
+    );
+    return;
+}
+
+# The ref-update Gerrit hook is invoked synchronously when a user
+# pushes commits to a branch. So, it acts much like Git's standard
+# 'update' hook. This routine prepares the options as usual and sets
+# the affected ref accordingly. The documented arguments for the hook
+# are these:
+
+# ref-update --project <project name> --refname <refname> --uploader \
+# <uploader> --oldrev <sha1> --newrev <sha1>
+
+sub _prepare_gerrit_ref_update {
+    my ($git, $args) = @_;
+
+    _prepare_gerrit_args($git, $args);
+    $git->set_affected_ref(@{$args->[0]}{qw/--refname --oldrev --newrev/});
+    return;
+}
+
 # The %prepare_hook hash maps hook names to the routine that must be
 # invoked in order to "prepare" their arguments.
 
 my %prepare_hook = (
-    'update'       => \&_prepare_update,
-    'pre-receive'  => \&_prepare_receive,
-    'post-receive' => \&_prepare_receive,
+    'update'           => \&_prepare_update,
+    'pre-receive'      => \&_prepare_receive,
+    'post-receive'     => \&_prepare_receive,
+    'ref-update'       => \&_prepare_gerrit_ref_update,
+    'patchset-created' => \&_prepare_gerrit_patchset_created,
 );
 
 ################
@@ -364,6 +496,11 @@ sub run_hook {
                     or $git->error(__PACKAGE__, ": error in external hook '$file'\n");
             }
         }
+    }
+
+    # Some hooks want to do some post-processing
+    foreach my $post_hook (@PostHooks) {
+        $post_hook->($hook_name, $git, @args);
     }
 
     die "\n" if scalar($git->get_errors());
@@ -702,6 +839,42 @@ non-specified order.
 If any of them exits abnormally, B<run_hook> dies with an appropriate
 error message.
 
+=head2 Gerrit Hooks
+
+L<Gerrit|gerrit.googlecode.com> is a web based code review and project
+management for Git based projects. It's based on
+L<JGit|http://www.eclipse.org/jgit/>, which is a pure Java
+implementation of Git.
+
+Up to version 2.6.0, Gerrit still doesn't support Git standard
+hooks. However, it implements its own L<special
+hooks|http://gerrit-documentation.googlecode.com/svn/Documentation/2.6/config-hooks.html>.
+B<Git::Hooks> currently supports only two of Gerrit hooks:
+
+=head3 ref-update
+
+The B<ref-update> hook is executed synchronously when a user performs
+a push to a branch. It's purpose is the same as Git's B<update> hook
+and Git::Hooks's plugins usually support them both together.
+
+=head3 patchset-created
+
+The B<patchset-created> hook is executed asynchrounously when a user
+performs a push to one of Gerrit's virtual branches (refs/for/*) in
+order to record a new review request. This means that one cannot stop
+the request from happening just by dying inside the hook. Instead,
+what one needs to do is to use Gerrit's API to accept or reject the
+new patchset as a reviewer.
+
+Git::Hooks does this using a C<Gerrit::REST> object. There are a few
+configuration options to set up this Gerrit interaction, which are
+described below.
+
+This hook's purpose is usually to verify the project's policy
+compliance. Plugins that implement C<pre-commit>, C<commit-msg>,
+C<update>, or C<pre-receive> hooks usually also implement this Gerrit
+hook.
+
 =head1 CONFIGURATION
 
 Git::Hooks is configured via Git's own configuration
@@ -868,25 +1041,40 @@ care of the authentication procedure. These services normally make the
 authenticated user name available in an environment variable. You may
 tell this hook which environment variable it is by setting this option
 to the variable's name. If not set, the hook will try to get the
-user's name from the C<USER> environment variable and let it undefined
-if it can't figure it out.
+user's name from the C<GERRIT_USER_EMAIL> or the C<USER> environment
+variable, in this order, and let it undefined if it can't figure it
+out.
+
+The Gerrit hooks unfortunately do not have access to the user's
+id. But they get the user's full name and email instead. Git:Hooks
+takes care so that two environment variables are defined in the hooks,
+as follows:
+
+=over
+
+=item * GERRIT_USER_NAME
+
+This contains the user's full name, such as "User Name".
+
+=item * GERRIT_USER_EMAIL
+
+This contains the user's email, such as "user@example.net".
+
+=back
 
 If the user name is not directly available in an environment variable
 you may set this option to a code snippet by prefixing it with
 C<eval:>. The code will be evaluated and its value will be used as the
-user name. For example, L<RhodeCode's|http://rhodecode.org/> up to
-version 1.3.6 used to pass the authenticated user name in the
-C<RHODECODE_USER> environment variable. From version 1.4.0 on it
-stopped using this variable and started to use another variable with
-more information in it. Like this:
+user name.
 
-    RHODECODE_EXTRAS='{"username": "rcadmin", "scm": "git", "repository": "git_intro/hooktest", "make_lock": null, "ip": "172.16.2.251", "locked_by": [null, null], "action": "push"}'
+For example, if the Gerrit user email is not what you want to use as
+the user id, you can set the C<githooks.userenv> configuration option
+to grok the user id from one of these environment variables. If the
+user id is always identical to the part of the email before the at
+sign, you can configure it like this:
 
-To grok the user name from this variable, one may set this option like
-this:
-
-    git config check-acls.userenv \
-      'eval:(exists $ENV{RHODECODE_EXTRAS} && $ENV{RHODECODE_EXTRAS} =~ /"username":\s*"([^"]+)"/) ? $1 : undef'
+    git config githooks.userenv \
+      'eval:(exists $ENV{GERRIT_USER_EMAIL} && $ENV{GERRIT_USER_EMAIL} =~ /([^@]+)/) ? $1 : undef'
 
 This variable is useful for any hook that need to authenticate the
 user performing the git action.
@@ -923,6 +1111,31 @@ anchored at the start of the username.
 
 =back
 
+=head2 githooks.gerrit.url URL
+=head2 githooks.gerrit.username USERNAME
+=head2 githooks.gerrit.password PASSWORD
+
+These three options are required if you enable Gerrit hooks. They are
+used to construct the C<Gerrit::REST> object that is used to interact
+with Gerrit.
+
+=head2 githooks.gerrit.review_label LABEL
+
+This option defines the
+L<label|http://gerrit-documentation.googlecode.com/svn/Documentation/2.6/config-labels.html>
+that must be used in Gerrit's review process. If not specified, the
+standard C<Code-Review> label is used.
+
+=head2 githooks.gerrit.vote_ok +N
+
+This option defines the vote that must be used to approve a review. If
+not specified, +1 is used.
+
+=head2 githooks.gerrit.vote_nok -N
+
+This option defines the vote that must be used to reject a review. If
+not specified, -1 is used.
+
 =head1 MAIN FUNCTION
 
 =head2 run_hook(NAME, ARGS...)
@@ -946,10 +1159,10 @@ Each one of the hook directives gets a routine-ref or a single block
 (anonymous routine) as argument. The routine/block will be called by
 C<run_hook> with proper arguments, as indicated below. These arguments
 are the ones gotten from @ARGV, with the exception of the ones
-identified by GIT. These are C<Git::More> objects which can be used to
+identified by 'GIT' which are C<Git::More> objects that can be used to
 grok detailed information about the repository and the current
-transaction. (Please, refer to the L<Git::More> documentation to know
-how to use them.)
+transaction. (Please, refer to C<Git::More> specific documentation to
+know how to use them.)
 
 Note that the hook directives resemble function definitions but they
 aren't. They are function calls, and as such must end with a
@@ -957,8 +1170,9 @@ semi-colon.
 
 Most of the hooks are used to check some condition. If the condition
 holds, they must simply end without returning anything. Otherwise,
-they must C<die> with a suitable error message. On some hooks, this
-will prevent Git from finishing its operation.
+they should invoke the C<error> method on the GIT object passing a
+suitable error message. On some hooks, this will prevent Git from
+finishing its operation.
 
 Also note that each hook directive can be called more than once if you
 need to implement more than one specific hook.
@@ -997,6 +1211,17 @@ need to implement more than one specific hook.
 
 =item * POST_REWRITE(GIT, command)
 
+=item * REF_UPDATE(GIT, OPTS)
+=item * PATCHSET_CREATED(GIT, OPTS)
+
+These are Gerrit-specific hooks. Gerrit invokes them passing a list of
+option/value pairs which are converted into a hash, which is passed by
+reference as the OPTS argument. In addition to the option/value pairs,
+a C<Gerrit::REST> object is created and inserted in the OPTS hash with
+the key 'gerrit'. This object can be used to interact with the Gerrit
+server.  For more information, please, read the L</Gerrit Hooks>
+section.
+
 =back
 
 =head1 METHODS FOR PLUGIN DEVELOPERS
@@ -1019,6 +1244,42 @@ Git::Hooks:: namespace in order to get a better understanding about
 this. Hopefully it's not that hard.
 
 The utility routines implemented by Git::Hooks are the following:
+
+=head2 post_hook SUB
+
+Plugin developers may be interested in performing some action
+depending on the overall result of every check made by every other
+hook. As an example, Gerrit's C<patchset-created> hook is invoked
+asynchronously, meaning that the hook's exit code doesn't affect the
+action that triggered the hook. The proper way to signal the hook
+result for Gerrit is to invoke it's API to make a review. But we want
+to perform the review once, at the end of the hook execution, based on
+the overall result of all enabled checks.
+
+To do that plugin developers can use this routine to register
+callbacks that are invoked at the end of C<run_hooks>. The callbacks
+are called with the following arguments:
+
+=over
+
+=item * HOOK_NAME
+
+The basename of the invoked hook.
+
+=item * GIT
+
+The Git::More object that was passed to the plugin hooks.
+
+=item * ARGS...
+
+The remaining arguments that were passed to the plugin hooks.
+
+=back
+
+The callbacks may see if there were any errors signalled by the plugin
+hook by invoking the C<get_errors> method on the GIT object. They may
+be used to signal the hook result in any way they want, but they
+should not die or they will prevent other post hooks to run.
 
 =head2 is_ref_enabled(REF, SPEC, ...)
 
@@ -1069,4 +1330,18 @@ returned.
 
 =head1 SEE ALSO
 
-C<Git::More>.
+=over
+
+=item * C<Git::More>
+
+A Git extension with some goodies for hook developers.
+
+=item * C<Gerrit::REST>
+
+A thin wrapper around Gerrit's REST API.
+
+=back
+
+=cut
+
+

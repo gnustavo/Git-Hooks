@@ -184,9 +184,11 @@ sub check_commit {
 }
 
 # Install hooks
-PRE_COMMIT  \&check_commit;
-UPDATE      \&check_affected_refs;
-PRE_RECEIVE \&check_affected_refs;
+PRE_COMMIT       \&check_commit;
+UPDATE           \&check_affected_refs;
+PRE_RECEIVE      \&check_affected_refs;
+REF_UPDATE       \&check_affected_refs;
+PATCHSET_CREATED \&check_commit;
 
 1;
 
@@ -224,6 +226,19 @@ definition.
 This hook is invoked once in the remote repository during C<git push>,
 checking if the references and files being added to the repository
 comply with its structure definition.
+
+=item * B<ref-update>
+
+This hook is invoked when a push request is received by Gerrit Code
+Review, to check if the references and files being added to the
+repository comply with its structure definition.
+
+=item * B<patchset-created>
+
+This hook is invoked when a push request is received by Gerrit Code
+Review for a virtual branch (refs/for/*), to check if the references
+and files being added to the repository comply with its structure
+definition.
 
 =back
 
@@ -347,7 +362,7 @@ ref structure recursively in exactly the same way as was explained for
 the C<githooks.checkstructure.file> variable above. Consider that reference
 names always begin with C<refs/>. Branches are kept under
 C<refs/heads/>, tags under C<refs/tags>, remotes under
-C<refs/remotes>, Gerrit branches under C<refs/for>, and so on.
+C<refs/remotes>, and so on.
 
 Let's see an example to make things clearer. Suppose the code below is
 in a file called C<hooks/ref-structure.def> under the repository
