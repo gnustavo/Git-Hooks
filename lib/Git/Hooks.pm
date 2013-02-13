@@ -229,15 +229,21 @@ sub _prepare_receive {
     return;
 }
 
+# The update hook get three arguments telling which reference is being
+# updated, from which commit, to which commit. Here we use these
+# arguments to set the affected ref in the Git object.
+
+sub _prepare_update {
+    my ($git, $args) = @_;
+    $git->set_affected_ref(@$args);
+    return;
+}
+
 # The %prepare_hook hash maps hook names to the routine that must be
 # invoked in order to "prepare" their arguments.
 
 my %prepare_hook = (
-    update => sub {
-        my ($git, $ref, $old_commit, $new_commit) = @_;
-        $git->set_affected_ref($ref, $old_commit, $new_commit);
-        return;
-    },
+    'update'           => \&_prepare_update,
     'pre-receive'  => \&_prepare_receive,
     'post-receive' => \&_prepare_receive,
 );
@@ -305,7 +311,7 @@ sub run_hook {
 
     # Some hooks need some argument munging before we invoke them
     if (my $prepare = $prepare_hook{$hook_name}) {
-        $prepare->($git, @args);
+        $prepare->($git, \@args);
     }
 
     _load_plugins($git);
