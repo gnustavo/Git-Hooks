@@ -211,10 +211,16 @@ sub eval_gitconfig {
     return $value;
 }
 
+##############
+# The following routines prepare the arguments for some hooks to make
+# it easier to deal with them later on.
+
+# The pre-receive and post-receive hooks get the list of affected
+# commits via STDIN. This routine gets them all and set all affected
+# refs in the Git object.
+
 sub _prepare_receive {
     my ($git) = @_;
-    # pre-receive and post-receive get the list of affected
-    # commits via STDIN.
     while (<STDIN>) { ## no critic (InputOutput::ProhibitExplicitStdin)
         chomp;
         my ($old_commit, $new_commit, $ref) = split;
@@ -222,6 +228,9 @@ sub _prepare_receive {
     }
     return;
 }
+
+# The %prepare_hook hash maps hook names to the routine that must be
+# invoked in order to "prepare" their arguments.
 
 my %prepare_hook = (
     update => sub {
@@ -232,6 +241,10 @@ my %prepare_hook = (
     'pre-receive'  => \&_prepare_receive,
     'post-receive' => \&_prepare_receive,
 );
+
+################
+# This routine loads every plugin configured in the githooks.plugin
+# option.
 
 sub _load_plugins {
     my ($git) = @_;
@@ -278,6 +291,10 @@ sub _load_plugins {
 
     return;
 }
+
+# This is the main routine of Git::Hooks. It gets the original hook
+# name and arguments, sets up the environment, loads plugins and
+# invokes the appropriate hook functions.
 
 sub run_hook {
     my ($hook_name, @args) = @_;
