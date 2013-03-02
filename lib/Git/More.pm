@@ -321,10 +321,12 @@ sub authenticated_user {
 
 sub get_current_branch {
     my ($git) = @_;
-    foreach ($git->command(branch => '--no-color')) {
-        return $1 if /^\* (.*)/;
-    }
-    return;
+    try {
+        return $git->command_oneline(qw/symbolic-ref HEAD/);
+    } otherwise {
+        # Return undef in dettached head state
+        return;
+    };
 }
 
 sub error {
@@ -578,8 +580,7 @@ return this.
 =head2 get_current_branch
 
 This method returns the repository's current branch name, as indicated
-by the C<git branch> command. Note that it's a ref short name, i.e.,
-it's usually sub-intended to reside under the 'refs/heads/' ref scope.
+by the C<git symbolic-ref HEAD> command.
 
 =head2 error PREFIX MESSAGE
 

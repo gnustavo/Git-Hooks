@@ -251,7 +251,7 @@ sub check_message_file {
 
     _setup_config($git);
 
-    my $current_branch = 'refs/heads/' . $git->get_current_branch();
+    my $current_branch = $git->get_current_branch();
     return 1 unless is_ref_enabled($current_branch, $git->get_config($CFG => 'ref'));
 
     my $msg = read_file($commit_msg_file)
