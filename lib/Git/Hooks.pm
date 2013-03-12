@@ -6,6 +6,7 @@ use strict;
 use warnings;
 use Exporter qw/import/;
 use Data::Util qw(:all);
+use File::Slurp;
 use File::Basename;
 use File::Spec::Functions;
 use List::MoreUtils qw/uniq/;
