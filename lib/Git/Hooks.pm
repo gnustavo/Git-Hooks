@@ -65,11 +65,27 @@ sub is_ref_enabled {
 sub spawn_external_file {
     my ($git, $file, $hook, @args) = @_;
 
-    my $exit;
     if ($hook !~ /^(?:pre|post)-receive$/) {
-        $exit = system {$file} ($hook, @args);
+
+        my $exit = system {$file} ($hook, @args);
+
+        if ($exit == 0) {
+            return 1;
+        } elsif ($exit == -1) {
+            $git->error(__PACKAGE__, ": failed to execute '$file': $!\n");
+        } elsif ($exit & 127) {
+            $git->error(__PACKAGE__, sprintf("'$file' died with signal %d, %s coredump\n",
+                                             ($exit & 127), ($exit & 128) ? 'with' : 'without'));
+        } else {
+            $git->error(__PACKAGE__, sprintf("'$file' exited abnormally with value %d\n", $exit >> 8));
+        }
+
+        return 0;
+
     } else {
+
         my $pid = open my $pipe, '|-';
+
         if (! defined $pid) {
             die __PACKAGE__, ": can't fork: $!\n";
         } elsif ($pid) {
@@ -78,26 +94,19 @@ sub spawn_external_file {
                 my ($old, $new) = $git->get_affected_ref_range($ref);
                 say $pipe "$old $new $ref";
             }
-            $exit = close $pipe;
+            if (close $pipe) {
+                return 1;
+            } elsif ($!) {
+                die __PACKAGE__, ": Error closing pipe to external hook '$file': $!\n";
+            } else {
+                die __PACKAGE__, ": External hook '$file' exited with $?\n";
+            }
         } else {
             # child
             exec {$file} ($hook, @args);
             die __PACKAGE__, ": can't exec: $!\n";
         }
     }
-
-    if ($exit == 0) {
-        return 1;
-    } elsif ($exit == -1) {
-        $git->error(__PACKAGE__, ": failed to execute '$file': $!\n");
-    } elsif ($exit & 127) {
-        $git->error(__PACKAGE__, sprintf("'$file' died with signal %d, %s coredump\n",
-                                             ($exit & 127), ($exit & 128) ? 'with' : 'without'));
-    } else {
-        $git->error(__PACKAGE__, sprintf("'$file' exited abnormally with value %d\n", $exit >> 8));
-    }
-
-    return 0;
 }
 
 sub grok_groups_spec {
