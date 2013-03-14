@@ -175,22 +175,28 @@ sub clean_cache {
 sub get_commits {
     my ($git, $old_commit, $new_commit) = @_;
 
-    # The commit list to be returned
-    my @commits;
-
     # We're interested in all commits reachable from $new_commit but
     # not reachable from $old_commit. We're going to use the "git
     # rev-list" command for that. As you can read on its
     # documentation, the usual syntax to specify this set of commits
     # is this: "$new_commit ^$old_commit".
 
-    # However, there is a special case signalled when $old_commit is
-    # null (i.e., '0'x40). In this case we want all commits reachable
-    # from $new_commit but not reachable from any other branch. The
-    # syntax for this is "$new_commit ^$b1 ^$b2 ... ^$bn", i.e.,
-    # $new_commit followed by every other branch name prefixed by
-    # carets. We can get at their names using the technique described
-    # in, e.g.,
+    # However, there are two special cases: when a new branch is
+    # created and when an old branch is deleted.
+
+    # When an old branch is deleted $new_commit is null (i.e.,
+    # '0'x40'). In this case previous commits are being forgotten and
+    # the hooks usually don't need to check them. So, in this
+    # situation we simply return an empty list of commits.
+
+    return () if $new_commit eq '0' x 40;
+
+    # When a new branch is created $old_commit is null (i.e.,
+    # '0'x40). In this case we want all commits reachable from
+    # $new_commit but not reachable from any other branch. The syntax
+    # for this is "$new_commit ^$b1 ^$b2 ... ^$bn", i.e., $new_commit
+    # followed by every other branch name prefixed by carets. We can
+    # get at their names using the technique described in, e.g.,
     # http://stackoverflow.com/questions/3511057/git-receive-update-hooks-and-new-branches.
 
     # The @excludes variable will hold the list of commits that will
@@ -200,6 +206,9 @@ sub get_commits {
         $old_commit eq '0' x 40
         ? grep {$_ ne $new_commit} $git->command(qw:for-each-ref --format=%(objectname) refs/heads/:)
         : $old_commit;
+
+    # The commit list to be returned
+    my @commits;
 
     local $/ = "\c@\cJ";
     my ($pipe, $ctx) = $git->command_output_pipe(
@@ -519,12 +528,19 @@ This method returns a list of hashes representing every commit
 reachable from NEWCOMMIT but not from OLDCOMMIT. It obtains this
 information by invoking C<git rev-list NEWCOMMIT ^OLDCOMMIT>.
 
-There is a special case, though, if OLDCOMMIT is the null SHA-1, i.e.,
-'0000000000000000000000000000000000000000'.  In this case we want all
-commits reachable from NEWCOMMIT but not reachable from any other
-branch. The syntax for this is NEWCOMMIT ^B1 ^B2 ... ^Bn", i.e.,
-NEWCOMMIT followed by every other branch name prefixed by carets. We
-can get at their names using the technique described in, e.g., L<this
+There are two special cases, though:
+
+If NEWCOMMIT is the null SHA-1, i.e.,
+'0000000000000000000000000000000000000000', this means that a branch,
+pointing to OLDCOMMIT, has been removed. In this case the method
+returns an empty list, meaning that no new commit has been created.
+
+If OLDCOMMIT is the null SHA-1, this means that a new branch poiting
+to NEWCOMMIT is being created. In this case we want all commits
+reachable from NEWCOMMIT but not reachable from any other branch. The
+syntax for this is NEWCOMMIT ^B1 ^B2 ... ^Bn", i.e., NEWCOMMIT
+followed by every other branch name prefixed by carets. We can get at
+their names using the technique described in, e.g., L<this
 discussion|http://stackoverflow.com/questions/3511057/git-receive-update-hooks-and-new-branches>.
 
 Each commit in the returned list is represented by a hash with the
