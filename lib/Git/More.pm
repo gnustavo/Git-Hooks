@@ -175,14 +175,40 @@ sub clean_cache {
 sub get_commits {
     my ($git, $old_commit, $new_commit) = @_;
 
+    # The commit list to be returned
     my @commits;
+
+    # We're interested in all commits reachable from $new_commit but
+    # not reachable from $old_commit. We're going to use the "git
+    # rev-list" command for that. As you can read on its
+    # documentation, the usual syntax to specify this set of commits
+    # is this: "$new_commit ^$old_commit".
+
+    # However, there is a special case signalled when $old_commit is
+    # null (i.e., '0'x40). In this case we want all commits reachable
+    # from $new_commit but not reachable from any other branch. The
+    # syntax for this is "$new_commit ^$b1 ^$b2 ... ^$bn", i.e.,
+    # $new_commit followed by every other branch name prefixed by
+    # carets. We can get at their names using the technique described
+    # in, e.g.,
+    # http://stackoverflow.com/questions/3511057/git-receive-update-hooks-and-new-branches.
+
+    # The @excludes variable will hold the list of commits that will
+    # be prefixed with carets in the git rev-list command invokation.
+
+    my @excludes =
+        $old_commit eq '0' x 40
+        ? grep {$_ ne $new_commit} $git->command(qw:for-each-ref --format=%(objectname) refs/heads/:)
+        : $old_commit;
 
     local $/ = "\c@\cJ";
     my ($pipe, $ctx) = $git->command_output_pipe(
         'rev-list',
         # See 'git help rev-list' to understand the --pretty argument
         '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%s%n%n%b%x00',
-        "$old_commit..$new_commit");
+        $new_commit,
+        map {"^$_"} @excludes,
+    );
 
     while (<$pipe>) {
             my %commit;
@@ -491,10 +517,19 @@ get rid of any value kept in the SECTION's cache.
 
 This method returns a list of hashes representing every commit
 reachable from NEWCOMMIT but not from OLDCOMMIT. It obtains this
-information by invoking C<git rev-list OLDCOMIT..NEWCOMMIT>.
+information by invoking C<git rev-list NEWCOMMIT ^OLDCOMMIT>.
 
-Each commit is represented by a hash with the following structure (the
-codes are explained in the C<git help rev-list> document):
+There is a special case, though, if OLDCOMMIT is the null SHA-1, i.e.,
+'0000000000000000000000000000000000000000'.  In this case we want all
+commits reachable from NEWCOMMIT but not reachable from any other
+branch. The syntax for this is NEWCOMMIT ^B1 ^B2 ... ^Bn", i.e.,
+NEWCOMMIT followed by every other branch name prefixed by carets. We
+can get at their names using the technique described in, e.g., L<this
+discussion|http://stackoverflow.com/questions/3511057/git-receive-update-hooks-and-new-branches>.
+
+Each commit in the returned list is represented by a hash with the
+following structure (the codes are explained in the C<git help
+rev-list> document):
 
     {
         commit          => %H:  commit hash
