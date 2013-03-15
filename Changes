@@ -2,6 +2,12 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.040     2013-03-15 00:21:24 America/Sao_Paulo
+
+  The 0.039 release package contained some experimental code
+  unintentionally. This new release simply fix this. The changes
+  recorded below for the 0.039 release are still valid.
+
 0.039     2013-03-14 23:56:15 America/Sao_Paulo
 
   [New features]
