@@ -2,6 +2,33 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.039     2013-03-14 23:56:15 America/Sao_Paulo
+
+  [New features]
+  - run_hook doesn't die at the first error anymore. Now it collects
+    errors from all hooks to be able to show them all when it dies at
+    the end. These modification required changes to all plugins to
+    make them invoke an error method instead of simply dying.
+
+  [Changes]
+  - Git::More::get_current_branch previously returned the branch
+    short-name. Now it returns the branch full name. Moreover, when in
+    dettached mode it returns undef.
+
+  [Fixes]
+  - The exit code of external pre-receive hooks weren't being dealt
+    with correctly.
+
+  - The arguments for update and pre-receive hooks weren't being dealt
+    with correctly when new branches were being pushed or branches
+    were being deteled on a push.
+
+  - Fix Git::More::is_ref_enabled for when in dettached head state. It
+    returns true in this case.
+
+  [Cleanup]
+  - Fix all L<> POD tags in the documentation.
+
 0.038     2013-02-01 16:25:00 America/Sao_Paulo
 
   [Updates]
