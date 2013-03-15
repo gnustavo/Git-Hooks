@@ -639,12 +639,17 @@ to a commit instead of to a branch, the method returns undef.
 
 =head2 error PREFIX MESSAGE
 
-This method should be used by plugins to produce consistent error or
+This method should be used by plugins to record consistent error or
 warning messages. It gets two arguments: a PREFIX and the error
 MESSAGE. The PREFIX is usually the plugin's package name.
 
-The method simply produces the error message and returns. It doesn't
+The method simply records the error message and returns. It doesn't
 die.
+
+=head2 get_errors
+
+This method returns a list of all error messages recorded with the
+C<error> method.
 
 =head1 SEE ALSO
 
