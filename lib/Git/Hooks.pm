@@ -85,7 +85,7 @@ sub spawn_external_file {
 
     } else {
 
-        my $pid = open my $pipe, '|-';
+        my $pid = open my $pipe, '|-'; ## no critic (InputOutput::RequireBriefOpen)
 
         if (! defined $pid) {
             die __PACKAGE__, ": can't fork: $!\n";
@@ -253,7 +253,7 @@ sub _prepare_update {
 # invoked in order to "prepare" their arguments.
 
 my %prepare_hook = (
-    'update'           => \&_prepare_update,
+    'update'       => \&_prepare_update,
     'pre-receive'  => \&_prepare_receive,
     'post-receive' => \&_prepare_receive,
 );
