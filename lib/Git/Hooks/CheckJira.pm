@@ -219,9 +219,11 @@ sub check_commit_msg {
 
     # Filter out JIRAs not belonging to any of the specific projects,
     # if any. We don't care about them.
-    if (my @projects = $git->get_config($CFG => 'project')) {
-        my %projects = map {($_ => undef)} @projects;
-        @keys = grep {/([^-]+)/ && exists $projects{$1}} @keys;
+    if ($nkeys) {
+        if (my @projects = $git->get_config($CFG => 'project')) {
+            my %projects = map {($_ => undef)} @projects;
+            @keys = grep {/([^-]+)/ && exists $projects{$1}} @keys;
+        }
     }
 
     unless (@keys) {
