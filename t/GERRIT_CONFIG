@@ -1,0 +1,9 @@
+# -*- mode: Perl -*-
+{
+    ssh_prefix => 'ssh -x -p 29418 gustavo@localhost',
+    userid     => 'gustavo@gnustavo.com',
+    user_email => 'gustavo@gnustavo.com',
+    repo_dir   => '/home/gustavo/Downloads/gerrit/testsite/git/demo.git',
+    hooks_dir  => '/home/gustavo/Downloads/gerrit/testsite/hooks',
+    repo_url   => 'ssh://gustavo@gnu:29418/demo',
+};

@@ -356,12 +356,13 @@ sub authenticated_user {
 
 sub get_current_branch {
     my ($git) = @_;
+    my $branch;
     try {
-        return $git->command_oneline(qw/symbolic-ref HEAD/);
+        $branch = $git->command_oneline(qw/symbolic-ref HEAD/);
     } otherwise {
-        # Return undef in dettached head state
-        return;
+        # In dettached head state
     };
+    return $branch;
 }
 
 sub error {
@@ -632,6 +633,9 @@ return this.
 
 This method returns the repository's current branch name, as indicated
 by the C<git symbolic-ref HEAD> command.
+
+If the repository is in a dettached head state, i.e., if HEAD points
+to a commit instead of to a branch, the method returns undef.
 
 =head2 error PREFIX MESSAGE
 

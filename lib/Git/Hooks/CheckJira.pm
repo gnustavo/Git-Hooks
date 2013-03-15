@@ -229,14 +229,15 @@ sub check_commit_msg {
     unless (@keys) {
         if ($git->get_config($CFG => 'require')) {
             my $shortid = substr $commit->{commit}, 0, 8;
+            my $in_ref  = $ref || "with no ref pointing to it";
             if (@keys == $nkeys) {
-                $git->error($PKG, "commit $shortid (in $ref) does not cite any JIRA in its message.\n");
+                $git->error($PKG, "commit $shortid ($in_ref) does not cite any JIRA in its message.\n");
                 return 0;
             } else {
-                my $project = join(' ', $git->get_config($CFG => 'project'));
+                my $projects = join(' ', $git->get_config($CFG => 'project'));
                 $git->error($PKG, <<"EOF");
-commit $shortid (in $ref) does not cite any JIRA from the expected
-projects ($project) in its message.
+commit $shortid ($in_ref) does not cite any JIRA from the expected
+projects ($projects) in its message.
 EOF
                 return 0;
             }
@@ -265,7 +266,7 @@ sub check_message_file {
 
     return check_commit_msg(
         $git,
-        { commit => '', body => $msg }, # fake a commit hash to simplify check_commit_msg
+        { commit => '0' x 40, body => $msg }, # fake a commit hash to simplify check_commit_msg
         $current_branch,
     );
 }

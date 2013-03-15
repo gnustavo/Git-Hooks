@@ -47,7 +47,7 @@ use Git::More;
 sub is_ref_enabled {
     my ($ref, @specs) = @_;
 
-    return 1 unless @specs;
+    return 1 if ! defined $ref || @specs == 0;
 
     foreach (@specs) {
         if (/^\^/) {
@@ -994,8 +994,8 @@ This routine returns a boolean indicating if REF matches one of the
 ref-specs in SPECS. REF is the complete name of a Git ref and SPECS is
 a list of strings, each one specifying a rule for matching ref names.
 
-As a special case, it returns true if there is no SPEC whatsoever,
-meaning that by default all refs are enabled.
+As a special case, it returns true if REF is undef or if there is no
+SPEC whatsoever, meaning that by default all refs/commits are enabled.
 
 You may want to use it, for example, in an C<update>, C<pre-receive>,
 or C<post-receive> hook which may be enabled depending on the
