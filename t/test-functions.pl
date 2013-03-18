@@ -177,9 +177,9 @@ sub new_repos {
         my $E = shift;
         # The BAIL_OUT function can't show a message with newlines
         # inside. So, we have to make sure to get rid of any.
-        $E =~ s/\n//g;          # 
+        $E =~ s/\n//g;
         local $, = ':';
-	BAIL_OUT("Error setting up repos for test: Exception='$_[0]'; CWD=$T; git-version=$git_version; \@INC=(@INC).\n");
+	BAIL_OUT("Error setting up repos for test: Exception='$E'; CWD=$T; git-version=$git_version; \@INC=(@INC).\n");
     };
 }
 
