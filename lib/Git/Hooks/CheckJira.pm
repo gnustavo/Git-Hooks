@@ -426,8 +426,27 @@ default issue pattern can match other things besides JIRA issue
 keys. You may use this option to restrict the places inside the commit
 message where the keys are going to be looked for.
 
-For example, set it to C<\[([^]]+)\]> to require that JIRA keys be
-cited inside the first pair of brackets found in the message.
+Here are some examples:
+
+=over
+
+=item * C<\[([^]]+)\]>
+
+Looks for JIRA keys inside the first pair of brackets found in the
+message.
+
+=item * C<(?s)^\[([^]]+)\]>
+
+Looks for JIRA keys inside a pair of brackets that must be at the
+beginning of the message's title.
+
+=item * C<(?im)^Bug:(.*)>
+
+Looks for JIRA keys in a line beginning with C<Bug:>. This is a common
+convention around some high caliber projects, such as OpenStack and
+Wikimedia.
+
+=back
 
 =head2 githooks.checkjira.project STRING
 
