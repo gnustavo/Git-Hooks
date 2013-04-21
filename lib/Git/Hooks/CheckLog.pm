@@ -471,4 +471,9 @@ L<This is a good
 discussion|http://ablogaboutcode.com/2011/03/23/proper-git-commit-messages-and-an-elegant-git-history/>
 about commit log message formatting and the reasons behind them.
 
+=item * B<GIT Commit Good Practice>
+
+L<This document|https://wiki.openstack.org/wiki/GitCommitMessages>
+defines the OpenStack's project commit policies.
+
 =back
