@@ -160,8 +160,8 @@ sub new_repos {
 
 	    $repo = Git::More->repository(Directory => '.');
 
-	    $repo->command(config => 'user.mail', 'myself@example.com');
-	    $repo->command(config => 'user.name', 'My Self');
+	    $repo->command(config => 'user.email', 'myself@example.com');
+	    $repo->command(config => 'user.name',  'My Self');
 	    $repo->command(add    => $filename);
 	    $repo->command(commit => '-mx');
 	}
