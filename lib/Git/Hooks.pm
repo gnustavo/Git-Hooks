@@ -721,7 +721,7 @@ define configuration global to a user or local to a repository.
 
 =head2 githooks.plugin PLUGIN
 
-To enable a plugin you must add it to this configutation option, like
+To enable a plugin you must add it to this configuration option, like
 this:
 
     $ git config --add githooks.plugin CheckAcls
@@ -738,22 +738,33 @@ created pointing from the hook names to the generic script so that the
 hooks are effectively invoked.
 
 In the previous examples, the plugins were referred to by their short
-names. In this case they are looked for in three places.
+names. In this case they are looked for in three places, in this
+order:
 
-First they're are searched for in the C<githooks> directory under the
-repository path (usually in C<.git/githooks>), so that you may have
-repository specific hooks (or repository specific versions of a hook).
+=over
 
-Then, they are searched for in every directory specified with the
-C<githooks.plugins> option.  You may set it more than once if you
-have more than one directory holding your hooks.
+=item 1.
 
-Finally, they are searched for in Git::Hooks installation.
+In the C<githooks> directory under the repository path (usually in
+C<.git/githooks>), so that you may have repository specific hooks (or
+repository specific versions of a hook).
+
+=item 2.
+
+In every directory specified with the C<githooks.plugins> option.  You
+may set it more than once if you have more than one directory holding
+your hooks.
+
+=item 3.
+
+In Git::Hooks installation.
+
+=back
 
 The first match is taken as the desired plugin, which is executed (via
 C<do>) and the search stops. So, you may want to copy one of the
 standard plugins and change it to suit your needs better. (Don't shy
-away from sending your changes back to us, though.)
+away from sending your changes back to the author, please.)
 
 However, if you use the fully qualified module name of the plugin in
 the configuration, then it will be simply C<required> as a normal
