@@ -265,7 +265,8 @@ my %prepare_hook = (
 sub _load_plugins {
     my ($git) = @_;
 
-    my @enabled_plugins = $git->get_config(githooks => 'plugin');
+    my @enabled_plugins  = $git->get_config(githooks => 'plugin');
+    my %disabled_plugins = map {($_ => undef)} $git->get_config(githooks => 'disable');
 
     return () unless @enabled_plugins; # no one configured
 
@@ -281,11 +282,13 @@ sub _load_plugins {
     );
 
     foreach my $plugin (uniq @enabled_plugins) {
+        next if exists $disabled_plugins{$plugin}; # disabled by full name
         my $prefix = '';
         if ($plugin =~ s/(.+::)//) {
+            next if exists $disabled_plugins{$plugin}; # disabled by basename
             $prefix = $1;
         }
-        next if exists $ENV{$plugin} && ! $ENV{$plugin}; # disabled by user
+        next if exists $ENV{$plugin} && ! $ENV{$plugin}; # disabled by environment variable
         my $exit = do {
             if ($prefix) {
                 # It must be a module name
@@ -772,7 +775,16 @@ module. For example:
 
     $ git config --add githooks.plugin My::Hook::CheckSomething
 
-Finally, you may temporarily disable a plugin by assigning to "0" an
+=head2 githooks.disable PLUGIN
+
+This option disables plugins enabled by the C<githooks.plugin>
+option. It's useful if you want to enable a plugin globally and only
+disable it for some repositories. For example:
+
+    $ git config --global --add githooks.plugin  CheckJira
+    $ git config --local  --add githooks.disable CheckJira
+
+You also may temporarily disable a plugin by assigning to "0" an
 environment variable with its name. This is useful sometimes, when you
 are denied some perfectly fine commit by one of the check plugins. For
 example, suppose you got an error from the CheckLog plugin because you
@@ -782,8 +794,10 @@ checks this way:
 
     $ CheckLog=0 git commit
 
-This works for every hook. The environment variable name has to match
-exactly the plugin name as configured.
+This works for every hook. For plugins specified by fully qualified
+module names, the environment variable name has to match the last part
+of it. For example, to disable the C<My::Hook::CheckSomething> plugin
+you must define an environment variable called C<CheckSomething>.
 
 Note, however, that this works for local hooks only. Remote hooks
 (like B<update> or B<pre-receive>) are run on the server. You can set
