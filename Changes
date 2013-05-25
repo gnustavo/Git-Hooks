@@ -2,6 +2,39 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.041     2013-05-25 11:46:39 America/Sao_Paulo
+
+  [New features]
+  - Support Gerrit's ref-update and patchset-created hooks. Gerrit
+    (http://gerrit.googlecode.com/) is a web-based code review system
+    which incorporates a Git server implemented with JGit
+    (http://www.eclipse.org/jgit/), which is a pure Java
+    implementation of Git.  Up to version 2.2.0 JGit still doesn't
+    support Git standard hooks. However, Gerrit implements its own
+    special hooks
+    (http://gerrit-documentation.googlecode.com/svn/Documentation/2.6/
+    config-hooks.html), which are rather different from Git's.
+
+  - New option: githooks.disable. This option can be used to disable
+    plugins otherwise enabled by the githooks.plugin option. It's
+    useful if you want to enable a plugin globally and only disable it
+    for some repositories.
+
+  [Fixes]
+  - CheckRewrite: Detect and allow fast-forward "git rebase upstream
+    base". If upstream is a decendant of base, the base-commit is
+    empty. In this situation the rebase will turn out to be a simple
+    fast-forward merge from base on upstream and there is nothing to
+    lose.
+
+  - Fix plugin disabling detection. Plugins enabled in the
+    configuration using their full module name could not be disabled
+    via the environment variable trick, because the variable must have
+    the full plugin name, but ':' characters are not accepted in
+    environment variable names.
+
+  - Fix BAIL_OUT message during tests.
+
 0.040     2013-03-15 00:21:24 America/Sao_Paulo
 
   The 0.039 release package contained some experimental code
