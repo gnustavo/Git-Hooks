@@ -280,13 +280,20 @@ sub _load_plugins {
         catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks'),
     );
 
-  HOOK:
     foreach my $plugin (uniq @enabled_plugins) {
+        my $prefix = '';
+        if ($plugin =~ s/(.+::)//) {
+            $prefix = $1;
+        }
         next if exists $ENV{$plugin} && ! $ENV{$plugin}; # disabled by user
         my $exit = do {
-            if ($plugin =~ /::/) {
+            if ($prefix) {
                 # It must be a module name
-                eval "require $plugin"; ## no critic (BuiltinFunctions::ProhibitStringyEval ErrorHandling::RequireCheckingReturnValueOfEval)
+
+                ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval, Modules::RequireBarewordIncludes)
+                eval {require "$prefix$plugin"};
+                ## use critic
+
             } else {
                 # Otherwise, it's a basename that we must look for
                 # in @plugin_dirs
