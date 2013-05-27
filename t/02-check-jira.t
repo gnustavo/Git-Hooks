@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 20;
+use Test::More tests => 24;
 use File::Slurp;
 
 BEGIN { require "test-functions.pl" };
@@ -157,6 +157,25 @@ check_cannot_commit('deny commit if check_code does not pass [GIT-2]',
 check_can_commit('allow commit if check_code does pass [GIT-2 GIT-3]');
 
 $repo->command(config => '--unset-all', 'check-jira.check-code');
+
+$repo->command(config => 'check-jira.matchlog', '(?s)^\[([^]]+)\]');
+
+check_cannot_commit('deny commit if cannot matchlog [GIT-2]',
+		    qr/does not cite any JIRA/);
+
+check_can_commit('[GIT-2] allow commit if can matchlog');
+
+$repo->command(config => '--add', 'check-jira.matchlog', '(?im)^Bug:(.*)');
+
+check_can_commit(<<'EOF');
+allow commit if can matchlog twice
+
+Bug: GIT-2
+EOF
+
+check_can_commit('[GIT-2] allow commit if can matchlog twice but first');
+
+$repo->command(config => '--unset-all', 'check-jira.matchlog');
 
 
 setup_repos_for(\$clone, 'update');

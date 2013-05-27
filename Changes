@@ -2,6 +2,11 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+  [New features]
+  - CheckJira: Make githooks.checkjira.matchlog option be
+    multi-valued. This allows one to specify more than one place in
+    the commit message where JIRA keys are looked for.
+
 0.041     2013-05-25 11:46:39 America/Sao_Paulo
 
   [New features]

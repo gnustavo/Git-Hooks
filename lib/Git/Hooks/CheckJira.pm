@@ -58,15 +58,17 @@ sub grok_msg_jiras {
     my ($git, $msg) = @_;
 
     my $matchkey = $git->get_config($CFG => 'matchkey');
-    my $matchlog = $git->get_config($CFG => 'matchlog');
+    my @matchlog = $git->get_config($CFG => 'matchlog');
 
     # Grok the JIRA issue keys from the commit log
-    if ($matchlog) {
-        if (my ($match) = ($msg =~ /$matchlog/o)) {
-            return $match =~ /$matchkey/go;
-        } else {
-            return ();
+    if (@matchlog) {
+        my @keys;
+        foreach my $matchlog (@matchlog) {
+            if (my ($match) = ($msg =~ /$matchlog/)) {
+                push @keys, ($match =~ /$matchkey/go);
+            }
         }
+        return @keys;
     } else {
         return $msg =~ /$matchkey/go;
     }
@@ -468,6 +470,11 @@ convention around some high caliber projects, such as OpenStack and
 Wikimedia.
 
 =back
+
+This is a multi-valued option. You may specify it more than once. All
+regexes are tried and JIRA keys are looked for in all of them. This
+allows you to more easily accomodate more than one way of specifying
+JIRA keys if you wish.
 
 =head2 githooks.checkjira.project STRING
 
