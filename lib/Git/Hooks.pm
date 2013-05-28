@@ -1168,11 +1168,19 @@ Note that the hook directives resemble function definitions but they
 aren't. They are function calls, and as such must end with a
 semi-colon.
 
-Most of the hooks are used to check some condition. If the condition
-holds, they must simply end without returning anything. Otherwise,
-they should invoke the C<error> method on the GIT object passing a
-suitable error message. On some hooks, this will prevent Git from
-finishing its operation.
+Some hooks are invoked before an action (e.g., C<pre-commit>) so that
+one can check some condition. If the condition holds, they must simply
+end without returning anything. Otherwise, they should invoke the
+C<error> method on the GIT object passing a suitable error message. On
+some hooks, this will prevent Git from finishing its operation.
+
+Other hooks are invoked after the action (e.g., C<post-commit>) so
+that its outcome cannot affect the action. Those are usually used to
+send notifications or to signal the completion of the action someway.
+
+You may learn about every Git hook by invoking the command C<git help
+hooks>. Gerrit hooks are documented in the L<project
+site|http://gerrit-documentation.googlecode.com/svn/Documentation/2.6/config-hooks.html>.
 
 Also note that each hook directive can be called more than once if you
 need to implement more than one specific hook.
