@@ -4,19 +4,6 @@ The following list is in approximately my order of implementation
 intention. Any comments or other suggestion are welcome at gnustavo AT
 cpan.org.
 
-=head2 Support Gerrit hooks
-
-Gerrit is a "web based code review and project management tool for Git
-based projects" (L<https://code.google.com/p/gerrit/>). It's based on
-JGit (L<http://eclipse.org/jgit/>) which, as of 2012-01-14, still
-doesn't support git's standard hooks.
-
-But Gerrit has its own hook infrastructure and we should support it
-(L<http://gerrit-documentation.googlecode.com/svn/Documentation/2.5.1/config-hooks.html>).
-
-The two hooks that seem to be relevant to Git::Hooks's plugins are
-B<patchset-created> and B<ref-updated>.
-
 =head2 Support the WIN32 Platform
 
 Currently we abort the build on C<Makefile.PL>.
