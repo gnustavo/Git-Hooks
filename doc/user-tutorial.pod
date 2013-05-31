@@ -132,11 +132,11 @@ L<JIRA|http://www.atlassian.com/software/jira> and
 L<Gerrit|https://code.google.com/p/gerrit/> internally. So, for my
 work-related repositories I have this in their C<.git/config>:
 
-[githooks]
-        plugin = CheckJira
-        plugin = GerritChangeId
-[githooks "checkjira"]
-        project = CDS
+    [githooks]
+            plugin = CheckJira
+            plugin = GerritChangeId
+    [githooks "checkjira"]
+            project = CDS
 
 C<GerritChangeId> doesn't require any configuration. It simply inserts
 a C<Change-Id> line in the messages of all commits. These are required
