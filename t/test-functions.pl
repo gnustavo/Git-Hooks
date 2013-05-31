@@ -38,6 +38,13 @@ use Cwd; our $cwd = cwd;
 chdir $T or die "Can't chdir $T: $!";
 END { chdir '/' }
 
+my $tmpldir = catfile($T, 'templates');
+mkdir $tmpldir, 0777 or BAIL_OUT("can't mkdir $tmpldir: $!");
+{
+    my $hooksdir = catfile($tmpldir, 'hooks');
+    mkdir $hooksdir, 0777 or BAIL_OUT("can't mkdir $hooksdir: $!");
+}
+
 our $git_version;
 try {
     $git_version = Git::command_oneline('version');
@@ -156,7 +163,7 @@ sub new_repos {
 	    # need to pass the argument. Then we have to go back to
 	    # where we were.
             my $dir = pushd($repodir);
-            Git::command(qw/init -q/);
+            Git::command(qw/init -q/, "--template=$tmpldir");
 
 	    $repo = Git::More->repository(Directory => '.');
 
@@ -166,7 +173,7 @@ sub new_repos {
 	    $repo->command(commit => '-mx');
 	}
 
-        Git::command(qw/clone -q --bare --no-hardlinks/, $repodir, $clonedir);
+        Git::command(qw/clone -q --bare --no-hardlinks/, "--template=$tmpldir", $repodir, $clonedir);
 
 	$clone = Git::More->repository(Repository => $clonedir);
 
