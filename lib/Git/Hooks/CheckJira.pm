@@ -110,7 +110,7 @@ sub get_issue {
 
     # Try to get the issue from the cache
     unless (exists $cache->{keys}{$key}) {
-        $cache->{keys}{$key} = eval { $cache->{jira}->getIssue($key) };
+        $cache->{keys}{$key} = eval { $jira->getIssue($key) };
         length $@
             and $git->error($PKG, "cannot get issue $key: $@\n")
                 and return;
