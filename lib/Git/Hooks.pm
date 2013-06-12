@@ -19,7 +19,7 @@ BEGIN {                ## no critic (Subroutines::RequireArgUnpacking)
         qw/ APPLYPATCH_MSG PRE_APPLYPATCH POST_APPLYPATCH
             PRE_COMMIT PREPARE_COMMIT_MSG COMMIT_MSG
             POST_COMMIT PRE_REBASE POST_CHECKOUT POST_MERGE
-            PRE_RECEIVE UPDATE POST_RECEIVE POST_UPDATE
+            PRE_PUSH PRE_RECEIVE UPDATE POST_RECEIVE POST_UPDATE
             PRE_AUTO_GC POST_REWRITE
 
             REF_UPDATE PATCHSET_CREATED
@@ -80,7 +80,47 @@ sub is_ref_enabled {
 sub spawn_external_file {
     my ($git, $file, $hook, @args) = @_;
 
-    if ($hook !~ /^(?:pre|post)-receive$/) {
+    if ($hook eq 'pre-receive' || $hook eq 'post-receive' || $hook eq 'pre-push') {
+
+        # These hooks receive information via STDIN that we read once
+        # before invoking any hook. Now, we must regenerate the same
+        # information and output it to the external hooks we invoke.
+
+        my $pid = open my $pipe, '|-'; ## no critic (InputOutput::RequireBriefOpen)
+
+        if (! defined $pid) {
+            die __PACKAGE__, ": can't fork: $!\n";
+        } elsif ($pid) {
+            # parent
+            if ($hook eq 'pre-receive' || $hook eq 'post-receive') {
+                foreach my $ref ($git->get_affected_refs()) {
+                    my ($old, $new) = $git->get_affected_ref_range($ref);
+                    say $pipe "$old $new $ref";
+                }
+            } elsif ($hook eq 'pre-push') {
+                foreach my $spec (@{$args[3]}) {
+                    say $pipe @$spec;
+                }
+            } else {
+                die __PACKAGE__, ": Internal error!\n";
+            }
+            if (close $pipe) {
+                return 1;
+            } elsif ($!) {
+                die __PACKAGE__, ": Error closing pipe to external hook '$file': $!\n";
+            } else {
+                die __PACKAGE__, ": External hook '$file' exited with $?\n";
+            }
+        } else {
+            # child
+            if ($hook eq 'pre-push') {
+                pop @args;      # pop out the push-specs argument we've faked
+            }
+            exec {$file} ($hook, @args);
+            die __PACKAGE__, ": can't exec: $!\n";
+        }
+
+    } else {
 
         my $exit = system {$file} ($hook, @args);
 
@@ -97,30 +137,6 @@ sub spawn_external_file {
 
         return 0;
 
-    } else {
-
-        my $pid = open my $pipe, '|-'; ## no critic (InputOutput::RequireBriefOpen)
-
-        if (! defined $pid) {
-            die __PACKAGE__, ": can't fork: $!\n";
-        } elsif ($pid) {
-            # parent
-            foreach my $ref ($git->get_affected_refs()) {
-                my ($old, $new) = $git->get_affected_ref_range($ref);
-                say $pipe "$old $new $ref";
-            }
-            if (close $pipe) {
-                return 1;
-            } elsif ($!) {
-                die __PACKAGE__, ": Error closing pipe to external hook '$file': $!\n";
-            } else {
-                die __PACKAGE__, ": External hook '$file' exited with $?\n";
-            }
-        } else {
-            # child
-            exec {$file} ($hook, @args);
-            die __PACKAGE__, ": can't exec: $!\n";
-        }
     }
 }
 
@@ -238,6 +254,24 @@ sub eval_gitconfig {
 ##############
 # The following routines prepare the arguments for some hooks to make
 # it easier to deal with them later on.
+
+# The pre-push hook gets information about the refs that are being
+# pushed from the STDIN. Each line contains four fields: (a) the local
+# ref, (b) the local sha1, (c) the remote ref, and (d) the remote
+# sha1. This routine reads all such lines and builds up an array of
+# arrays containing all that information. A reference to this data
+# structure is then appended as a new argument to the hook.
+
+sub _prepare_pre_push {
+    my ($git, $args) = @_;
+    my @specs;
+    while (<STDIN>) { ## no critic (InputOutput::ProhibitExplicitStdin)
+        chomp;
+        push @specs, [split];
+    }
+    push @$args, \@specs;
+    return;
+}
 
 # The pre-receive and post-receive hooks get the list of affected
 # commits via STDIN. This routine gets them all and set all affected
@@ -384,6 +418,7 @@ sub _prepare_gerrit_ref_update {
 
 my %prepare_hook = (
     'update'           => \&_prepare_update,
+    'pre-push'         => \&_prepare_pre_push,
     'pre-receive'      => \&_prepare_receive,
     'post-receive'     => \&_prepare_receive,
     'ref-update'       => \&_prepare_gerrit_ref_update,
@@ -1207,7 +1242,34 @@ need to implement more than one specific hook.
 
 =item * POST_MERGE(GIT, is-squash-merge)
 
+=item * PRE_PUSH(GIT, remote-name, remote-url, push-specs)
+
+The C<pre-push> hook was introduced in Git 1.8.2. The default hook
+gets two arguments: the name and the URL of the remote which is being
+pushed to. It also gets a variable number of arguments via STDIN with
+lines of the form:
+
+    <local ref> SP <local sha1> SP <remote ref> SP <remote sha1> LF
+
+The information from these lines is read and passed to the hook as the
+C<push-specs> argument as a reference to a data structure like this:
+
+    [
+      ['local ref', 'local sha1', 'remote ref', 'remote sha1'],
+      ['local ref', 'local sha1', 'remote ref', 'remote sha1'],
+      ...
+    ]
+
 =item * PRE_RECEIVE(GIT)
+
+The C<pre-receive> hook gets a variable number of arguments via STDIN
+with lines of the form:
+
+    <old-value> SP <new-value> SP <ref-name> LF
+
+The information from these lines is read and can be grokked by the
+hooks by using the C<Git::More::get_affected_refs> and the
+C<Git::More::get_affected_ref_rage> methods.
 
 =item * UPDATE(GIT, updated-ref-name, old-object-name, new-object-name)
 
