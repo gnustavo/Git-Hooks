@@ -140,6 +140,8 @@ sub produced {
 
 sub compare {
     my ($testname, $expected, $produced) = @_;
+    $expected =~ s/\bI[0-9a-f]{40}\b/I0000000000000000000000000000000000000000/;
+    $produced =~ s/\bI[0-9a-f]{40}\b/I0000000000000000000000000000000000000000/;
     if ($produced eq $expected) {
 	pass($testname);
     } else {
@@ -176,8 +178,9 @@ foreach my $test (
     [ 'with-url git',        "\n\ngit://example.com/ fixes this\n\n$CID\n" ],
     [ 'with-false-tags',     "\n\nFakeLine:\n  foo\n  bar\n\n$CID\nRealTag: abc\n" ],
 ) {
-    my $expected = expected(join('', @$test));
-    my $produced = produced(join('', @$test));
+    my $msg = join('', @$test);
+    my $expected = expected($msg);
+    my $produced = produced($msg);
     compare("compare: $test->[0]", $expected, $produced);
 }
 

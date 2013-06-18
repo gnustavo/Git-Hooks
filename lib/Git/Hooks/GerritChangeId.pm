@@ -23,7 +23,7 @@ use utf8;
 use strict;
 use warnings;
 use Git::Hooks qw/:DEFAULT :utils/;
-use File::Slurp;
+use Git::More::Message;
 use File::Temp qw/tempfile/;
 use Error qw(:try);
 
@@ -31,32 +31,6 @@ my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
 ##########
-
-sub clean_message {
-    my ($msg) = @_;
-
-    # strip comment lines
-    $msg =~ s/^#.*\n?//mg;
-
-    # strip Signed-of-by lines
-    $msg =~ s/^Signed-off-by:.*\n?//img;
-
-    # strip trailing whitespace from all lines
-    $msg =~ s/\s+$//mg;
-
-    # collapse multiple consecutive empty lines
-    $msg =~ s/\n{3,}/\n\n/sg;
-
-    # remove empty lines from the begining
-    $msg =~ s/^\n+//;
-
-    return '' unless length $msg;
-
-    # remove empty lines from the end, leaving a \n there
-    $msg =~ s/(?<=\n)\n+$//;
-
-    return $msg;
-}
 
 sub gen_change_id {
     my ($git, $msg) = @_;
@@ -79,90 +53,43 @@ sub gen_change_id {
     $fh->print("\n", $msg);
     $fh->close();
 
-    return $git->hash_object(commit => $filename);
+    return 'I' . $git->hash_object(commit => $filename);
 }
 
 sub insert_change_id {
     my ($git, $msg) = @_;
 
-    # Strip the patch data from the message.
-    $msg =~ s:^diff --git a/.*::ms;
-
     # Does Change-Id: already exist? if so, exit (no change).
-    return if $msg =~ /^Change-id:/im;
+    return if $msg =~ /^Change-Id:/im;
 
-    # If the message is just blank space, exit.
-    my $clean_msg = clean_message($msg);
-    return unless length $clean_msg;
+    my $cmsg = Git::More::Message->new($msg);
 
-    # strip comment lines
-    $msg =~ s/^#.*\n?//mg;
-
-    # Split $msg in interleaved blocks of text and empty-lines
-    my @blocks = split /(?<=\n)(\n+)/s, $msg;
-
-    # strip a possible trailing empty line
-    pop @blocks if $blocks[-1] =~ /^\n+$/;
-
-    # Check if the last block is a footer
-    my $has_footer;
-    if (@blocks < 2) {
-        $has_footer = 0;
-    } else {
-        $has_footer = 1;
-        my $in_footer_comment = 0;
-        foreach (split /^/m, $blocks[-1]) {
-            if ($in_footer_comment) {
-                $in_footer_comment = 0 if /\]$/;
-            } elsif (/^\[[\w-]+:/i) {
-                $in_footer_comment = 1;
-            } elsif (! /^[\w-]+:/i) {
-                $has_footer = 0;
-                last;
-            }
-        }
+    # Don't mess with the message if it's empty.
+    if ($cmsg->title !~ /\S/ && $cmsg->body !~ /\S/) {
+        # (Signed-off-by footers don't count.)
+        my @footer = $cmsg->get_footer_keys;
+        return if @footer == 0 || @footer == 1 && $footer[0] eq 'signed-off-by';
     }
 
-    # Build the Change-Id line.
-    my $change_id = 'Change-Id: I' . gen_change_id($git, $clean_msg) . "\n";
+    # Insert the Change-Id footer
+    $cmsg->add_footer_values('Change-Id' => gen_change_id($git, $cmsg->as_string));
 
-    if ($has_footer) {
-	# Try to insert the change-id line after leading Bug|Issue
-	# lines in the footer.
-	my $inserted = 0;
-        my $where = 0;
-	while ($blocks[-1] =~ /^([\w-]+?):.*/gim) {
-            if ($1 =~ /^Bug|Issue$/i) {
-                $where = pos($blocks[-1]);
-            } else {
-                substr $blocks[-1], $where, 0, $change_id;
-                $inserted = 1;
-                last;
-            }
-	}
-	$blocks[-1] .= $change_id unless $inserted;
-    } else {
-	# Write the change-id in a new footer
-	push @blocks, "\n$change_id";
-    }
-
-    return join('', @blocks);
+    return $cmsg->as_string;
 };
 
 sub rewrite_message {
     my ($git, $commit_msg_file) = @_;
 
-    my $msg = read_file($commit_msg_file);
+    my $msg = eval { $git->read_commit_msg_file($commit_msg_file) };
     unless (defined $msg) {
-        $git->error($PKG, "Can't open file '$commit_msg_file' for reading: $!\n");
+        $git->error($PKG, "Can't read commit message file '$commit_msg_file': $@\n");
         return 0;
     }
 
-    my $new_msg = insert_change_id($git, $msg);
-
     # Rewrite the message file
-    write_file($commit_msg_file, $new_msg)
-	if defined $new_msg && $new_msg ne $msg;
+    if (my $new_msg = insert_change_id($git, $msg)) {
+        $git->write_commit_msg_file($commit_msg_file, $new_msg);
+    }
 
     return 1;
 }
@@ -174,7 +101,7 @@ COMMIT_MSG \&rewrite_message;
 
 
 __END__
-=for Pod::Coverage clean_message gen_change_id insert_change_id
+=for Pod::Coverage gen_change_id insert_change_id
 
 =head1 NAME
 
@@ -184,8 +111,12 @@ Git::Hooks::GerritChangeId - Git::Hooks plugin to insert a Change-Id in a commit
 
 This Git::Hooks plugin hooks itself to the C<commit-msg> hook. It is a
 reimplementation of Gerrit's official commit-msg hook for inserting
-change-ids in git commit messages. (What follows is a partial copy of
-that document's DESCRIPTION section.)
+change-ids in git commit messages.  It's does not produce the same
+C<Change-Id> for the same message, but this is not really necessary,
+since it keeps existing Change-Id footers unmodified.
+
+(What follows is a partial copy of that document's DESCRIPTION
+section.)
 
 This plugin automatically inserts a globally unique Change-Id tag in
 the footer of a commit message. When present, Gerrit uses this tag to

@@ -59,9 +59,9 @@ $repo->command(config => "githooks.commit-msg", 'CheckLog');
 
 # title-required
 
-check_cannot_commit('deny an empty message', qr/log title has 0 lines but should have only 1/, '');
+check_cannot_commit('deny an empty message', qr/log needs a title line/, '');
 
-check_cannot_commit('deny without required title', qr/log title has 2 lines but should have only 1/, <<'EOF');
+check_cannot_commit('deny without required title', qr/commit's log needs a title line/, <<'EOF');
 No
 Title
 EOF
@@ -143,7 +143,7 @@ $repo->command(config => 'CheckLog.title-max-width', 50);
 
 # body-max-width
 
-check_cannot_commit('deny large body', qr/log body lines should be at most 72 characters wide, but there is one with 73/, <<'EOF');
+check_cannot_commit('deny large body', qr/log body lines should be at most 72 characters wide, but there is 1 bigger/, <<'EOF');
 Title
 
 Body first line.
