@@ -107,32 +107,13 @@ sub spawn_external_hook_with_feed {
 sub spawn_external_hook {
     my ($git, $file, $hook, @args) = @_;
 
-    if ($hook eq 'pre-receive' || $hook eq 'post-receive') {
+    if ($hook =~ /^(?:pre-receive|post-receive|pre-push|post-rewrite)$/) {
 
         # These hooks receive information via STDIN that we read once
         # before invoking any hook. Now, we must regenerate the same
         # information and output it to the external hooks we invoke.
 
-        my $stdin = '';
-        foreach my $ref ($git->get_affected_refs()) {
-            my ($old, $new) = $git->get_affected_ref_range($ref);
-            $stdin .= "$old $new $ref\n";
-        }
-        return spawn_external_hook_with_feed($git, $file, $hook, $stdin, @args);
-
-    } elsif ($hook eq 'pre-push') {
-
-        # This hook also receives information via STDIN that we read
-        # once before invoking any hook. Now, we must regenerate the
-        # same information and output it to the external hooks we
-        # invoke. Note that we also pop the last argument from @args
-        # because we faked it before.
-
-        my $specs = pop @args;
-        my $stdin = '';
-        foreach my $spec (@$specs) {
-            $stdin .= join(' ', @$spec) . "\n";
-        }
+        my $stdin = join("\n", map {join(' ', @$_)} @{$git->get_input_data}) . "\n";
         return spawn_external_hook_with_feed($git, $file, $hook, $stdin, @args);
 
     } else {
@@ -429,6 +410,7 @@ sub _prepare_gerrit_ref_update {
 my %prepare_hook = (
     'update'           => \&_prepare_update,
     'pre-push'         => \&_prepare_input_data,
+    'post-rewrite'     => \&_prepare_input_data,
     'pre-receive'      => \&_prepare_receive,
     'post-receive'     => \&_prepare_receive,
     'ref-update'       => \&_prepare_gerrit_ref_update,
@@ -1285,6 +1267,16 @@ C<Git::More::get_affected_ref_rage> methods.
 =item * PRE_AUTO_GC(GIT)
 
 =item * POST_REWRITE(GIT, command)
+
+The C<post-rewrite> hook gets a variable number of arguments via STDIN
+with lines of the form:
+
+    <old sha1> SP <new sha1> SP <extra info> LF
+
+The C<extra info> and the preceeding SP are optional.
+
+The information from these lines is read and can be fetched by the
+hooks using the C<Git::Hooks::get_input_data> method.
 
 =item * REF_UPDATE(GIT, OPTS)
 =item * PATCHSET_CREATED(GIT, OPTS)
