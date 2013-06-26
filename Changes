@@ -2,6 +2,37 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.043     2013-06-26 10:35:02 America/Sao_Paulo
+
+  [New features]
+  - Support the new pre-push hook, implemented by Git 1.8.2 which is
+    invoked during a "git push" command.
+    
+  - New class Git::More::Message, representing a Git commit
+    message. Generally speaking, a commit message can be any string
+    whatsoever. However, the Git community came up with a few
+    conventions for how to best format a message and this class
+    embraces those conventions making it easier for you to validate
+    and change a commit message structure. With it the
+    Git::Hooks::CheckLog and Git::Hooks::GerritChangeId plugins were
+    much simplified.
+  
+  - New method Git::More::read_commit_msg_file that reads the contents
+    of a file, respecting the i18n.commitencoding config option, and
+    returns its contents stripspaced.
+  
+  - New method Git::More::write_commit_msg_file that writes a string
+    to a file respecting the i18n.commitencoding config option.
+
+  - New methods Git::More::push_input_data and
+    Git::More::get_input_data to unify the treatment of data read from
+    STDIN by the hooks pre-receive, post-receive, pre-push, and
+    post-rewrite.
+
+  [Fixes]
+  - The data passed to the post-rewrite hook via STDIN wasn't being
+    processed.
+
 0.042     2013-05-31 15:17:39 America/Sao_Paulo
 
   [New features]
