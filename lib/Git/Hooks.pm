@@ -74,51 +74,66 @@ sub is_ref_enabled {
     return 0;
 }
 
+# This is an internal routine used to invoke external hooks which need
+# to be fed information via STDIN.
+
+sub spawn_external_hook_with_feed {
+    my ($git, $file, $hook, $stdin, @args) = @_;
+
+    my $pid = open my $pipe, '|-'; ## no critic (InputOutput::RequireBriefOpen)
+
+    if (! defined $pid) {
+        die __PACKAGE__, ": can't fork: $!\n";
+    } elsif ($pid) {
+        # parent
+        print $pipe $stdin;
+        if (close $pipe) {
+            return 1;
+        } elsif ($!) {
+            die __PACKAGE__, ": Error closing pipe to external hook '$file': $!\n";
+        } else {
+            die __PACKAGE__, ": External hook '$file' exited with $?\n";
+        }
+    } else {
+        # child
+        exec {$file} ($hook, @args);
+        die __PACKAGE__, ": can't exec: $!\n";
+    }
+}
+
 # This is an internal routine used to invoke external hooks, feed them
 # the needed input and wait for them.
 
-sub spawn_external_file {
+sub spawn_external_hook {
     my ($git, $file, $hook, @args) = @_;
 
-    if ($hook eq 'pre-receive' || $hook eq 'post-receive' || $hook eq 'pre-push') {
+    if ($hook eq 'pre-receive' || $hook eq 'post-receive') {
 
         # These hooks receive information via STDIN that we read once
         # before invoking any hook. Now, we must regenerate the same
         # information and output it to the external hooks we invoke.
 
-        my $pid = open my $pipe, '|-'; ## no critic (InputOutput::RequireBriefOpen)
-
-        if (! defined $pid) {
-            die __PACKAGE__, ": can't fork: $!\n";
-        } elsif ($pid) {
-            # parent
-            if ($hook eq 'pre-receive' || $hook eq 'post-receive') {
-                foreach my $ref ($git->get_affected_refs()) {
-                    my ($old, $new) = $git->get_affected_ref_range($ref);
-                    say $pipe "$old $new $ref";
-                }
-            } elsif ($hook eq 'pre-push') {
-                foreach my $spec (@{$args[3]}) {
-                    say $pipe @$spec;
-                }
-            } else {
-                die __PACKAGE__, ": Internal error!\n";
-            }
-            if (close $pipe) {
-                return 1;
-            } elsif ($!) {
-                die __PACKAGE__, ": Error closing pipe to external hook '$file': $!\n";
-            } else {
-                die __PACKAGE__, ": External hook '$file' exited with $?\n";
-            }
-        } else {
-            # child
-            if ($hook eq 'pre-push') {
-                pop @args;      # pop out the push-specs argument we've faked
-            }
-            exec {$file} ($hook, @args);
-            die __PACKAGE__, ": can't exec: $!\n";
+        my $stdin = '';
+        foreach my $ref ($git->get_affected_refs()) {
+            my ($old, $new) = $git->get_affected_ref_range($ref);
+            $stdin .= "$old $new $ref\n";
         }
+        return spawn_external_hook_with_feed($git, $file, $hook, $stdin, @args);
+
+    } elsif ($hook eq 'pre-push') {
+
+        # This hook also receives information via STDIN that we read
+        # once before invoking any hook. Now, we must regenerate the
+        # same information and output it to the external hooks we
+        # invoke. Note that we also pop the last argument from @args
+        # because we faked it before.
+
+        my $specs = pop @args;
+        my $stdin = '';
+        foreach my $spec (@$specs) {
+            $stdin .= join(' ', @$spec) . "\n";
+        }
+        return spawn_external_hook_with_feed($git, $file, $hook, $stdin, @args);
 
     } else {
 
@@ -527,7 +542,7 @@ sub run_hook {
                 or $git->error(__PACKAGE__, ": cannot opendir $dir: $!\n")
                     and next;
             foreach my $file (grep {-f && -x} map {catfile($dir, $_)} readdir $dh) {
-                spawn_external_file($git, $file, $hook_name, @args)
+                spawn_external_hook($git, $file, $hook_name, @args)
                     or $git->error(__PACKAGE__, ": error in external hook '$file'\n");
             }
         }
@@ -547,7 +562,7 @@ sub run_hook {
 1; # End of Git::Hooks
 __END__
 
-=for Pod::Coverage spawn_external_file grok_groups_spec grok_groups
+=for Pod::Coverage spawn_external_hook_with_feed spawn_external_hook grok_groups_spec grok_groups
 
 =head1 SYNOPSIS
 
