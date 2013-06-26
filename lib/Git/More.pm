@@ -359,6 +359,17 @@ sub get_affected_ref_commits {
     return @{$affected->{$ref}{commits}};
 }
 
+sub push_input_data {
+    my ($git, $data) = @_;
+    push @{$git->{more}{input_data}}, $data;
+    return;
+}
+
+sub get_input_data {
+    my ($git) = @_;
+    return $git->{more}{input_data} || [];
+}
+
 sub set_authenticated_user {
     my ($git, $user) = @_;
     return $git->{more}{authenticated_user} = $user;
@@ -704,6 +715,20 @@ This method returns the username of the authenticated user performing
 the Git action. It groks it from the C<githooks.userenv> configuration
 variable specification, which is described in the C<Git::Hooks>
 documentation. It's useful for most access control check plugins.
+
+=head2 push_input_data DATA
+
+This method gets a single value and tucks it in an internal list so
+that every piece of data can be gotten later with the
+C<get_input_data> method below.
+
+It's used by C<Git::Hooks> to save arguments read from STDIN by some
+Git hooks like pre-receive, post-receive, pre-push, and post-rewrite.
+
+=head2 get_input_data
+
+This method returns an array-ref pointing to a list of all pieces of
+data saved by calls to C<push_input_data> method above.
 
 =head2 set_authenticated_user USERNAME
 

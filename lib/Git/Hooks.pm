@@ -270,21 +270,16 @@ sub eval_gitconfig {
 # The following routines prepare the arguments for some hooks to make
 # it easier to deal with them later on.
 
-# The pre-push hook gets information about the refs that are being
-# pushed from the STDIN. Each line contains four fields: (a) the local
-# ref, (b) the local sha1, (c) the remote ref, and (d) the remote
-# sha1. This routine reads all such lines and builds up an array of
-# arrays containing all that information. A reference to this data
-# structure is then appended as a new argument to the hook.
+# Some hooks get information from STDIN as text lines with
+# space-separated fields. This routine reads up all of STDIN and tucks
+# that information in the Git::More object.
 
-sub _prepare_pre_push {
-    my ($git, $args) = @_;
-    my @specs;
+sub _prepare_input_data {
+    my ($git) = @_;
     while (<STDIN>) { ## no critic (InputOutput::ProhibitExplicitStdin)
         chomp;
-        push @specs, [split];
+        $git->push_input_data([split]);
     }
-    push @$args, \@specs;
     return;
 }
 
@@ -294,9 +289,9 @@ sub _prepare_pre_push {
 
 sub _prepare_receive {
     my ($git) = @_;
-    while (<STDIN>) { ## no critic (InputOutput::ProhibitExplicitStdin)
-        chomp;
-        my ($old_commit, $new_commit, $ref) = split;
+    _prepare_input_data($git);
+    foreach (@{$git->get_input_data()}) {
+        my ($old_commit, $new_commit, $ref) = @$_;
         $git->set_affected_ref($ref, $old_commit, $new_commit);
     }
     return;
@@ -433,7 +428,7 @@ sub _prepare_gerrit_ref_update {
 
 my %prepare_hook = (
     'update'           => \&_prepare_update,
-    'pre-push'         => \&_prepare_pre_push,
+    'pre-push'         => \&_prepare_input_data,
     'pre-receive'      => \&_prepare_receive,
     'post-receive'     => \&_prepare_receive,
     'ref-update'       => \&_prepare_gerrit_ref_update,
@@ -1257,7 +1252,7 @@ need to implement more than one specific hook.
 
 =item * POST_MERGE(GIT, is-squash-merge)
 
-=item * PRE_PUSH(GIT, remote-name, remote-url, push-specs)
+=item * PRE_PUSH(GIT, remote-name, remote-url)
 
 The C<pre-push> hook was introduced in Git 1.8.2. The default hook
 gets two arguments: the name and the URL of the remote which is being
@@ -1266,14 +1261,8 @@ lines of the form:
 
     <local ref> SP <local sha1> SP <remote ref> SP <remote sha1> LF
 
-The information from these lines is read and passed to the hook as the
-C<push-specs> argument as a reference to a data structure like this:
-
-    [
-      ['local ref', 'local sha1', 'remote ref', 'remote sha1'],
-      ['local ref', 'local sha1', 'remote ref', 'remote sha1'],
-      ...
-    ]
+The information from these lines is read and can be fetched by the
+hooks using the C<Git::Hooks::get_input_data> method.
 
 =item * PRE_RECEIVE(GIT)
 
@@ -1282,8 +1271,9 @@ with lines of the form:
 
     <old-value> SP <new-value> SP <ref-name> LF
 
-The information from these lines is read and can be grokked by the
-hooks by using the C<Git::More::get_affected_refs> and the
+The information from these lines is read and can be fetched by the
+hooks using the C<Git::Hooks::get_input_data> method or, perhaps more
+easily, by using the C<Git::More::get_affected_refs> and the
 C<Git::More::get_affected_ref_rage> methods.
 
 =item * UPDATE(GIT, updated-ref-name, old-object-name, new-object-name)
