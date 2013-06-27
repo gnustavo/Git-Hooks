@@ -265,16 +265,35 @@ sub read_commit_msg_file {
     # Truncate the message just before the diff, if any.
     $$msg_ref =~ s:\ndiff --git .*::s;
 
-    my ($pid, $in, $out, $ctx) = $git->command_bidi_pipe(qw/stripspace -s/);
-    print $out $$msg_ref;
-    close $out;
-    my $msg = do {
-        local $/ = undef;
-        <$in>;
-    };
-    $git->command_close_bidi_pipe($pid, $in, undef, $ctx);
+    # The comments in the following lines were taken from the "git
+    # help stripspace" documentation to guide the
+    # implementation. Previously we invoked the "git stripspace -s"
+    # external command via Git::command_bidi_pipe to do the cleaning
+    # but it seems that it doesn't work on FreeBSD. So, we reimplement
+    # its functionality here.
 
-    return $msg;
+    for ($$msg_ref) {
+        # Skip and remove all lines starting with comment character
+        # (default #).
+        s/^#.*//gm;
+
+        # remove trailing whitespace from all lines
+        s/[ \t\f]+$//gm;
+
+        # collapse multiple consecutive empty lines into one empty line
+        s/\n{3,}/\n\n/gs;
+
+        # remove empty lines from the beginning and end of the input
+        # add a missing \n to the last line if necessary.
+        s/^\n+//s;
+        s/\n*$/\n/s;
+
+        # In the case where the input consists entirely of whitespace
+        # characters, no output will be produced.
+        s/^\s+$//s;
+    }
+
+    return $$msg_ref;
 }
 
 sub write_commit_msg_file {
