@@ -2,6 +2,14 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.044     2013-06-27 09:13:28 America/Sao_Paulo
+
+  [Fixes]
+
+  - Version 0.043 used the s///r operator, which was implemented on
+    Perl 5.14. This version refactors it to avoid the operator and
+    keep compatibility with Perl 5.10.
+
 0.043     2013-06-26 10:35:02 America/Sao_Paulo
 
   [New features]
