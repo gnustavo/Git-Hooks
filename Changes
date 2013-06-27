@@ -2,10 +2,15 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.045     2013-06-27 17:22:18 America/Sao_Paulo
+
+  [Fixes]
+  - Refactor Git::More::read_commit_msg_file to avoid using
+    Git::command_bidi_pipe which seems to not work on FreeBSD.
+
 0.044     2013-06-27 09:13:28 America/Sao_Paulo
 
   [Fixes]
-
   - Version 0.043 used the s///r operator, which was implemented on
     Perl 5.14. This version refactors it to avoid the operator and
     keep compatibility with Perl 5.10.
