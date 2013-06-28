@@ -51,7 +51,7 @@ sub _branches_containing {
 sub record_commit_parents {
     my ($git) = @_;
 
-    # Here we record the HEAD commit's onw id and it's parent's ids in
+    # Here we record the HEAD commit's own id and it's parent's ids in
     # a file under the git directory. The file has two lines in this
     # format:
 
@@ -73,7 +73,7 @@ sub check_commit_amend {
     my $record_file = _record_filename($git);
 
     -r $record_file
-        or $git->error($PKG, "Can't read $record_file. You probably forgot to symlink the pre-commmit hook.\n")
+        or $git->error($PKG, "Can't read $record_file. You probably forgot to symlink the pre-commit hook.\n")
             and return 0;
 
     my ($old_commit, $old_parents) = read_file($record_file);
