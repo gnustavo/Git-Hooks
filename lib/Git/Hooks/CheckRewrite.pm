@@ -132,8 +132,6 @@ sub check_rebase {
         };
     }
 
-    my $log = $git->command(qw/log --oneline --graph --decorate --all/);
-
     # Find the base commit of the rebased sequence
     my $base_commit = $git->command_oneline('rev-list', '--topo-order', '--reverse', "$upstream..$branch");
 
