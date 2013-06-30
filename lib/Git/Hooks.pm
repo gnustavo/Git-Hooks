@@ -530,7 +530,21 @@ sub run_hook {
         $post_hook->($hook_name, $git, @args);
     }
 
-    die "\n" if scalar($git->get_errors());
+    if (scalar($git->get_errors())) {
+        if (($hook_name eq 'commit-msg' or $hook_name eq 'pre-commit')
+                and not $git->get_config(githooks => 'abort-commit')) {
+            warn <<"EOF";
+ATTENTION: To fix the problems in this commit, please consider
+amending or undoing it:
+
+        git commit --amend      # to amend it
+        git reset --soft HEAD^  # to undo it
+
+EOF
+        } else {
+            die "\n";
+        }
+    }
 
     return;
 }
@@ -1137,6 +1151,20 @@ case-insensitively. The caret is part of the regex, meaning that it's
 anchored at the start of the username.
 
 =back
+
+=head2 githooks.abort-commit [01]
+
+This option is true (1) by default, meaning that the C<pre-commit> and
+the C<commit-msg> hooks will abort the commit if they detect anything
+wrong in it. This may not be the best way to handle errors, because
+you must remember to retrieve your carefully worded commit message
+from the C<.git/COMMIT_EDITMSG> to try it again, and it is easy to
+forget about it and lose it.
+
+Setting this to false (0) makes these hooks simply warn the user via
+STDERR but let the commit succeed. This way, the user can correct any
+mistake with a simple C<git commit --amend> and doesn't run the risk
+of losing the commit message.
 
 =head2 githooks.gerrit.url URL
 =head2 githooks.gerrit.username USERNAME

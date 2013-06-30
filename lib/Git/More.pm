@@ -134,8 +134,9 @@ sub get_config {
         }
 
         # Set default values for undefined ones.
-        $config{githooks}{externals} //= [1];
+        $config{githooks}{externals}       //= [1];
         $config{githooks}{gerrit}{enabled} //= [1];
+        $config{githooks}{'abort-commit'}  //= [1];
 
         _compatibilize_config(\%config);
 

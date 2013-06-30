@@ -77,7 +77,7 @@ commit_on_master();
 # CHECK AMEND
 check_can_amend('allow amend on tip');
 
-my $ammend_message = qr/unsafe commit --amend/;
+my $ammend_message = qr/unsafe "git commit --amend"/;
 
 $repo->command(qw/branch  x/);
 check_cannot_amend('deny amend with a local branch pointing to HEAD', $ammend_message);

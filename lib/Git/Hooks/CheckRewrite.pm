@@ -101,14 +101,17 @@ sub check_commit_amend {
         my $branches = join "\n    ", @branches;
         $git->error($PKG, <<"EOF");
 
-You've just performed un unsafe commit --amend because your original
-HEAD ($old_commit) is still reachable by the following branch(es):
+You've just performed un unsafe "git commit --amend" because your
+original HEAD ($old_commit) is still reachable by the following
+branch(es):
 
     $branches
 
-You can revert the amend with the following command:
+Consider amending or undoing it:
 
-    git reset --soft $old_commit
+        git commit --amend      # to amend it
+        git reset --soft HEAD^  # to undo it
+
 EOF
         return 0;
     }
