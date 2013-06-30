@@ -156,10 +156,12 @@ sub add_footer_values {
     croak "Malformed footer key: '$key'\n"
         unless $key =~ /^[\w-]+$/i;
 
+    ## no critic (BuiltinFunctions::ProhibitComplexMappings)
     push @{$self->{footer}{lc $key}},
         map { [$key => $_] }
             map { my $copy = $_; $copy =~ s/foo/BAR/; $copy } # strip trailing newlines to keep the footer structure
                 @values;
+    ## use critic
 
     # ANCIENT PERL ALERT! The strange looking dance above with the
     # $copy variable is needed in old Perls.
