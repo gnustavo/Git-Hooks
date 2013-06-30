@@ -4,28 +4,36 @@ As a git user you may be interested in enabling some hooks for your
 local git repositories. In particular, you may be interested in
 guaranteeing that the same policies that are being enforced by the
 remote repositories you push to are enforced earlier when you commit
-locally.
+locally, so that you can avoid an onerous round trip to the common
+repository.
 
 =head2 GIT::HOOKS DRIVER SCRIPT
 
 Git::Hooks only need a single script to drive all hooks implemented by
-yourself or by the plugins you enable. The script I use was created
-like this:
+yourself or by the plugins you enable. If you do not need to create
+your own hooks, but want to use just the ones that come with
+Git::Hooks plugins, you can use a shared script like this for all your
+local repositories:
 
-    $ cat >~/bin/githooks.pl <<EOF
     #!/usr/bin/env perl
-    
-    BEGIN { $ENV{GITPERLLIB} = '/usr/share/perl5' };
-    
     use Git::Hooks;
-    
     run_hook($0, @ARGV);
-    EOF
-    
-    $ chmod +x ~/bin/githooks.pl
 
-Without the C<BEGIN> block I get the following error when I use it in
-my Ubuntu notebook:
+I save this script as C<~/bin/githooks.pl> under my $HOME
+directory. Do not forget to make it executable! If you invoke it
+directly it should do nothing but to exit normally:
+
+    $ ~/bin/githooks.pl
+    $ echo $?
+    0
+
+=head3 The GITPERLLIB environment variable
+
+Git::Hooks uses the C<Git> module which is part of the C<git>
+installation and not at L<CPAN|http://cpan.org> yet. So, depending on
+your environment, your Perl may not find it on its standard library
+directories. In this case, you'll get an error like this when you try
+to invoke the script:
 
     $ ~/bin/githooks.pl
     Can't locate Git.pm in @INC (@INC contains: /opt/perl/perl5/perlbrew...
@@ -37,14 +45,31 @@ my Ubuntu notebook:
 
 This is because the C<Git.pm> module can't be found in my standard
 @INC, since I'm using a L<perlbrew|http://perlbrew.pl/> installed
-Perl. If you get the same error, you must define the environment
-variable C<GITPERLLIB> in a BEGIN block before the C<use Git::Hooks>
-line. In Debian/Ubuntu the module is installed as
-</usr/share/perl5/Git.pm> as part of the C<git> package.
+Perl. If you get the same error, define the environment variable
+C<GITPERLLIB> in a BEGIN block before the C<use Git::Hooks> line in
+the script. In Debian/Ubuntu the module is installed as
+</usr/share/perl5/Git.pm> as part of the C<git> package. So, the
+script would be this:
+
+    #!/usr/bin/env perl
+    BEGIN { $ENV{GITPERLLIB} = '/usr/share/perl5' };
+    use Git::Hooks;
+    run_hook($0, @ARGV);
 
 =head2 HOOK LINKS
 
-In order to make it easy to setup your hooks, it's useful to create a
+Now you simply need to create symbolic links under the C<.git/hooks>
+directory of your repositories pointing to the common script. So, for
+example, if you want to enable some C<pre-commit> and some
+C<commit-msg> hooks, you would do this:
+
+    $ cd .../.git/hooks
+    $ ln -s ~/bin/githooks.pl pre-commit
+    $ ln -s ~/bin/githooks.pl commit-msg
+
+However, doing it manually for every repository is cumbersome and
+prone to mistakes and neglect. Fortunately, there is a better way. In
+order to make it easy to setup your hooks, it's useful to create a
 repository template for git to use when you perform a C<git init> or a
 C<git clone>.
 
@@ -62,12 +87,12 @@ You may customize one for you like this:
     > do ln -s ~/bin/githooks.pl $i
     > done
 
-This copies the default template directory to C<~/.git-template> (you
-may choose another directory), removes all sample hooks and creates
-symbolic links to the Git::Hooks driver script which we created above
-for four hooks: C<commit-msg>, C<post-commit>, C<pre-commit>,
-C<pre-rebase>. These are all the hooks I'm interested in locally. Your
-mileage may vary.
+These commands copy the default template directory to
+C<~/.git-template> (you may choose another directory), removes all
+sample hooks and creates symbolic links to the Git::Hooks driver
+script which we created above for four hooks: C<commit-msg>,
+C<post-commit>, C<pre-commit>, and C<pre-rebase>. These are all the
+hooks I'm interested in locally. Your mileage may vary.
 
 You must tell git to use your repository template instead of its
 default. The best way to do it is to configure it globally like this:
@@ -85,8 +110,8 @@ taste. You should read the plugins's documentation to understand them
 and decide which ones you would like to enable globally and which ones
 you would like to enable locally for particular repositories.
 
-Here I show my personal preferences. You can take it as a baseline
-from which you can make variations.
+Here I show my personal preferences. You are encouraged to make your
+own variations.
 
 =head3 Global Configuration
 
@@ -95,13 +120,14 @@ This is what I have in my global git configuration (C<~/.gitconfig>):
     [githooks]
             plugin = CheckLog
             plugin = CheckRewrite
+            abort-commit = 0
+    [githooks "checklog"]
+            title-max-width = 62
     [githooks "checkjira"]
             jiraurl  = https://jira.cpqd.com.br
             jirauser = gustavo
             jirapass = a-very-large-and-difficult-to-crack-password
             matchlog = (?s)^\\[([^]]+)\\]
-    [githooks "checklog"]
-            title-max-width = 62
 
 The only plugins I want enabled for every repository are C<CheckLog>
 and C<CheckRewrite>. The latter is simple, as it doesn't require any
@@ -113,6 +139,12 @@ The C<CheckLog> is also useful to guarantee that I'm not deviating
 from the common git policies regarding the commit messages. The only
 thing I change from the defaults is the C<title-max-width>, because I
 think 50 characters is very constraining.
+
+I disable the C<githooks.abort-commit> option so that C<pre-commit>
+and C<commit-msg> hooks don't abort the commit in case of
+errors. That's because I find it easier to amend the commit than to
+remember to recover my carefully crafted commit message from the
+C<.git/COMMIT_EDITMSG> afterwards.
 
 The section C<githooks "checkjira"> contains some global configuration
 for the C<CheckJira> plugin, which I enable only for some
@@ -143,7 +175,7 @@ a C<Change-Id> line in the messages of all commits. These are required
 by Gerrit.
 
 I use C<CheckJira> to remind me to cite a JIRA issue in every commit
-message. I make two deviations from its default configuration. The
-C<project> value makes it accept only issues of the CDS JIRA project.
+message. The C<project> value makes it accept only issues of the CDS
+JIRA project for this particular repository.
 
 =cut
