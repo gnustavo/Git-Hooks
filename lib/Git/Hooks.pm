@@ -453,7 +453,7 @@ sub _load_plugins {
                 # It must be a module name
 
                 ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval, Modules::RequireBarewordIncludes)
-                eval {require "$prefix$plugin"};
+                eval "require $prefix$plugin";
                 ## use critic
 
             } else {
