@@ -744,7 +744,7 @@ For example:
             my ($mode, $sha, $n, $name) = split / /;
             my $size = $git->command('cat-file' => '-s', $sha);
             $size <= $LIMIT
-                or $git-error('CheckSize', "File '$name' has $size bytes, more than our limit of $LIMIT.\n"
+                or $git->error('CheckSize', "File '$name' has $size bytes, more than our limit of $LIMIT.\n"
                     and $errors++;
         }
 
