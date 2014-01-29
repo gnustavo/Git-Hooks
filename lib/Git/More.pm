@@ -66,7 +66,7 @@ sub _compatibilize_config {
 
     foreach my $var (qw/admin userenv/) {
         next if exists $config->{githooks}{$var};
-        foreach my $plugin (qw/checkacls checkjira/) {
+        foreach my $plugin (grep {exists $config->{$_}} qw/checkacls checkjira/) {
             if (exists $config->{$plugin}{$var}) {
                 $config->{githooks}{$var} = $config->{$plugin}{$var};
                 next;
