@@ -2,6 +2,21 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.047     2014-01-29 12:21:18 America/Sao_Paulo
+
+  [Changes]
+  - Remove suggestion to undo a commit when a problem is detected in
+    the post-commit hook. Now we only suggest to amend it.
+
+  - Make githooks.plugin configuration variable accept a list of
+    plugins names.
+
+  [Fixes]
+  - Fix handling of fully qualified module names for plugins.
+
+  - Fix CheckJira's commit-msg error message which was incorrectly
+    showing a commit SHA-1 as '0000000'.
+
 0.046     2013-06-30 17:01:46 America/Sao_Paulo
 
   [New features]
