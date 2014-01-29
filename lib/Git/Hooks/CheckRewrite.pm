@@ -107,10 +107,9 @@ branch(es):
 
     $branches
 
-Consider amending or undoing it:
+Consider amending it again:
 
-        git commit --amend      # to amend it
-        git reset --soft HEAD^  # to undo it
+    git commit --amend      # to amend it
 
 EOF
         return 0;

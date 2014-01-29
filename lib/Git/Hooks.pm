@@ -535,10 +535,9 @@ sub run_hook {
                 and not $git->get_config(githooks => 'abort-commit')) {
             warn <<"EOF";
 ATTENTION: To fix the problems in this commit, please consider
-amending or undoing it:
+amending it:
 
         git commit --amend      # to amend it
-        git reset --soft HEAD^  # to undo it
 
 EOF
         } else {
