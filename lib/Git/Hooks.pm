@@ -424,8 +424,8 @@ my %prepare_hook = (
 sub _load_plugins {
     my ($git) = @_;
 
-    my @enabled_plugins  = $git->get_config(githooks => 'plugin');
-    my %disabled_plugins = map {($_ => undef)} $git->get_config(githooks => 'disable');
+    my @enabled_plugins  = map {split} $git->get_config(githooks => 'plugin');
+    my %disabled_plugins = map {($_ => undef)} map {split} $git->get_config(githooks => 'disable');
 
     return () unless @enabled_plugins; # no one configured
 
@@ -935,17 +935,20 @@ repository. Note that this will fetch all C<--system>, C<--global>,
 and C<--local> options, in this order. You may use this mechanism to
 define configuration global to a user or local to a repository.
 
-=head2 githooks.plugin PLUGIN
+=head2 githooks.plugin PLUGIN...
 
-To enable a plugin you must add it to this configuration option, like
-this:
+To enable one or more plugins you must add them to this configuration
+option, like this:
 
-    $ git config --add githooks.plugin CheckAcls
+    $ git config --add githooks.plugin CheckAcls CheckJira
 
-To enable more than one plugin, simply repeat the command for the next
-one:
+You can add another list to the same variable to enable more plugins,
+like this:
 
-    $ git config --add githooks.plugin CheckJira
+    $ git config --add githooks.plugin CheckLog
+
+This is usefull, for example, to enable some plugins globally and
+others locally, per repository.
 
 A plugin may hook itself to one or more hooks. C<CheckJira>, for
 example, hook itself to three: C<commit-msg>, C<pre-receive>, and
@@ -988,16 +991,17 @@ module. For example:
 
     $ git config --add githooks.plugin My::Hook::CheckSomething
 
-=head2 githooks.disable PLUGIN
+=head2 githooks.disable PLUGIN...
 
 This option disables plugins enabled by the C<githooks.plugin>
 option. It's useful if you want to enable a plugin globally and only
 disable it for some repositories. For example:
 
     $ git config --global --add githooks.plugin  CheckJira
+
     $ git config --local  --add githooks.disable CheckJira
 
-You also may temporarily disable a plugin by assigning to "0" an
+You may also temporarily disable a plugin by assigning to "0" an
 environment variable with its name. This is useful sometimes, when you
 are denied some perfectly fine commit by one of the check plugins. For
 example, suppose you got an error from the CheckLog plugin because you
