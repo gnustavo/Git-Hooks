@@ -482,4 +482,17 @@ about commit log message formatting and the reasons behind them.
 L<This document|https://wiki.openstack.org/wiki/GitCommitMessages>
 defines the OpenStack's project commit policies.
 
+=item * B<A Note About Git Commit Messages>
+
+This L<blog
+post|http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html>
+argues briefly and convincingly for the use of a particular format for Git
+commit messages.
+
+=item * B<Git Commit Messages: 50/72 Formatting>
+
+This L<StackOverflow
+question|http://stackoverflow.com/questions/2290016/git-commit-messages-50-72-formatting>
+has a good discussion about the topic.
+
 =back
