@@ -292,7 +292,7 @@ sub _prepare_update {
 # list into a hash and change the original argument list into a single
 # hash-ref. We also record information about the user performing the
 # push. Based on:
-# http://gerrit-documentation.googlecode.com/svn/Documentation/2.6/config-hooks.html
+# https://gerrit-review.googlesource.com/Documentation/config-hooks.html
 
 sub _prepare_gerrit_args {
     my ($git, $args) = @_;
@@ -885,10 +885,10 @@ management for Git based projects. It's based on
 L<JGit|http://www.eclipse.org/jgit/>, which is a pure Java
 implementation of Git.
 
-Up to version 2.6.0, Gerrit still doesn't support Git standard
-hooks. However, it implements its own L<special
-hooks|http://gerrit-documentation.googlecode.com/svn/Documentation/2.6/config-hooks.html>.
-B<Git::Hooks> currently supports only two of Gerrit hooks:
+Gerrit doesn't support Git standard hooks. However, it implements its own
+L<special
+hooks|https://gerrit-review.googlesource.com/Documentation/config-hooks.html>.
+B<Git::Hooks> currently supports only three of Gerrit hooks:
 
 =head3 ref-update
 
@@ -898,7 +898,7 @@ and Git::Hooks's plugins usually support them both together.
 
 =head3 patchset-created
 
-The B<patchset-created> hook is executed asynchrounously when a user
+The B<patchset-created> hook is executed asynchronously when a user
 performs a push to one of Gerrit's virtual branches (refs/for/*) in
 order to record a new review request. This means that one cannot stop
 the request from happening just by dying inside the hook. Instead,
@@ -1179,9 +1179,9 @@ with Gerrit.
 =head2 githooks.gerrit.review-label LABEL
 
 This option defines the
-L<label|http://gerrit-documentation.googlecode.com/svn/Documentation/2.6/config-labels.html>
-that must be used in Gerrit's review process. If not specified, the
-standard C<Code-Review> label is used.
+L<label|https://gerrit-review.googlesource.com/Documentation/config-labels.html>
+that must be used in Gerrit's review process. If not specified, the standard
+C<Code-Review> label is used.
 
 =head2 githooks.gerrit.vote-ok +N
 
@@ -1247,7 +1247,7 @@ send notifications or to signal the completion of the action someway.
 
 You may learn about every Git hook by invoking the command C<git help
 hooks>. Gerrit hooks are documented in the L<project
-site|http://gerrit-documentation.googlecode.com/svn/Documentation/2.6/config-hooks.html>.
+site|https://gerrit-review.googlesource.com/Documentation/config-hooks.html>.
 
 Also note that each hook directive can be called more than once if you
 need to implement more than one specific hook.
