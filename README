@@ -1,4 +1,4 @@
-### Git::Hooks - A framework for implementing Git (and Gerrit) hooks.
+### Git::Hooks - Framework for implementing Git (and Gerrit) hooks
 
 Git::Hooks comes with plugins implementing several hooks that you can
 use with Git and Gerrit. To use them you just need a single three-line

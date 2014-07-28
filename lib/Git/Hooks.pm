@@ -1,5 +1,5 @@
 package Git::Hooks;
-# ABSTRACT: A framework for implementing Git hooks.
+# ABSTRACT: Framework for implementing Git (and Gerrit) hooks
 
 use 5.010;
 use strict;
