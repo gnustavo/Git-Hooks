@@ -35,7 +35,7 @@ my $PKG = __PACKAGE__;
 sub gen_change_id {
     my ($git, $msg) = @_;
 
-    my ($fh, $filename) = tempfile(undef, UNLINK => 1);
+    my ($fh, $filename) = tempfile(UNLINK => 1);
 
     foreach my $info (
         [ tree      => [qw/write-tree/] ],
