@@ -443,11 +443,14 @@ this option to a suitable regex to match a complete JIRA issue key.
 
 =head2 githooks.checkjira.matchlog REGEXP
 
-By default, JIRA keys are looked for in all of the commit
-message. However, this can lead to some false positives, since the
-default issue pattern can match other things besides JIRA issue
-keys. You may use this option to restrict the places inside the commit
-message where the keys are going to be looked for.
+By default, JIRA keys are looked for in all of the commit message. However,
+this can lead to some false positives, since the default issue pattern can
+match other things besides JIRA issue keys. You may use this option to
+restrict the places inside the commit message where the keys are going to be
+looked for. You do this by specifying a regular expression with a capture
+group (a pair of parenthesis) in it. The commit message is matched against
+the regular expression and the JIRA tickets are looked for only within the
+part that matched the capture group.
 
 Here are some examples:
 
