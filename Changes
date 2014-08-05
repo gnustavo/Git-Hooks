@@ -2,6 +2,20 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.048     2014-08-05 14:05:28 America/Sao_Paulo
+
+  [Changes]
+  - CheckJira now uses the JIRA::REST module instead of JIRA::Client.  The
+    JIRA::Client module uses JIRA's SOAP API which was deprecated on JIRA
+    6.0 and won't be available anymore on JIRA 7.0. Note that this may break
+    user code relying on the JIRA::Client objects, which isn't needed for
+    the hook's basic functionality.
+
+  [Fixes]
+
+  - Suppress spurious error message (fatal: ref HEAD is not a symbolic ref)
+  when pushing a commit while in a dettached head state.
+
 0.047     2014-01-29 12:21:18 America/Sao_Paulo
 
   [Changes]
