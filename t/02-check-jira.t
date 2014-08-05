@@ -17,26 +17,32 @@ sub setup_repos_for {
     ($repo, $file, $clone, $T) = new_repos();
 
     foreach my $git ($repo, $clone) {
-	# Inject a fake JIRA::Client class definition in order to be able
+	# Inject a fake JIRA::REST class definition in order to be able
 	# to test this without a real JIRA server.
 
 	install_hooks($git, <<'EOF', qw/commit-msg update pre-receive/);
-package JIRA::Client;
+package JIRA::REST;
 
 sub new {
     my ($class, $jiraurl, $jirauser, $jirapass) = @_;
-    die "JIRA::Client(fake): cannot connect or login\n" if $jirapass eq 'invalid';
+    die "JIRA::REST(fake): cannot connect or login\n" if $jirapass eq 'invalid';
     return bless {}, $class;
 }
 
 my %issues = (
-    'GIT-1' => {key => 'GIT-1', resolution => 1,     assignee => 'user'},
-    'GIT-2' => {key => 'GIT-2', resolution => undef, assignee => 'user'},
-    'GIT-3' => {key => 'GIT-3', resolution => undef, assignee => 'user'},
+    'GIT-1' => {key => 'GIT-1', fields => { resolution => 1,     assignee => { name => 'user'}}},
+    'GIT-2' => {key => 'GIT-2', fields => { resolution => undef, assignee => { name => 'user'}}},
+    'GIT-3' => {key => 'GIT-3', fields => { resolution => undef, assignee => { name => 'user'}}},
 );
 
-sub getIssue {
-    my ($self, $key) = @_;
+sub GET {
+    my ($self, $endpoint) = @_;
+    my $key;
+    if ($endpoint =~ m:/issue/(.*):) {
+        $key = $1;
+    } else {
+	die "JIRA::Client(fake): no such endpoint ($endpoint)\n";
+    }
     if (exists $issues{$key}) {
 	return $issues{$key};
     } else {
@@ -45,7 +51,7 @@ sub getIssue {
 }
 
 package main;
-$INC{'JIRA/Client.pm'} = 'fake';
+$INC{'JIRA/REST.pm'} = 'fake';
 EOF
     }
 

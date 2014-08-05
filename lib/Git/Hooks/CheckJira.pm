@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-# Copyright (C) 2012 by CPqD
+# Copyright (C) 2012-2014 by CPqD
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ use Git::Hooks qw/:DEFAULT :utils/;
 use File::Slurp;
 use Data::Util qw(:check);
 use List::MoreUtils qw/uniq/;
-use JIRA::Client;
+use JIRA::REST;
 
 my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
@@ -89,7 +89,7 @@ sub _jira {
         }
         $jira{jiraurl} =~ s:/+$::; # trim trailing slashes from the URL
 
-        my $jira = eval { JIRA::Client->new($jira{jiraurl}, $jira{jirauser}, $jira{jirapass}) };
+        my $jira = eval { JIRA::REST->new($jira{jiraurl}, $jira{jirauser}, $jira{jirapass}) };
         length $@
             and $git->error($PKG, "cannot connect to the JIRA server at '$jira{jiraurl}' as '$jira{jirauser}': $@\n")
                 and return;
@@ -99,7 +99,7 @@ sub _jira {
     return $cache->{jira};
 }
 
-# Returns a JIRA::Client object or undef if there is any problem
+# Returns a JIRA::REST object or undef if there is any problem
 
 sub get_issue {
     my ($git, $key) = @_;
@@ -110,7 +110,7 @@ sub get_issue {
 
     # Try to get the issue from the cache
     unless (exists $cache->{keys}{$key}) {
-        $cache->{keys}{$key} = eval { $jira->getIssue($key) };
+        $cache->{keys}{$key} = eval { $jira->GET("/issue/$key") };
         length $@
             and $git->error($PKG, "cannot get issue $key: $@\n")
                 and return;
@@ -178,7 +178,7 @@ sub _check_jira_keys {
             or $errors++
                 and next KEY;
 
-        if ($unresolved && defined $issue->{resolution}) {
+        if ($unresolved && defined $issue->{fields}{resolution}) {
             $git->error($PKG, ferror($key, $commit, $ref, "is already resolved"));
             $errors++;
             next KEY;
@@ -190,9 +190,11 @@ sub _check_jira_keys {
                     and $errors++
                         and next KEY;
 
-            $user eq $issue->{assignee}
+            my $assignee = $issue->{fields}{assignee}{name};
+
+            $user eq $assignee
                 or $git->error($PKG, ferror($key, $commit, $ref,
-                                            "is currently assigned to '$issue->{assignee}' but should be assigned to you ($user)"))
+                                            "is currently assigned to '$assignee' but should be assigned to you ($user)"))
                     and $errors++
                         and next KEY;
         }
@@ -418,18 +420,18 @@ documentation to understand it.
 =head2 githooks.checkjira.jiraurl URL
 
 This option specifies the JIRA server HTTP URL, used to construct the
-C<JIRA::Client> object which is used to interact with your JIRA
-server. Please, see the JIRA::Client documentation to know about them.
+C<JIRA::REST> object which is used to interact with your JIRA
+server. Please, see the JIRA::REST documentation to know about them.
 
 =head2 githooks.checkjira.jirauser USERNAME
 
 This option specifies the JIRA server username, used to construct the
-C<JIRA::Client> object.
+C<JIRA::REST> object.
 
 =head2 githooks.checkjira.jirapass PASSWORD
 
 This option specifies the JIRA server password, used to construct the
-C<JIRA::Client> object.
+C<JIRA::REST> object.
 
 =head2 githooks.checkjira.matchkey REGEXP
 
@@ -529,7 +531,15 @@ because there is no commit yet.
 
 =item * B<JIRA>
 
-The JIRA::Client object used to talk to the JIRA server.
+The JIRA::REST object used to talk to the JIRA server.
+
+Note that up to version 0.047 of Git::Hooks::CheckJira this used to be a
+JIRA::Client object, which uses JIRA's SOAP API which was deprecated on JIRA
+6.0 and won't be available anymore on JIRA 7.0.
+
+If you have code relying on the JIRA::Client module you're advised to
+rewrite it using the JIRA::REST module. As a stopgap measure you can
+disregard the JIRA::REST object and create your own JIRA::Client object.
 
 =item * B<ISSUES...>
 
@@ -570,11 +580,24 @@ arguments passed to the hook by Gerrit.
 
 =head1 SEE ALSO
 
-B<Git::More>
+=over
 
-B<JIRA::Client>
+=item * L<Git::More>
+
+=item * L<JIRA::REST>
+
+=item * L<JIRA::Client>
+
+=back
 
 =head1 REFERENCES
 
-This script is heavily inspired (and sometimes derived) from Joyjit
+=over
+
+=item This script is heavily inspired (and sometimes derived) from Joyjit
 Nath's L<git-jira-hook|https://github.com/joyjit/git-jira-hook>.
+
+=item L<JIRA SOAP API deprecation
+notice|https://developer.atlassian.com/display/JIRADEV/SOAP+and+XML-RPC+API+Deprecated+in+JIRA+6.0>
+
+=back
