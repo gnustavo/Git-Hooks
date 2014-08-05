@@ -421,7 +421,7 @@ sub get_current_branch {
     my ($git) = @_;
     my $branch;
     try {
-        $branch = $git->command_oneline(qw/symbolic-ref HEAD/);
+        $branch = $git->command_oneline([qw/symbolic-ref HEAD/], { STDERR => 0});
     } otherwise {
         # In dettached head state
     };
