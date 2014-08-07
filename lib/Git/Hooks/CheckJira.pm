@@ -241,6 +241,8 @@ EOF
 sub check_patchset {
     my ($git, $opts) = @_;
 
+    _setup_config($git);
+
     my $sha1   = $opts->{'--commit'};
     my $commit = ($git->get_commits("$sha1^", $sha1))[-1];
 
