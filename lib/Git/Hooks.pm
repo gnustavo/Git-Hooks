@@ -368,16 +368,16 @@ sub _prepare_gerrit_patchset_created {
                 "/changes/$change/revisions/$patchset/review";
             };
 
-            my $review_label = $git->get_config('githooks.gerrit' => 'review_label') || 'Code-Review';
+            my $review_label = $git->get_config('githooks.gerrit' => 'review-label') || 'Code-Review';
 
             if (my @errors = $git->get_errors()) {
                 $args->{gerrit}->POST($resource, {
-                    labels  => {$review_label => $git->get_config('githooks.gerrit' => 'vote_nok') || -1},
+                    labels  => {$review_label => $git->get_config('githooks.gerrit' => 'vote-nok') || -1},
                     message => join("\n\n", @errors),
                 });
             } else {
                 $args->{gerrit}->POST($resource, {
-                    labels  => {$review_label => $git->get_config('githooks.gerrit' => 'vote_ok')  || +1},
+                    labels  => {$review_label => $git->get_config('githooks.gerrit' => 'vote-ok')  || +1},
                 });
             }
 
@@ -1177,19 +1177,19 @@ These three options are required if you enable Gerrit hooks. They are
 used to construct the C<Gerrit::REST> object that is used to interact
 with Gerrit.
 
-=head2 githooks.gerrit.review_label LABEL
+=head2 githooks.gerrit.review-label LABEL
 
 This option defines the
 L<label|http://gerrit-documentation.googlecode.com/svn/Documentation/2.6/config-labels.html>
 that must be used in Gerrit's review process. If not specified, the
 standard C<Code-Review> label is used.
 
-=head2 githooks.gerrit.vote_ok +N
+=head2 githooks.gerrit.vote-ok +N
 
 This option defines the vote that must be used to approve a review. If
 not specified, +1 is used.
 
-=head2 githooks.gerrit.vote_nok -N
+=head2 githooks.gerrit.vote-nok -N
 
 This option defines the vote that must be used to reject a review. If
 not specified, -1 is used.
