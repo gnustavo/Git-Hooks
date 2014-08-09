@@ -352,12 +352,12 @@ sub _prepare_gerrit_args {
 # were errors that should be signalled via as code review action.
 
 sub _prepare_gerrit_patchset_created {
-    my ($git, $args) = @_;
+    my ($git_object, $arguments) = @_;
 
-    _prepare_gerrit_args($git, $args);
+    _prepare_gerrit_args($git_object, $arguments);
     post_hook(
         sub {
-            my ($hook_name, $git, $args) = @_; ## no critic (Variables::ProhibitReusedNames)
+            my ($hook_name, $git, $args) = @_;
 
             my $resource = do {
                 my $change   = $args->{'--change'}
@@ -451,11 +451,7 @@ sub _load_plugins {
         my $exit = do {
             if ($prefix) {
                 # It must be a module name
-
-                ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval, Modules::RequireBarewordIncludes)
-                eval "require $prefix$plugin";
-                ## use critic
-
+                eval "require $prefix$plugin"; ## no critic (ProhibitStringyEval, RequireCheckingReturnValueOfEval)
             } else {
                 # Otherwise, it's a basename that we must look for
                 # in @plugin_dirs
