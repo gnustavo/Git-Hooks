@@ -72,7 +72,7 @@ sub check_ref {
         next unless match_user($git, $who);
         next unless match_ref($ref, $refspec);
         if ($what =~ /[^CRUD-]/) {
-            $git->error($PKG, "invalid acl 'what' component ($what).\n");
+            $git->error($PKG, "Invalid acl 'what' component: '$what'");
             return 0;
         }
         return 1 if index($what, $op) != -1;
@@ -87,9 +87,9 @@ sub check_ref {
     );
 
     if (my $myself = eval { $git->authenticated_user() }) {
-        $git->error($PKG, "you ($myself) cannot $op{$op} ref $ref.\n");
+        $git->error($PKG, "You ($myself) cannot $op{$op} ref $ref");
     } else {
-        $git->error($PKG, "$@\n");
+        $git->error($PKG, "Cannot grok authenticated username", $@);
     }
 
     return 0;

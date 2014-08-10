@@ -113,7 +113,7 @@ sub check_added_files {
         # check_structure.
         my ($code, $error) = check_structure(get_structure($git, 'file'), [split '/', "/$file"]);
         unless ($code) {
-            $git->error($PKG, "$error: $file\n");
+            $git->error($PKG, "$error: $file");
             $errors++;
         }
     }
@@ -132,7 +132,7 @@ sub check_ref {
     if (my $structure = get_structure($git, 'ref')) {
         if ($old_commit eq '0' x 40) {
             check_structure($structure, [split '/', "/$ref"])
-                or $git->error($PKG, "reference name '$ref' not allowed\n")
+                or $git->error($PKG, "reference name '$ref' not allowed")
                     and $errors++;
         }
     }

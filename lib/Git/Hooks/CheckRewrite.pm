@@ -58,7 +58,7 @@ sub check_commit_amend {
     my $record_file = _record_filename($git);
 
     -r $record_file
-        or $git->error($PKG, "Can't read $record_file. You probably forgot to symlink the pre-commit hook.\n")
+        or $git->error($PKG, "Can't read $record_file. You probably forgot to symlink the pre-commit hook.")
             and return 0;
 
     my ($old_commit, $old_parents) = read_file($record_file);
@@ -84,8 +84,7 @@ sub check_commit_amend {
         # $old_commit is reachable by at least one branch, which means
         # the amend was unsafe.
         my $branches = join "\n    ", @branches;
-        $git->error($PKG, <<"EOF");
-
+        $git->error($PKG, "Unsafe commit", <<"EOF");
 You've just performed un unsafe "git commit --amend" because your
 original HEAD ($old_commit) is still reachable by the following
 branch(es):
@@ -95,7 +94,6 @@ branch(es):
 Consider amending it again:
 
     git commit --amend      # to amend it
-
 EOF
         return 0;
     }
@@ -135,7 +133,7 @@ sub check_rebase {
         # The base commit is reachable by more than one branch, which
         # means the rewrite is unsafe.
         my $branches = join("\n    ", grep {$_ ne $branch} @branches);
-        $git->error($PKG, <<"EOF");
+        $git->error($PKG, "Unsafe rebase", <<"EOF");
 This is an unsafe rebase because it would rewrite commits shared by
 $branch and the following other branch(es):
 

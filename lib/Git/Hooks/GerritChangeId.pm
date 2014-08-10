@@ -67,7 +67,7 @@ sub rewrite_message {
 
     my $msg = eval { $git->read_commit_msg_file($commit_msg_file) };
     unless (defined $msg) {
-        $git->error($PKG, "Can't read commit message file '$commit_msg_file': $@\n");
+        $git->error($PKG, "Can't read commit message file '$commit_msg_file'", $@);
         return 0;
     }
 

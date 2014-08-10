@@ -49,7 +49,7 @@ sub _spell_checker {
 
     unless (state $tried_to_check) {
         unless (eval { require Text::SpellChecker; }) {
-            $git->error($PKG, "Could not require Text::SpellChecker module to spell messages.\n$@\n");
+            $git->error($PKG, "Could not require Text::SpellChecker module to spell messages", $@);
             return;
         }
 
@@ -64,7 +64,7 @@ sub _spell_checker {
 
         my $word = eval { $checker->next_word(); };
         length $@
-            and $git->error($PKG, "Cannot spell check using Text::SpellChecker.\n$@\n")
+            and $git->error($PKG, "Cannot spell check using Text::SpellChecker", $@)
                 and return;
 
         $tried_to_check = 1;
@@ -87,15 +87,12 @@ sub check_spelling {
     my $errors = 0;
 
     foreach my $badword ($checker->next_word()) {
-        unless ($errors++) {
-            $git->error($PKG, "$id\'s log has the following spelling problems in it.\n");
-        }
         my @suggestions = $checker->suggestions($badword);
-        if (defined $suggestions[0]) {
-            $git->error($PKG, "  $badword (suggestions: ", join(', ', @suggestions), ")\n");
-        } else {
-            $git->error($PKG, "  $badword (no suggestions)\n");
-        }
+        $git->error(
+            $PKG,
+            "$id\'s log has a misspelled word: '$badword'",
+            defined $suggestions[0] ? "suggestions: " . join(', ', @suggestions) : undef,
+        );
     }
 
     return $errors == 0;
@@ -109,11 +106,11 @@ sub check_patterns {
     foreach my $match ($git->get_config($CFG => 'match')) {
         if ($match =~ s/^!\s*//) {
             $msg !~ /$match/m
-                or $git->error($PKG, "$id\'s log SHOULD NOT match \Q$match\E.\n")
+                or $git->error($PKG, "$id\'s log SHOULD NOT match '\Q$match\E'")
                     and $errors++;
         } else {
             $msg =~ /$match/m
-                or $git->error($PKG, "$id\'s log SHOULD match \Q$match\E.\n")
+                or $git->error($PKG, "$id\'s log SHOULD match '\Q$match\E'")
                     and $errors++;
         }
     }
@@ -128,11 +125,11 @@ sub check_title {
         or return 1;
 
     defined $title
-        or $git->error($PKG, "$id\'s log needs a title line!\n")
+        or $git->error($PKG, "$id\'s log needs a title line")
             and return 0;
 
     ($title =~ tr/\n/\n/) == 1
-        or $git->error($PKG, "$id\'s log title should have just one line!\n")
+        or $git->error($PKG, "$id\'s log title should have just one line")
             and return 0;
 
     my $errors = 0;
@@ -140,21 +137,21 @@ sub check_title {
     if (my $max_width = $git->get_config($CFG => 'title-max-width')) {
         my $tlen = length($title) - 1; # discount the newline
         $tlen <= $max_width
-            or $git->error($PKG, "$id\'s log title should be at most $max_width characters wide, but it has $tlen!\n")
+            or $git->error($PKG, "$id\'s log title should be at most $max_width characters wide, but it has $tlen")
                 and $errors++;
     }
 
     if (my $period = $git->get_config($CFG => 'title-period')) {
         if ($period eq 'deny') {
             $title !~ /\.$/
-                or $git->error($PKG, "$id\'s log title SHOULD NOT end in a period.\n")
+                or $git->error($PKG, "$id\'s log title SHOULD NOT end in a period")
                     and $errors++;
         } elsif ($period eq 'require') {
             $title =~ /\.$/
-                or $git->error($PKG, "$id\'s log title SHOULD end in a period.\n")
+                or $git->error($PKG, "$id\'s log title SHOULD end in a period")
                     and $errors++;
         } elsif ($period ne 'allow') {
-            $git->error($PKG, "Invalid value for the $CFG.title-period option: '$period'.\n")
+            $git->error($PKG, "Invalid value for the $CFG.title-period option: '$period'")
                 and $errors++;
         }
     }
@@ -171,7 +168,7 @@ sub check_body {
         if (my @biggies = ($body =~ /^(.{$max_width,})/gm)) {
             my $aremany = (@biggies == 1 ? "is " : "are ") . scalar(@biggies);
             $git->error($PKG, "$id\'s log body lines should be at most $max_width characters wide, "
-                            . "but there $aremany bigger than that in it!\n");
+                            . "but there $aremany bigger than that in it");
             return 0;
         }
     }
@@ -220,7 +217,7 @@ sub check_message_file {
     my $msg = eval {$git->read_commit_msg_file($commit_msg_file)};
 
     unless (defined $msg) {
-        $git->error($PKG, "Cannot read commit message file '$commit_msg_file': $@\n");
+        $git->error($PKG, "Cannot read commit message file '$commit_msg_file'", $@);
         return 0;
     }
 

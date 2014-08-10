@@ -69,14 +69,14 @@ sub _jira {
         my %jira;
         for my $option (qw/jiraurl jirauser jirapass/) {
             $jira{$option} = $git->get_config($CFG => $option)
-                or $git->error($PKG, "Missing $CFG.$option configuration attribute.\n")
+                or $git->error($PKG, "Missing $CFG.$option configuration attribute")
                     and return;
         }
         $jira{jiraurl} =~ s:/+$::; # trim trailing slashes from the URL
 
         my $jira = eval { JIRA::REST->new($jira{jiraurl}, $jira{jirauser}, $jira{jirapass}) };
         length $@
-            and $git->error($PKG, "cannot connect to the JIRA server at '$jira{jiraurl}' as '$jira{jirauser}': $@\n")
+            and $git->error($PKG, "cannot connect to the JIRA server at '$jira{jiraurl}' as '$jira{jirauser}", $@)
                 and return;
         $cache->{jira} = $jira;
     }
@@ -97,19 +97,11 @@ sub get_issue {
     unless (exists $cache->{keys}{$key}) {
         $cache->{keys}{$key} = eval { $jira->GET("/issue/$key") };
         length $@
-            and $git->error($PKG, "cannot get issue $key: $@\n")
+            and $git->error($PKG, "cannot get issue $key", $@)
                 and return;
     }
 
     return $cache->{keys}{$key};
-}
-
-sub ferror {
-    my ($key, $commit, $ref, $error) = @_;
-    my $msg = "issue $key, $error.\n  (cited ";
-    $msg .= "by $commit->{commit} " if $commit->{commit};
-    $msg .= "in $ref)\n";
-    return $msg;
 }
 
 sub check_codes {
@@ -124,22 +116,22 @@ sub check_codes {
             $code = do $check;
             unless ($code) {
                 if (length $@) {
-                    $git->error($PKG, "couldn't parse option check-code ($check): $@\n");
+                    $git->error($PKG, "couldn't parse option check-code ($check)", $@);
                 } elsif (! defined $code) {
-                    $git->error($PKG, "couldn't do option check-code ($check): $!\n");
+                    $git->error($PKG, "couldn't do option check-code ($check)", $!);
                 } else {
-                    $git->error($PKG, "couldn't run option check-code ($check)\n");
+                    $git->error($PKG, "couldn't run option check-code ($check)");
                 }
                 next CODE;
             }
         } else {
             $code = eval $check; ## no critic (BuiltinFunctions::ProhibitStringyEval)
             length $@
-                and $git->error($PKG, "couldn't parse option check-code value:\n$@\n")
+                and $git->error($PKG, "couldn't parse option check-code value", $@)
                     and next CODE;
         }
         is_code_ref($code)
-            or $git->error($PKG, "option check-code must end with a code ref.\n")
+            or $git->error($PKG, "option check-code must end with a code ref")
                 and next CODE;
         push @codes, $code;
     }
@@ -164,22 +156,21 @@ sub _check_jira_keys {
                 and next KEY;
 
         if ($unresolved && defined $issue->{fields}{resolution}) {
-            $git->error($PKG, ferror($key, $commit, $ref, "is already resolved"));
+            $git->error($PKG, "issue $key is already resolved");
             $errors++;
             next KEY;
         }
 
         if ($by_assignee) {
             my $user = $git->authenticated_user()
-                or $git->error($PKG, ferror($key, $commit, $ref, "cannot grok the authenticated user"))
+                or $git->error($PKG, "cannot grok the authenticated user")
                     and $errors++
                         and next KEY;
 
             my $assignee = $issue->{fields}{assignee}{name};
 
             $user eq $assignee
-                or $git->error($PKG, ferror($key, $commit, $ref,
-                                            "is currently assigned to '$assignee' but should be assigned to you ($user)"))
+                or $git->error($PKG, "issue $key should be assigned to '$user', not '$assignee'")
                     and $errors++
                         and next KEY;
         }
@@ -320,7 +311,7 @@ PATCHSET_CREATED \&check_patchset;
 
 
 __END__
-=for Pod::Coverage check_codes check_commit_msg check_ref ferror get_issue grok_msg_jiras
+=for Pod::Coverage check_codes check_commit_msg check_ref get_issue grok_msg_jiras
 
 =head1 NAME
 

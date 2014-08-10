@@ -123,12 +123,12 @@ sub spawn_external_hook {
         if ($exit == 0) {
             return 1;
         } elsif ($exit == -1) {
-            $git->error(__PACKAGE__, ": failed to execute '$file': $!\n");
+            $git->error(__PACKAGE__, ": failed to execute '$file'", $!);
         } elsif ($exit & 127) {
-            $git->error(__PACKAGE__, sprintf("'$file' died with signal %d, %s coredump\n",
+            $git->error(__PACKAGE__, sprintf("'$file' died with signal %d, %s coredump",
                                              ($exit & 127), ($exit & 128) ? 'with' : 'without'));
         } else {
-            $git->error(__PACKAGE__, sprintf("'$file' exited abnormally with value %d\n", $exit >> 8));
+            $git->error(__PACKAGE__, sprintf("'$file' exited abnormally with value %d", $exit >> 8));
         }
 
         return 0;
@@ -499,7 +499,7 @@ sub run_hook {
             # If they fail they invoke Git::More::error.
         } elsif (length $@) {
             # Old hooks die when they fail...
-            $git->error(__PACKAGE__ . "($hook_name)", $@);
+            $git->error(__PACKAGE__ . "($hook_name)", "Hook failed", $@);
         } else {
             # ...and return undef when they succeed.
         }
@@ -512,11 +512,11 @@ sub run_hook {
                 ($git->get_config(githooks => 'hooks'), catfile($git->repo_path(), 'hooks.d'))
         ) {
             opendir my $dh, $dir
-                or $git->error(__PACKAGE__, ": cannot opendir $dir: $!\n")
+                or $git->error(__PACKAGE__, ": cannot opendir '$dir'", $!)
                     and next;
             foreach my $file (grep {-f && -x} map {catfile($dir, $_)} readdir $dh) {
                 spawn_external_hook($git, $file, $hook_name, @args)
-                    or $git->error(__PACKAGE__, ": error in external hook '$file'\n");
+                    or $git->error(__PACKAGE__, ": error in external hook '$file'");
             }
         }
     }
@@ -739,7 +739,7 @@ For example:
             my ($mode, $sha, $n, $name) = split / /;
             my $size = $git->command('cat-file' => '-s', $sha);
             $size <= $LIMIT
-                or $git->error('CheckSize', "File '$name' has $size bytes, more than our limit of $LIMIT.\n"
+                or $git->error('CheckSize', "File '$name' has $size bytes, more than our limit of $LIMIT"
                     and $errors++;
         }
 

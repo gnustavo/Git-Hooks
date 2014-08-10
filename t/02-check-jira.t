@@ -135,7 +135,7 @@ $repo->command(config => '--unset-all', 'check-jira.unresolved');
 $repo->command(config => '--replace-all', 'check-jira.by-assignee', 1);
 $ENV{USER} = 'other';
 check_cannot_commit('deny commit if not by-assignee [GIT-2]',
-		    qr/is currently assigned to 'user' but should be assigned to you \(other\)/);
+		    qr/should be assigned to 'other', not 'user'/);
 
 $ENV{USER} = 'user';
 check_can_commit('allow commit if by-assignee [GIT-2]');

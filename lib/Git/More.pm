@@ -429,10 +429,17 @@ sub get_current_branch {
 }
 
 sub error {
-    my ($git, $prefix, $message) = @_;
+    my ($git, $prefix, $message, $details) = @_;
+    $message =~ s/\n*$//s;    # strip trailing newlines
     my $fmtmsg = "\n[$prefix] $message";
-    push @{$git->{more}{errors}}, "$fmtmsg\n";
-    warn "$fmtmsg\n";
+    if ($details) {
+        $details =~ s/\n*$//s; # strip trailing newlines
+        $details =~ s/^/  /gm; # prefix each line with two spaces
+        $fmtmsg .= ":\n\n$details\n";
+    }
+    $fmtmsg .= "\n";            # end in a newline
+    push @{$git->{more}{errors}}, $fmtmsg;
+    carp $fmtmsg;
     return 1;
 }
 
@@ -765,14 +772,26 @@ by the C<git symbolic-ref HEAD> command.
 If the repository is in a dettached head state, i.e., if HEAD points
 to a commit instead of to a branch, the method returns undef.
 
-=head2 error PREFIX MESSAGE
+=head2 error PREFIX MESSAGE [DETAILS]
 
-This method should be used by plugins to record consistent error or
-warning messages. It gets two arguments: a PREFIX and the error
-MESSAGE. The PREFIX is usually the plugin's package name.
+This method should be used by plugins to record consistent error or warning
+messages. It gets two or three arguments. The PREFIX is usually the plugin's
+package name. The MESSAGE is a oneline string. These two arguments are
+combined to produce a single line like this:
 
-The method simply records the error message and returns. It doesn't
-die.
+  [PREFIX] MESSAGE
+
+DETAILS is an optional string. If present, it is appended to the line above,
+separated by an empty line, and with its lines prefixed by two spaces, like
+this:
+
+  [PREFIX] MESSAGE
+
+    DETAILS
+    MORE DETAILS...
+
+The method simply records the formatted error message and returns. It
+doesn't die.
 
 =head2 get_errors
 
