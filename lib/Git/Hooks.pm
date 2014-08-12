@@ -382,7 +382,12 @@ sub _prepare_gerrit_patchset_created {
                 }
             }
 
-            $args->{gerrit}->POST($resource, \%params);
+            my $eval = eval { $args->{gerrit}->POST($resource, \%params) };
+            unless ($eval) {
+                my $error = $@;
+                require Data::Dumper;
+                die __PACKAGE__ . ": error in Gerrit::REST::POST(\n" . Data::Dumper::Dumper($resource, \%params) . ")\n: $error\n";
+            }
 
             return;
         }
