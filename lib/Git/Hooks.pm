@@ -370,16 +370,19 @@ sub _prepare_gerrit_patchset_created {
 
             my $review_label = $git->get_config('githooks.gerrit' => 'review-label') || 'Code-Review';
 
+            my %params;
+
             if (my @errors = $git->get_errors()) {
-                $args->{gerrit}->POST($resource, {
-                    labels  => {$review_label => $git->get_config('githooks.gerrit' => 'vote-nok') || -1},
-                    message => join("\n\n", @errors),
-                });
+                $params{labels}  = { $review_label => $git->get_config('githooks.gerrit' => 'vote-nok') || -1 };
+                $params{message} = join("\n\n", @errors);
             } else {
-                $args->{gerrit}->POST($resource, {
-                    labels  => {$review_label => $git->get_config('githooks.gerrit' => 'vote-ok')  || +1},
-                });
+                $params{labels}  = { $review_label => $git->get_config('githooks.gerrit' => 'vote-ok')  || +1 };
+                if (my $comment = $git->get_config('githooks.gerrit' => 'comment-ok')) {
+                    $params{message} = "[Git::Hooks] $comment";
+                }
             }
+
+            $args->{gerrit}->POST($resource, \%params);
 
             return;
         }
@@ -1189,6 +1192,16 @@ not specified, +1 is used.
 
 This option defines the vote that must be used to reject a review. If
 not specified, -1 is used.
+
+=head2 githooks.gerrit.comment-ok COMMENT
+
+By default, when approving a review Git::Hooks simply casts a positive vote
+but does not add any comment to the change. If you set this option, it adds
+a comment like this in addition to casting the vote:
+
+  [Git::Hooks] COMMENT
+
+You may want to use a simple comment like 'OK'.
 
 =head1 MAIN FUNCTION
 
