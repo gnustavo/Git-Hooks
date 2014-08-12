@@ -359,6 +359,10 @@ sub _prepare_gerrit_patchset_created {
         sub {
             my ($hook_name, $git, $args) = @_;
 
+            # Only the change's owner can vote on its own drafts. Since
+            # hooks normally use an administrator account they can't vote.
+            return if $args->{'--is-draft'} eq 'true';
+
             my $resource = do {
                 my $change   = $args->{'--change'}
                     or die __PACKAGE__, ": Missing --change argument to Gerrit's patchset_created hook.\n";
@@ -918,6 +922,11 @@ This hook's purpose is usually to verify the project's policy
 compliance. Plugins that implement C<pre-commit>, C<commit-msg>,
 C<update>, or C<pre-receive> hooks usually also implement this Gerrit
 hook.
+
+Note that this hook is invoked for normal changes as well as for draft
+changes. However, since draft changes are normally visible only by their
+respective owners the hook usually can't vote on draft changes. Hence,
+Git::Hooks does not cast votes on draft changes.
 
 =head1 CONFIGURATION
 
