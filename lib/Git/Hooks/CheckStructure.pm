@@ -174,6 +174,7 @@ UPDATE           \&check_affected_refs;
 PRE_RECEIVE      \&check_affected_refs;
 REF_UPDATE       \&check_affected_refs;
 PATCHSET_CREATED \&check_commit;
+DRAFT_PUBLISHED  \&check_commit;
 
 1;
 

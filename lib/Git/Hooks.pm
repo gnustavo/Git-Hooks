@@ -22,7 +22,7 @@ BEGIN {                ## no critic (Subroutines::RequireArgUnpacking)
             PRE_PUSH PRE_RECEIVE UPDATE POST_RECEIVE POST_UPDATE
             PRE_AUTO_GC POST_REWRITE
 
-            REF_UPDATE PATCHSET_CREATED
+            REF_UPDATE PATCHSET_CREATED DRAFT_PUBLISHED
           /;
 
     for my $installer (@installers) {
@@ -344,61 +344,6 @@ sub _prepare_gerrit_args {
     return;
 }
 
-# Gerrit's patchset-created hook is invoked when a commit is pushed to
-# a refs/for/* branch for revision. It's invoked asynchronously, i.e.,
-# it can't stop the push to happen. Instead, if it detects any
-# problem, we must reject the commit via Gerrit's own revision
-# process. So, we prepare a post hook action in which we see if there
-# were errors that should be signalled via as code review action.
-
-sub _prepare_gerrit_patchset_created {
-    my ($git_object, $arguments) = @_;
-
-    _prepare_gerrit_args($git_object, $arguments);
-    post_hook(
-        sub {
-            my ($hook_name, $git, $args) = @_;
-
-            # Only the change's owner can vote on its own drafts. Since
-            # hooks normally use an administrator account they can't vote.
-            return if $args->{'--is-draft'} eq 'true';
-
-            my $resource = do {
-                my $change   = $args->{'--change'}
-                    or die __PACKAGE__, ": Missing --change argument to Gerrit's patchset_created hook.\n";
-                my $patchset = $args->{'--patchset'}
-                    or die __PACKAGE__, ": Missing --patchset argument to Gerrit's patchset_created hook.\n";
-
-                "/changes/$change/revisions/$patchset/review";
-            };
-
-            my $review_label = $git->get_config('githooks.gerrit' => 'review-label') || 'Code-Review';
-
-            my %params;
-
-            if (my @errors = $git->get_errors()) {
-                $params{labels}  = { $review_label => $git->get_config('githooks.gerrit' => 'vote-nok') || -1 };
-                $params{message} = join("\n\n", @errors);
-            } else {
-                $params{labels}  = { $review_label => $git->get_config('githooks.gerrit' => 'vote-ok')  || +1 };
-                if (my $comment = $git->get_config('githooks.gerrit' => 'comment-ok')) {
-                    $params{message} = "[Git::Hooks] $comment";
-                }
-            }
-
-            my $eval = eval { $args->{gerrit}->POST($resource, \%params) };
-            unless ($eval) {
-                my $error = $@;
-                require Data::Dumper;
-                die __PACKAGE__ . ": error in Gerrit::REST::POST(\n" . Data::Dumper::Dumper($resource, \%params) . ")\n: $error\n";
-            }
-
-            return;
-        }
-    );
-    return;
-}
-
 # The ref-update Gerrit hook is invoked synchronously when a user
 # pushes commits to a branch. So, it acts much like Git's standard
 # 'update' hook. This routine prepares the options as usual and sets
@@ -416,6 +361,83 @@ sub _prepare_gerrit_ref_update {
     return;
 }
 
+# The following routine is the post_hook used by the Gerrit hooks
+# patchset-created and draft-published. It basically casts a vote on the
+# patchset based on the errors found during the hook processing.
+
+sub _gerrit_patchset_post_hook {
+    my ($hook_name, $git, $args) = @_;
+
+    my $resource = do {
+        my $change   = $args->{'--change'}
+            or die __PACKAGE__, ": Missing --change argument to Gerrit's $hook_name hook.\n";
+        my $patchset = $args->{'--patchset'}
+            or die __PACKAGE__, ": Missing --patchset argument to Gerrit's $hook_name hook.\n";
+
+        "/changes/$change/revisions/$patchset/review";
+    };
+
+    my $review_label = $git->get_config('githooks.gerrit' => 'review-label') || 'Code-Review';
+
+    my %params;
+
+    if (my @errors = $git->get_errors()) {
+        $params{labels}  = { $review_label => $git->get_config('githooks.gerrit' => 'vote-nok') || -1 };
+        $params{message} = join("\n\n", @errors);
+    } else {
+        $params{labels}  = { $review_label => $git->get_config('githooks.gerrit' => 'vote-ok')  || +1 };
+        if (my $comment = $git->get_config('githooks.gerrit' => 'comment-ok')) {
+            $params{message} = "[Git::Hooks] $comment";
+        }
+    }
+
+    my $eval = eval { $args->{gerrit}->POST($resource, \%params) };
+    unless ($eval) {
+        my $error = $@;
+        require Data::Dumper;
+        die __PACKAGE__ . ": error in Gerrit::REST::POST(\n" . Data::Dumper::Dumper($resource, \%params) . ")\n: $error\n";
+    }
+
+    return;
+}
+
+# Gerrit's patchset-created hook is invoked when a commit is pushed to a
+# refs/for/* branch for revision. It's invoked asynchronously, i.e., it
+# can't stop the push to happen. Instead, if it detects any problem, we must
+# reject the commit via Gerrit's own revision process. So, we prepare a post
+# hook action in which we see if there were errors that should be signaled
+# via a code review action. Note, however, that draft changes can only be
+# accessed by their respective owners and usually can't be voted on by the
+# hook. So, draft changes aren't voted on and we exit the hook prematurely.
+# The arguments for the hook are these:
+
+# patchset-created --change <change id> --is-draft <boolean> \
+# --kind <change kind> --change-url <change url> \
+# --change-owner <change owner> --project <project name> \
+# --branch <branch> --topic <topic> --uploader <uploader>
+# --commit <sha1> --patchset <patchset id>
+
+# Gerrit's draft-published hook is invoked when a draft change is
+# published. In this state they're are visible by the hook and can be voted
+# on. The arguments for the hook are these:
+
+# draft-published --change <change id> --change-url <change url> \
+# --change-owner <change owner> --project <project name> \
+# --branch <branch> --topic <topic> --uploader <uploader> \
+# --commit <sha1> --patchset <patchset id>
+
+sub _prepare_gerrit_patchset {
+    my ($git, $args) = @_;
+
+    _prepare_gerrit_args($git, $args);
+
+    exit(0) if exists $args->[0]{'--is-draft'} and $args->[0]{'--is-draft'} eq 'true';
+
+    post_hook(\&_gerrit_patchset_post_hook);
+
+    return;
+}
+
 # The %prepare_hook hash maps hook names to the routine that must be
 # invoked in order to "prepare" their arguments.
 
@@ -426,7 +448,8 @@ my %prepare_hook = (
     'pre-receive'      => \&_prepare_receive,
     'post-receive'     => \&_prepare_receive,
     'ref-update'       => \&_prepare_gerrit_ref_update,
-    'patchset-created' => \&_prepare_gerrit_patchset_created,
+    'patchset-created' => \&_prepare_gerrit_patchset,
+    'draft-published'  => \&_prepare_gerrit_patchset,
 );
 
 ################
@@ -923,10 +946,18 @@ compliance. Plugins that implement C<pre-commit>, C<commit-msg>,
 C<update>, or C<pre-receive> hooks usually also implement this Gerrit
 hook.
 
-Note that this hook is invoked for normal changes as well as for draft
-changes. However, since draft changes are normally visible only by their
-respective owners the hook usually can't vote on draft changes. Hence,
-Git::Hooks does not cast votes on draft changes.
+Since draft patchsets are visible only by their owners, the
+B<patchset-created> hook is unusable because it uses a fixed user to
+authenticate. So, Git::Hooks exit prematurely when invoked as the
+B<patchset-created> hook for a draft change.
+
+=head3 draft-published
+
+The B<draft-published> hook is executed when the user publishes a draft
+change, making it visible to other users. Since the B<patchset-created> hook
+doesn't work for draft changes, the B<draft-published> hook is a good time
+to work on them. All plugins that work on the B<patchset-created> also work
+on the B<draft-published> hook to cast a vote when drafts are published.
 
 =head1 CONFIGURATION
 
@@ -1334,6 +1365,7 @@ hooks using the C<Git::Hooks::get_input_data> method.
 
 =item * REF_UPDATE(GIT, OPTS)
 =item * PATCHSET_CREATED(GIT, OPTS)
+=item * DRAFT_PUBLISHED(GIT, OPTS)
 
 These are Gerrit-specific hooks. Gerrit invokes them passing a list of
 option/value pairs which are converted into a hash, which is passed by
