@@ -341,6 +341,7 @@ sub _prepare_gerrit_args {
     };
 
     @$args = (\%opt);
+
     return;
 }
 
@@ -518,6 +519,9 @@ sub run_hook {
     $hook_name = basename $hook_name;
 
     my $git = Git::More->repository();
+
+    # Don't show context in error messages if requested
+    $git->nocarp if $git->get_config(githooks => 'nocarp');
 
     # Some hooks need some argument munging before we invoke them
     if (my $prepare = $prepare_hook{$hook_name}) {
@@ -1212,6 +1216,16 @@ Setting this to false (0) makes these hooks simply warn the user via
 STDERR but let the commit succeed. This way, the user can correct any
 mistake with a simple C<git commit --amend> and doesn't run the risk
 of losing the commit message.
+
+=head2 githooks.nocarp [01]
+
+By default all errors produced by Git::Hooks use L<Carp::croak>, so that
+they contain a suffix telling where the error occurred. Sometimes you may
+not want this. For instance, if you receive the error message produced by a
+server hook you won't be able to use that information.
+
+So, for server hooks you may want to set this configuration variable to 1 to
+strip those suffixes from the error messages.
 
 =head2 githooks.gerrit.url URL
 =head2 githooks.gerrit.username USERNAME
