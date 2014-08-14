@@ -1495,6 +1495,8 @@ A thin wrapper around Gerrit's REST API.
 
 =back
 
+=head1 REPOSITORY
+
+L<https://github.com/gnustavo/Git-Hooks>
+
 =cut
-
-
