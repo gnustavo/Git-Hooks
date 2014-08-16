@@ -449,7 +449,7 @@ sub error {
     $fmtmsg .= "\n";            # end in a newline
     push @{$git->{more}{errors}}, $fmtmsg;
     if ($git->{more}{nocarp}) {
-        warn $fmtmsg;
+        warn $fmtmsg;           ## no critic (RequireCarping)
     } else {
         carp $fmtmsg;
     }

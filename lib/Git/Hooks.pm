@@ -513,7 +513,7 @@ sub _load_plugins {
 # name and arguments, sets up the environment, loads plugins and
 # invokes the appropriate hook functions.
 
-sub run_hook {
+sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplexity)
     my ($hook_name, @args) = @_;
 
     $hook_name = basename $hook_name;
