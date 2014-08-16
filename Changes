@@ -2,6 +2,36 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.049     2014-08-16 20:47:21 America/Sao_Paulo
+
+  [Changes]
+
+  - Support Gerrit's draft-published hook which is invoked when a draft
+    change is published.
+
+  - New githooks.nocarp configuration variable to suppress the script line
+    number on error messages.
+
+  - New githooks.gerrit.comment-ok configuration variable to add a comment
+    to a positive review in Gerrit.
+
+  - All error messages are now printed in a specific format.
+
+  - Released at #cpanday.
+
+  [Fixes]
+
+  - Git configuration variables can't have underscores in their names. So,
+    this version changes the names of three of them under the
+    githooks.gerrit section: review_label, vote_ok, and vote_nok. They are
+    now: review-label, vote-ok, and vote-nok.
+
+  - The patchset-created hook wasn't setting up the configuration variables
+    correctly.
+
+  - Draft changes in Gerrit don't trigger the patchset-created hook anymore,
+    because only the draft owner can review it.
+
 0.048     2014-08-05 14:05:28 America/Sao_Paulo
 
   [Changes]
