@@ -460,12 +460,12 @@ regexes are tried and JIRA keys are looked for in all of them. This
 allows you to more easily accomodate more than one way of specifying
 JIRA keys if you wish.
 
-=head2 githooks.checkjira.project STRING
+=head2 githooks.checkjira.project KEY
 
 By default, the committer can reference any JIRA issue in the commit
 log. You can restrict the allowed keys to a set of JIRA projects by
-specifying a JIRA project key to this option. You can enable more than
-one project by specifying more than one value to this option.
+specifying a JIRA project key to this option. You can allow more than one
+project by specifying this option multiple times, once per project key.
 
 =head2 githooks.checkjira.require [01]
 
