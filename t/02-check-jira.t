@@ -102,14 +102,14 @@ $repo->command(config => 'check-jira.ref', 'refs/heads/fix');
 check_can_commit('allow commit on disabled ref even without JIRAs');
 
 $repo->command(checkout => '-q', '-b', 'fix');
-check_cannot_commit('deny commit on enabled ref without JIRAs', qr/does not cite any JIRA/);
+check_cannot_commit('deny commit on enabled ref without JIRAs', qr/must cite a JIRA/);
 
 $repo->command(config => '--unset', 'check-jira.ref');
 $repo->command(checkout => '-q', 'master');
 
 $repo->command(config => 'check-jira.project', 'OTHER');
-check_cannot_commit('deny commit citing non-cared for projects [GIT-0]',
-		    qr/does not cite any JIRA/);
+check_cannot_commit('deny commit citing non-allowed projects [GIT-0]',
+		    qr/do not cite issue GIT-0/);
 
 $repo->command(config => 'check-jira.require', '0');
 check_can_commit('allow commit if JIRA is not required');
@@ -167,7 +167,7 @@ $repo->command(config => '--unset-all', 'check-jira.check-code');
 $repo->command(config => 'check-jira.matchlog', '(?s)^\[([^]]+)\]');
 
 check_cannot_commit('deny commit if cannot matchlog [GIT-2]',
-		    qr/does not cite any JIRA/);
+		    qr/must cite a JIRA/);
 
 check_can_commit('[GIT-2] allow commit if can matchlog');
 
@@ -187,7 +187,7 @@ $repo->command(config => '--unset-all', 'check-jira.matchlog');
 setup_repos_for(\$clone, 'update');
 
 check_cannot_push('deny push by update by default without JIRAs',
-		  qr/does not cite any JIRA/);
+		  qr/must cite a JIRA/);
 
 setup_repos_for(\$clone, 'update');
 
@@ -197,7 +197,7 @@ check_can_push('allow push by update if valid issue cited [GIT-2]');
 setup_repos_for(\$clone, 'pre-receive');
 
 check_cannot_push('deny push by pre-receive by default without JIRAs',
-		  qr/does not cite any JIRA/);
+		  qr/must cite a JIRA/);
 
 setup_repos_for(\$clone, 'pre-receive');
 

@@ -142,8 +142,19 @@ sub check_codes {
 sub _check_jira_keys {
     my ($git, $commit, $ref, @keys) = @_;
 
+    unless (@keys) {
+        if ($git->get_config($CFG => 'require')) {
+            my $shortid = exists $commit->{commit} ? substr($commit->{commit}, 0, 8) : '';
+            $git->error($PKG, "commit $shortid must cite a JIRA in its message");
+            return 0;
+        } else {
+            return 1;
+        }
+    }
+
     my @issues;
 
+    my %projects    = map {($_ => undef)} $git->get_config($CFG => 'project');
     my $unresolved  = $git->get_config($CFG => 'unresolved');
     my $by_assignee = $git->get_config($CFG => 'by-assignee');
 
@@ -151,6 +162,12 @@ sub _check_jira_keys {
 
   KEY:
     foreach my $key (@keys) {
+        not %projects
+            or $key =~ /([^-]+)/ and exists $projects{$1}
+                or $git->error($PKG, "do not cite issue $key. This repository accepts only issues from: "
+                                   . join(' ', sort keys %projects))
+                    and next KEY;
+
         my $issue = get_issue($git, $key)
             or $errors++
                 and next KEY;
@@ -194,38 +211,7 @@ sub _check_jira_keys {
 sub check_commit_msg {
     my ($git, $commit, $ref) = @_;
 
-    my @keys  = uniq(grok_msg_jiras($git, $commit->{body}));
-    my $nkeys = @keys;
-
-    # Filter out JIRAs not belonging to any of the specific projects,
-    # if any. We don't care about them.
-    if ($nkeys) {
-        if (my @projects = $git->get_config($CFG => 'project')) {
-            my %projects = map {($_ => undef)} @projects;
-            @keys = grep {/([^-]+)/ && exists $projects{$1}} @keys;
-        }
-    }
-
-    unless (@keys) {
-        if ($git->get_config($CFG => 'require')) {
-            my $shortid = exists $commit->{commit} ? substr($commit->{commit}, 0, 8) : '';
-            if (@keys == $nkeys) {
-                $git->error($PKG, "commit $shortid does not cite any JIRA in its message");
-                return 0;
-            } else {
-                my $projects = join(' ', $git->get_config($CFG => 'project'));
-                $git->error($PKG, <<"EOF");
-commit $shortid does not cite any JIRA from the expected
-projects ($projects) in its message.
-EOF
-                return 0;
-            }
-        } else {
-            return 1;
-        }
-    }
-
-    return _check_jira_keys($git, $commit, $ref, @keys);
+    return _check_jira_keys($git, $commit, $ref, uniq(grok_msg_jiras($git, $commit->{body})));
 }
 
 sub check_patchset {
@@ -465,6 +451,9 @@ By default, the committer can reference any JIRA issue in the commit
 log. You can restrict the allowed keys to a set of JIRA projects by
 specifying a JIRA project key to this option. You can allow more than one
 project by specifying this option multiple times, once per project key.
+
+If you set this option, then any cited JIRA issue that doesn't belong to one
+of the specified projects causes an error.
 
 =head2 githooks.checkjira.require [01]
 
