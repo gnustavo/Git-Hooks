@@ -117,7 +117,7 @@ EOF
 
 $repo->command(config => 'CheckLog.title-period', 'invalid');
 
-check_cannot_commit('deny due to invalid value', qr/Invalid value for the/, <<'EOF');
+check_cannot_commit('deny due to invalid value', qr/invalid value for the/, <<'EOF');
 Title
 EOF
 

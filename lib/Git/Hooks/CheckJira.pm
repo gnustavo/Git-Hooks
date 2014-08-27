@@ -69,7 +69,7 @@ sub _jira {
         my %jira;
         for my $option (qw/jiraurl jirauser jirapass/) {
             $jira{$option} = $git->get_config($CFG => $option)
-                or $git->error($PKG, "Missing $CFG.$option configuration attribute")
+                or $git->error($PKG, "missing $CFG.$option configuration attribute")
                     and return;
         }
         $jira{jiraurl} =~ s:/+$::; # trim trailing slashes from the URL
@@ -183,7 +183,7 @@ sub _check_jira_keys {
         if (defined $ok) {
             $errors++ unless $ok;
         } elsif (length $@) {
-            $git->error($PKG, "Error while evaluating check-code: $@\n");
+            $git->error($PKG, "error while evaluating check-code: $@\n");
             $errors++;
         }
     }
@@ -249,7 +249,7 @@ sub check_message_file {
     return 1 unless is_ref_enabled($current_branch, $git->get_config($CFG => 'ref'));
 
     my $msg = read_file($commit_msg_file)
-        or $git->error($PKG, "Can't open file '$commit_msg_file' for reading: $!\n")
+        or $git->error($PKG, "cannot open file '$commit_msg_file' for reading: $!\n")
             and return 0;
 
     # Remove comment lines from the message file contents.

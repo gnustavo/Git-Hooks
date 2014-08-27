@@ -49,7 +49,7 @@ sub _spell_checker {
 
     unless (state $tried_to_check) {
         unless (eval { require Text::SpellChecker; }) {
-            $git->error($PKG, "Could not require Text::SpellChecker module to spell messages", $@);
+            $git->error($PKG, "could not require Text::SpellChecker module to spell messages", $@);
             return;
         }
 
@@ -64,7 +64,7 @@ sub _spell_checker {
 
         my $word = eval { $checker->next_word(); };
         length $@
-            and $git->error($PKG, "Cannot spell check using Text::SpellChecker", $@)
+            and $git->error($PKG, "cannot spell check using Text::SpellChecker", $@)
                 and return;
 
         $tried_to_check = 1;
@@ -151,7 +151,7 @@ sub check_title {
                 or $git->error($PKG, "$id\'s log title SHOULD end in a period")
                     and $errors++;
         } elsif ($period ne 'allow') {
-            $git->error($PKG, "Invalid value for the $CFG.title-period option: '$period'")
+            $git->error($PKG, "invalid value for the $CFG.title-period option: '$period'")
                 and $errors++;
         }
     }
@@ -217,7 +217,7 @@ sub check_message_file {
     my $msg = eval {$git->read_commit_msg_file($commit_msg_file)};
 
     unless (defined $msg) {
-        $git->error($PKG, "Cannot read commit message file '$commit_msg_file'", $@);
+        $git->error($PKG, "cannot read commit message file '$commit_msg_file'", $@);
         return 0;
     }
 
