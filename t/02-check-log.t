@@ -61,7 +61,7 @@ $repo->command(config => "githooks.commit-msg", 'CheckLog');
 
 check_cannot_commit('deny an empty message', qr/log needs a title line/, '');
 
-check_cannot_commit('deny without required title', qr/commit's log needs a title line/, <<'EOF');
+check_cannot_commit('deny without required title', qr/log needs a title line/, <<'EOF');
 No
 Title
 EOF
