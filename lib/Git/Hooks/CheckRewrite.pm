@@ -58,7 +58,7 @@ sub check_commit_amend {
     my $record_file = _record_filename($git);
 
     -r $record_file
-        or $git->error($PKG, "cannot read $record_file. You probably forgot to symlink the pre-commit hook.")
+        or $git->error($PKG, "cannot read $record_file. You probably forgot to symlink the pre-commit hook")
             and return 0;
 
     my ($old_commit, $old_parents) = read_file($record_file);
