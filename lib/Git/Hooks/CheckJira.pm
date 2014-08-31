@@ -139,7 +139,7 @@ sub check_codes {
     return @codes;
 }
 
-sub _check_jira_keys {
+sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
     my ($git, $commit, $ref, @keys) = @_;
 
     unless (@keys) {
