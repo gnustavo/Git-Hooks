@@ -312,11 +312,10 @@ messages of all commits being pushed comply.
 Projects using Git, probably more than projects using any other
 version control system, have a tradition of establishing policies on
 the format of commit log messages. The REFERENCES section below lists
-some of the more important ones.
+some of the most important.
 
-This plugin allows one to enforce most of the more established
-policies. The default configuration already enforces the most common
-one.
+This plugin allows one to enforce most of the established policies. The
+default configuration already enforces the most common one.
 
 To enable it you should add it to the githooks.plugin configuration
 option:
@@ -343,7 +342,7 @@ no limit on the title's width.
 =head2 githooks.checklog.title-period [deny|allow|require]
 
 This option defines the policy regarding the title's ending in a
-period (a.k.a. full stop ('.')). It can take three values:
+period ('.'). It can take three values:
 
 =over
 
@@ -373,14 +372,14 @@ plugin imposes no limit on the body line's width.
 
 This option may be specified more than once. It defines a list of
 regular expressions that will be matched against the commit log
-messages. If the '!' prefix isn't used, the log has to match the
-REGEXP. Otherwise, the log must not match the REGEXP.
+messages. If the '!' prefix is used, the log must not match the
+REGEXP.
 
 =head2 githooks.checklog.spelling [01]
 
 This option makes the plugin spell check the commit log message using
-C<Text::SpellChecker>. Any spell error will cause the commit or push
-to abort.
+C<Text::SpellChecker>. Any spelling error will cause the commit or push to
+abort.
 
 Note that C<Text::SpellChecker> isn't required to install
 C<Git::Hooks>. So, you may see errors when you enable this
@@ -388,9 +387,9 @@ check. Please, refer to the module's own documentation to see how to
 install it and its own dependencies (which are C<Text::Hunspell> or
 C<Text::Aspell>).
 
-=head2 githooks.checklog.spelling-lang ISO
+=head2 githooks.checklog.spelling-lang ISOCODE
 
-The Text::SpellChecker module uses defaults to infer which language is
+The Text::SpellChecker module uses defaults to infer which language it
 must use to spell check the message. You can make it use a particular
 language passing its ISO code to this option.
 
@@ -450,7 +449,7 @@ policies.
 
 L<This
 document|http://www.mediawiki.org/wiki/Git/Commit_message_guidelines>
-defines the MediaWiki's project commit log message guidelines.
+defines MediaWiki's project commit log message guidelines.
 
 =item * B<Proper Git Commit Messages and an Elegant Git History>
 
