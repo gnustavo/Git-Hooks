@@ -2,6 +2,18 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+0.050     2014-08-31 08:17:29 America/Sao_Paulo
+
+  [Changes]
+
+  - CheckJira's githooks.checkjira.project option is now strict, i.e., when
+    it's set specifying a set of JIRA projects only those project's issues
+    may be refered to in the commit messages. Other project's issues are
+    rejected. Previously, other project's issues were accepted without any
+    other check.
+
+  - Make error messages more uniform.
+
 0.049     2014-08-16 20:47:21 America/Sao_Paulo
 
   [Changes]
