@@ -118,6 +118,11 @@ sub spawn_external_hook {
 
     } else {
 
+        if (@args && ref $args[0]) {
+            # This is a Gerrit hook and we need to expand its arguments
+            @args = %{$args[0]};
+        }
+
         my $exit = system {$file} ($hook, @args);
 
         if ($exit == 0) {
