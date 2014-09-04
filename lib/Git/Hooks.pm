@@ -988,6 +988,15 @@ repository. Note that this will fetch all C<--system>, C<--global>,
 and C<--local> options, in this order. You may use this mechanism to
 define configuration global to a user or local to a repository.
 
+Gerrit keeps its repositories in a hierarchy and its specific configuration
+mechanism takes advantage of that to allow a configuration definition in a
+parent repository to trickle down to its children repositories. Git::Hooks
+uses Git's native configuration mechanisms and doesn't support Gerrit's
+mechanism, which is based on configuration files kept in a dettached
+C<refs/meta/config> branch. But you can implement a hierarchy of
+configuration files by using Git's inclusion mechanism. Please, read the
+"Includes" section of C<git help config> to know how.
+
 =head2 githooks.plugin PLUGIN...
 
 To enable one or more plugins you must add them to this configuration
