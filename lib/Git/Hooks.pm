@@ -913,6 +913,11 @@ own documentation for more details.
 Allow you to specify Access Control Lists to tell who can commit or
 push to the repository and affect which Git refs.
 
+=item * Git::Hooks::CheckFile
+
+Check if the contents of newly added or modified files comply with specified
+policies.
+
 =item * Git::Hooks::CheckJira
 
 Integrate Git with the L<JIRA|http://www.atlassian.com/software/jira/>
