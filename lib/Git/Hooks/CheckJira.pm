@@ -220,7 +220,7 @@ sub check_patchset {
     _setup_config($git);
 
     my $sha1   = $opts->{'--commit'};
-    my $commit = ($git->get_commits("$sha1^", $sha1))[-1];
+    my $commit = $git->get_commit($sha1);
 
     return check_commit_msg($git, $commit, $opts->{'--branch'});
 }
