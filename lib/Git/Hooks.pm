@@ -40,7 +40,7 @@ BEGIN {                ## no critic (Subroutines::RequireArgUnpacking)
 
     @EXPORT      = (@installers, 'run_hook');
 
-    @EXPORT_OK = qw/is_ref_enabled im_memberof match_user im_admin
+    @EXPORT_OK = qw/is_ref_enabled im_memberof match_user im_admin file_temp
                     eval_gitconfig post_hook redirect_output restore_output/;
 
     %EXPORT_TAGS = (utils => \@EXPORT_OK);
@@ -176,6 +176,41 @@ sub spawn_external_hook {
     }
 
     return 0;
+}
+
+sub file_temp {
+    my ($git, $rev, $file, @args) = @_;
+
+    state $cache = {};
+
+    my $blob = "$rev:$file";
+
+    unless (exists $cache->{$blob}) {
+        # create temporary file and copy contents to it
+        my $tmp = File::Temp->new(@args);
+        my ($pipe, $ctx) = $git->command_output_pipe(qw/cat-file blob/, $blob);
+        my $read;
+        while ($read = sysread $pipe, my $buffer, 64 * 1024) {
+            my $length = length $buffer;
+            my $offset = 0;
+            while ($length) {
+                my $written = syswrite $tmp, $buffer, $length, $offset;
+                defined $written
+                    or $git->error(__PACKAGE__, "Internal error: can't write to '$tmp->filename()': $!")
+                        and return;
+                $length -= $written;
+                $offset += $written;
+            }
+        }
+        defined $read
+            or $git->error(__PACKAGE__, "Internal error: can't read from git cat-file pipe: $!")
+                and return;
+        $git->command_close_pipe($pipe, $ctx);
+        $tmp->close();
+        $cache->{$blob} = $tmp;
+    }
+
+    return $cache->{$blob};
 }
 
 sub grok_groups_spec {
@@ -897,9 +932,9 @@ already pushed.
 
 =item * Git::Hooks::CheckStructure
 
-Check if newly added files and references (branches and tags) comply
-with specified policies, so that you can impose a strict structure to
-the repository's file and reference hierarchies.
+Check if newly added files and reference names (branches and tags) comply
+with specified policies, so that you can impose a strict structure to the
+repository's file and reference hierarchies.
 
 =item * Git::Hooks::GerritChangeId
 
@@ -1557,6 +1592,24 @@ the handles to their original state.
 This routine gets a reference returned by C<redirect_output>, restores
 STDOUT and STDERR to their previous state and returns a string containing
 every output since the previous call to redirect_output.
+
+=head2 file_temp REV, FILE, ARGS...
+
+This routine returns a C<File::Temp> object representing a temporary file
+into which the contents of the file FILE in revision REV has been copied.
+
+The object's filehandle is closed before being returned.
+
+It's useful for hooks that need to read the contents of changed files in
+order to check anything in them.
+
+These objects are cached so that if more than one hook needs to get at them
+they're created only once.
+
+By default, all temporary files are removed when the hook exits.
+
+Any remaining ARGS are passed as arguments to C<File::Temp::new> so that you
+can have more control over the temporary file creation.
 
 =head1 SEE ALSO
 
