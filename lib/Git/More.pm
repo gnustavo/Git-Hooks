@@ -354,14 +354,40 @@ sub write_commit_msg_file {
     return;
 }
 
-sub get_diff_files {
-    my ($git, @args) = @_;
-    my %affected;
-    foreach ($git->command(diff => '--name-status', @args)) {
-        my ($status, $name) = split ' ', $_, 2;
-        $affected{$name} = $status;
+sub filter_files_in_index {
+    my ($git, $filter) = @_;
+    my $output = $git->command(
+        qw/diff-index --name-only --no-commit-id --cached -r -z/,
+        "--diff-filter=$filter", 'HEAD',
+    );
+    return split /\0/, $output;
+}
+
+sub filter_files_in_range {
+    my ($git, $filter, $from, $to) = @_;
+    my $output = $git->command(
+        qw/diff-tree --name-only --no-commit-id -r -z/,
+        "--diff-filter=$filter", $from, $to,
+    );
+    return split /\0/, $output;
+}
+
+sub filter_files_in_commit {
+    my ($git, $filter, $commit) = @_;
+    my $output = $git->command(
+        qw/diff-tree --name-only -m -r -z/,
+        "--diff-filter=$filter", $commit,
+    );
+    my $num_parents = 0;
+    my %files;
+    foreach my $name (split /\0/, $output) {
+        if ($name =~ /^[0-9a-f]{40}$/) {
+            ++$num_parents;
+        } else {
+            ++$files{$name};
+        }
     }
-    return \%affected;
+    return grep { $files{$_} == $num_parents } keys %files;
 }
 
 sub set_affected_ref {
@@ -533,8 +559,8 @@ __END__
     my $commits = $git->get_commits($oldcommit, $newcommit);
     my $message = $git->get_commit_msg('HEAD');
 
-    my $files_modified_by_commit = $git->get_diff_files('--diff-filter=AM', '--cached');
-    my $files_modified_by_push   = $git->get_diff_files('--diff-filter=AM', $oldcommit, $newcommit);
+    my $files_modified_by_commit = $git->filter_files_in_index('AM');
+    my $files_modified_by_push   = $git->filter_files_in_range('AM', $oldcommit, $newcommit);
 
 =head1 DESCRIPTION
 
@@ -757,24 +783,61 @@ defined.
 An empty line (C<\n\n>) is inserted between every pair of MSG
 arguments, if there is more than one, of course.
 
-=head2 get_diff_files DIFFARGS...
+=head2 filter_files_in_index FILTER
 
-This method invokes the command C<git diff --name-status> with extra
-options and arguments as passed to it. It returns a reference to a
-hash mapping every affected files to their affecting status. Its
-purpose is to make it easy to grok the names of files affected by a
-commit or a sequence of commits. Please, read C<git help diff> to know
-everything about its options.
+This method returns a list of the names of the files that are changed in the
+index (staging area) compared to the HEAD commit. It's useful in the
+C<pre-commit> hook when you want to know which files are being modified in
+the upcoming commit.
 
-A common usage is to grok every file added or modified in a pre-commit
-hook:
+FILTER specifies in which kind of changes you're interested in. It's passed
+as the argument to the C<--diff-filter> option of C<git diff-index>, which
+is documented like this:
 
-    my $hash_ref = $git->get_diff_files('--diff-filter=AM', '--cached');
+  --diff-filter=[(A|C|D|M|R|T|U|X|B)...[*]]
 
-Another one is to grok every file added or modified in a pre-receive
-hook:
+    Select only files that are Added (A), Copied (C), Deleted (D), Modified
+    (M), Renamed (R), have their type (i.e. regular file, symlink,
+    submodule, ...) changed (T), are Unmerged (U), are Unknown (X), or have
+    had their pairing Broken (B). Any combination of the filter characters
+    (including none) can be used. When * (All-or-none) is added to the
+    combination, all paths are selected if there is any file that matches
+    other criteria in the comparison; if there is no file that matches other
+    criteria, nothing is selected.
 
-    my $hash_ref = $git->get_diff_files('--diff-filter=AM', $old_commit, $new_commit);
+=head2 filter_files_in_range FILTER, FROM, TO
+
+This method returns a list of the names of the files that are changed
+between FROM and TO commits. It's useful in the C<update> and the
+C<pre-receive> hooks when you want to know which files are being modified in
+the commits being received by a C<git push> command.
+
+FILTER specifies in which kind of changes you're interested in. Please, read
+the C<filter_files_in_index> documetation above.
+
+FROM and TO are revision parameters (see C<git help revisions>) specifying
+two commits. They're passed as arguments to C<git diff-tree> in order to
+compare them and grok the files that differ between them.
+
+=head2 filter_files_in_commit FILTER, COMMIT
+
+This method returns a list of the names of the files that are changed in
+COMMIT. It's useful in the C<patchset-created> and the C<draft-published>
+hooks when you want to know which files are being modified in the single
+commit being received by a C<git push> command.
+
+FILTER specifies in which kind of changes you're interested in. Please, read
+the C<filter_files_in_index> documetation above.
+
+COMMIT is a revision parameter (see C<git help revisions>) specifying the
+commit. It's passed a argument to C<git diff-tree> in order to compare it to
+its parents and grok the files that changed in it.
+
+Merge commits are treated specially. Only files that are changed in COMMIT
+with respect to all of its parents are returned. The reasoning behind this
+is that if a file isn't changed with respect to one or more of COMMIT's
+parents, then it must have been checked already in those commits and we
+don't need to check it again.
 
 =head2 set_affected_ref REF OLDCOMMIT NEWCOMMIT
 
