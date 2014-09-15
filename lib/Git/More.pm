@@ -202,7 +202,7 @@ sub get_commit {
     my ($pipe, $ctx) = $git->command_output_pipe(
         'rev-list',
         '--no-walk',
-    # See 'git help rev-list' to understand the --pretty argument
+        # See 'git help rev-list' to understand the --pretty argument
         '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%s%n%n%b%x00',
         $commit,
     );
