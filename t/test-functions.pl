@@ -96,6 +96,11 @@ EOF
 \$ENV{GIT_CONFIG} = "\$ENV{GIT_DIR}/config";
 EOF
 
+        # Reset HOME to avoid reading ~/.gitconfig
+	print $fh <<"EOF";
+\$ENV{HOME}       = '';
+EOF
+
         # Hooks on Windows are invoked indirectly.
         if ($^O eq 'MSWin32') {
             print $fh <<"EOF";
