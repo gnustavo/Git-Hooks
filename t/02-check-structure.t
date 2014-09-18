@@ -25,7 +25,7 @@ sub setup_structure {
     my $filedef = catfile($git->repo_path(), 'hooks', "structure.$kind");
     open my $fh, '>', "$filedef" or die "Can't create $filedef: $!\n";
     $fh->print($structure);
-    $git->command(config => '--replace-all', "check-structure.$kind", "file:$filedef");
+    $git->command(config => '--replace-all', "githooks.checkstructure.$kind", "file:$filedef");
 }
 
 sub add_file {
@@ -86,7 +86,7 @@ sub check_cannot_push {
 
 setup_repos();
 
-$repo->command(config => "githooks.pre-commit", 'check-structure');
+$repo->command(config => "githooks.plugin", 'CheckStructure');
 
 setup_structure($repo, <<'EOF');
 {};
@@ -145,7 +145,7 @@ check_cannot_commit('commit deny custom error message', qr/custom error message/
 
 setup_repos();
 
-$clone->command(config => "githooks.pre-receive", 'check-structure');
+$clone->command(config => "githooks.plugin", 'CheckStructure');
 
 setup_structure($clone, <<'EOF');
 [

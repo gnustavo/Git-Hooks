@@ -55,7 +55,7 @@ sub check_cannot_push {
 
 install_hooks($repo, undef, 'commit-msg');
 
-$repo->command(config => "githooks.commit-msg", 'CheckLog');
+$repo->command(config => "githooks.plugin", 'CheckLog');
 
 # title-required
 
@@ -76,14 +76,14 @@ check_can_commit('allow with required title only', <<'EOF');
 Title
 EOF
 
-$repo->command(config => 'CheckLog.title-required', 0);
+$repo->command(config => 'githooks.checklog.title-required', 0);
 
 check_can_commit('allow without non-required title', <<'EOF');
 No
 Title
 EOF
 
-$repo->command(config => 'CheckLog.title-required', 1);
+$repo->command(config => 'githooks.checklog.title-required', 1);
 
 # title-period
 
@@ -95,7 +95,7 @@ check_cannot_commit('deny with denied period', qr/log title SHOULD NOT end in a 
 Title.
 EOF
 
-$repo->command(config => 'CheckLog.title-period', 'require');
+$repo->command(config => 'githooks.checklog.title-period', 'require');
 
 check_cannot_commit('deny without required period', qr/log title SHOULD end in a period/, <<'EOF');
 Title
@@ -105,7 +105,7 @@ check_can_commit('allow with required period', <<'EOF');
 Title.
 EOF
 
-$repo->command(config => 'CheckLog.title-period', 'allow');
+$repo->command(config => 'githooks.checklog.title-period', 'allow');
 
 check_can_commit('allow without allowed period', <<'EOF');
 Title
@@ -115,13 +115,13 @@ check_can_commit('allow with allowed period', <<'EOF');
 Title.
 EOF
 
-$repo->command(config => 'CheckLog.title-period', 'invalid');
+$repo->command(config => 'githooks.checklog.title-period', 'invalid');
 
 check_cannot_commit('deny due to invalid value', qr/invalid value for the/, <<'EOF');
 Title
 EOF
 
-$repo->command(config => 'CheckLog.title-period', 'deny');
+$repo->command(config => 'githooks.checklog.title-period', 'deny');
 
 # title-max-width
 
@@ -131,7 +131,7 @@ check_cannot_commit('deny large title', qr/log title should be at most 50 charac
 The above title has 51 characters.
 EOF
 
-$repo->command(config => 'CheckLog.title-max-width', 0);
+$repo->command(config => 'githooks.checklog.title-max-width', 0);
 
 check_can_commit('allow large title', <<'EOF');
 123456789012345678901234567890123456789012345678901
@@ -139,7 +139,7 @@ check_can_commit('allow large title', <<'EOF');
 The above title has 51 characters.
 EOF
 
-$repo->command(config => 'CheckLog.title-max-width', 50);
+$repo->command(config => 'githooks.checklog.title-max-width', 50);
 
 # body-max-width
 
@@ -153,7 +153,7 @@ Body first line.
 The previous line has 73 characters.
 EOF
 
-$repo->command(config => 'CheckLog.body-max-width', 0);
+$repo->command(config => 'githooks.checklog.body-max-width', 0);
 
 check_can_commit('allow large body', <<'EOF');
 Title
@@ -164,12 +164,12 @@ Body first line.
 The previous line has 73 characters.
 EOF
 
-$repo->command(config => 'CheckLog.body-max-width', 72);
+$repo->command(config => 'githooks.checklog.body-max-width', 72);
 
 # match
 
-$repo->command(config => 'CheckLog.match', '^has to have');
-$repo->command(config => '--add', 'CheckLog.match', '!^must not have');
+$repo->command(config => 'githooks.checklog.match', '^has to have');
+$repo->command(config => '--add', 'githooks.checklog.match', '!^must not have');
 
 check_can_commit('allow if matches', <<'EOF');
 Title
@@ -190,7 +190,7 @@ has to have
 must not have
 EOF
 
-$repo->command(config => '--unset-all', 'CheckLog.match');
+$repo->command(config => '--unset-all', 'githooks.checklog.match');
 
 # encoding
 
@@ -208,12 +208,12 @@ SKIP: {
 xytxuythiswordshouldnotspell
 EOF
 
-    $repo->command(config => '--add', 'CheckLog.spelling', 1);
+    $repo->command(config => '--add', 'githooks.checklog.spelling', 1);
 
-    check_cannot_commit('deny misspelling with checking', qr/log has the following spelling problems in it/, <<'EOF');
+    check_cannot_commit('deny misspelling with checking', qr/log has a misspelled word/, <<'EOF');
 xytxuythiswordshouldnotspell
 EOF
 
-    $repo->command(config => '--unset-all', 'CheckLog.spelling');
+    $repo->command(config => '--unset-all', 'githooks.checklog.spelling');
 }
 

@@ -12,7 +12,7 @@ BEGIN { require "test-functions.pl" };
 my ($repo, $file, $clone, $T);
 
 sub setup_repos_for {
-    my ($reporef, $hook) = @_;
+    my ($reporef) = @_;
 
     ($repo, $file, $clone, $T) = new_repos();
 
@@ -55,10 +55,10 @@ $INC{'JIRA/REST.pm'} = 'fake';
 EOF
     }
 
-    $$reporef->command(config => "githooks.$hook", 'check-jira');
-    $$reporef->command(config => 'check-jira.jiraurl', 'fake://url/');
-    $$reporef->command(config => 'check-jira.jirauser', 'user');
-    $$reporef->command(config => 'check-jira.jirapass', 'valid');
+    $$reporef->command(config => "githooks.plugin", 'CheckJira');
+    $$reporef->command(config => 'githooks.checkjira.jiraurl', 'fake://url/');
+    $$reporef->command(config => 'githooks.checkjira.jirauser', 'user');
+    $$reporef->command(config => 'githooks.checkjira.jirapass', 'valid');
 }
 
 sub check_can_commit {
@@ -94,33 +94,33 @@ sub check_cannot_push {
 }
 
 
-setup_repos_for(\$repo, 'commit-msg');
+setup_repos_for(\$repo);
 
 check_cannot_commit('deny commit by default without JIRAs');
 
-$repo->command(config => 'check-jira.ref', 'refs/heads/fix');
+$repo->command(config => 'githooks.checkjira.ref', 'refs/heads/fix');
 check_can_commit('allow commit on disabled ref even without JIRAs');
 
 $repo->command(checkout => '-q', '-b', 'fix');
 check_cannot_commit('deny commit on enabled ref without JIRAs', qr/must cite a JIRA/);
 
-$repo->command(config => '--unset', 'check-jira.ref');
+$repo->command(config => '--unset', 'githooks.checkjira.ref');
 $repo->command(checkout => '-q', 'master');
 
-$repo->command(config => 'check-jira.project', 'OTHER');
+$repo->command(config => 'githooks.checkjira.project', 'OTHER');
 check_cannot_commit('deny commit citing non-allowed projects [GIT-0]',
 		    qr/do not cite issue GIT-0/);
 
-$repo->command(config => 'check-jira.require', '0');
+$repo->command(config => 'githooks.checkjira.require', '0');
 check_can_commit('allow commit if JIRA is not required');
-$repo->command(config => '--unset-all', 'check-jira.require');
+$repo->command(config => '--unset-all', 'githooks.checkjira.require');
 
-$repo->command(config => '--replace-all', 'check-jira.project', 'GIT');
+$repo->command(config => '--replace-all', 'githooks.checkjira.project', 'GIT');
 
-$repo->command(config => '--replace-all', 'check-jira.jirapass', 'invalid');
+$repo->command(config => '--replace-all', 'githooks.checkjira.jirapass', 'invalid');
 check_cannot_commit('deny commit if cannot connect to JIRA [GIT-0]',
 		    qr/cannot connect to the JIRA server/);
-$repo->command(config => '--replace-all', 'check-jira.jirapass', 'valid');
+$repo->command(config => '--replace-all', 'githooks.checkjira.jirapass', 'valid');
 
 check_cannot_commit('deny commit if cannot get issue [GIT-0]',
 		    qr/cannot get issue/);
@@ -128,18 +128,18 @@ check_cannot_commit('deny commit if cannot get issue [GIT-0]',
 check_cannot_commit('deny commit if issue is already resolved [GIT-1]',
 		    qr/is already resolved/);
 
-$repo->command(config => '--replace-all', 'check-jira.unresolved', 0);
+$repo->command(config => '--replace-all', 'githooks.checkjira.unresolved', 0);
 check_can_commit('allow commit if issue can be resolved [GIT-1]');
-$repo->command(config => '--unset-all', 'check-jira.unresolved');
+$repo->command(config => '--unset-all', 'githooks.checkjira.unresolved');
 
-$repo->command(config => '--replace-all', 'check-jira.by-assignee', 1);
+$repo->command(config => '--replace-all', 'githooks.checkjira.by-assignee', 1);
 $ENV{USER} = 'other';
 check_cannot_commit('deny commit if not by-assignee [GIT-2]',
 		    qr/should be assigned to 'other', not 'user'/);
 
 $ENV{USER} = 'user';
 check_can_commit('allow commit if by-assignee [GIT-2]');
-$repo->command(config => '--unset-all', 'check-jira.by-assignee');
+$repo->command(config => '--unset-all', 'githooks.checkjira.by-assignee');
 
 check_can_commit('allow commit if valid issue cited [GIT-2]');
 
@@ -155,23 +155,23 @@ EOF
 write_file($codefile, {err_mode => 'carp'}, $code)
     or BAIL_OUT("can't write_file('$codefile', <>code>)\n");
 
-$repo->command(config => 'check-jira.check-code', "file:$codefile");
+$repo->command(config => 'githooks.checkjira.check-code', "file:$codefile");
 
 check_cannot_commit('deny commit if check_code does not pass [GIT-2]',
 		    qr/You must cite issues GIT-2 and GIT-3 only/);
 
 check_can_commit('allow commit if check_code does pass [GIT-2 GIT-3]');
 
-$repo->command(config => '--unset-all', 'check-jira.check-code');
+$repo->command(config => '--unset-all', 'githooks.checkjira.check-code');
 
-$repo->command(config => 'check-jira.matchlog', '(?s)^\[([^]]+)\]');
+$repo->command(config => 'githooks.checkjira.matchlog', '(?s)^\[([^]]+)\]');
 
 check_cannot_commit('deny commit if cannot matchlog [GIT-2]',
 		    qr/must cite a JIRA/);
 
 check_can_commit('[GIT-2] allow commit if can matchlog');
 
-$repo->command(config => '--add', 'check-jira.matchlog', '(?im)^Bug:(.*)');
+$repo->command(config => '--add', 'githooks.checkjira.matchlog', '(?im)^Bug:(.*)');
 
 check_can_commit(<<'EOF');
 allow commit if can matchlog twice
@@ -181,25 +181,25 @@ EOF
 
 check_can_commit('[GIT-2] allow commit if can matchlog twice but first');
 
-$repo->command(config => '--unset-all', 'check-jira.matchlog');
+$repo->command(config => '--unset-all', 'githooks.checkjira.matchlog');
 
 
-setup_repos_for(\$clone, 'update');
+setup_repos_for(\$clone);
 
 check_cannot_push('deny push by update by default without JIRAs',
 		  qr/must cite a JIRA/);
 
-setup_repos_for(\$clone, 'update');
+setup_repos_for(\$clone);
 
 check_can_push('allow push by update if valid issue cited [GIT-2]');
 
 
-setup_repos_for(\$clone, 'pre-receive');
+setup_repos_for(\$clone);
 
 check_cannot_push('deny push by pre-receive by default without JIRAs',
 		  qr/must cite a JIRA/);
 
-setup_repos_for(\$clone, 'pre-receive');
+setup_repos_for(\$clone);
 
 check_can_push('allow push by pre-receive if valid issue cited [GIT-2]');
 

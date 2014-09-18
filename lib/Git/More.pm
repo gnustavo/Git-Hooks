@@ -18,99 +18,6 @@ use Carp;
 use File::Slurp;
 use Git::Hooks qw/:utils/;
 
-sub _compatibilize_config {
-    my ($config) = @_;
-
-    # Up to version 0.022 the plugins used flat names, such as
-    # "check-acls.pl". These names were used as values for the
-    # githooks.HOOK configuration variables and also as the name of
-    # configuration sections specific of the plugins. In version 0.023
-    # the three existing plugins (check-acls.pl, check-jira.pl, and
-    # check-structure.pl) were converted to proper modules and renamed
-    # to the usual CamelCase form of the names (i.e., CheckAcls.pm,
-    # CheckJira.pm, and CheckStructure.pm). To preserve compatibility
-    # with already configured hooks here we inject the old names in
-    # the new names.
-
-    foreach my $hook (qw/commit-msg pre-commit pre-receive post-receive update/) {
-        if (exists $config->{githooks}{$hook}) {
-            foreach (@{$config->{githooks}{$hook}}) {
-                $_ = "Check\u$1" if /^check-(acls|jira|structure)(?:\.pl)?$/;
-            }
-        }
-    }
-
-    foreach my $name (
-        ['check-acls'      => 'checkacls'],
-        ['check-jira'      => 'checkjira'],
-        ['check-structure' => 'checkstructure'],
-    ) {
-        if (exists $config->{$name->[0]}) {
-            if (exists $config->{$name->[1]}) {
-                die  __PACKAGE__, ": you have incompatible configuration sections: '$name->[0]' and '$name->[1]'.\n",
-                    "Please, rename all variables from section '$name->[0]' to section '$name->[1]'.\n";
-            } else {
-                $config->{$name->[1]} = delete $config->{$name->[0]};
-            }
-        }
-    }
-
-    # Up to version 0.020 the configuration variables 'admin' and
-    # 'userenv' were defined for the CheckAcls and CheckJira
-    # plugins. In version 0.021 they were both "promoted" to the
-    # Git::Hooks module, so that they can be used by any access
-    # control plugin. In order to maintain compatibility with their
-    # previous usage, here we virtually "inject" the variables in the
-    # "githooks" configuration section if they are undefined there and
-    # are defined in the plugin sections.
-
-    foreach my $var (qw/admin userenv/) {
-        next if exists $config->{githooks}{$var};
-        foreach my $plugin (grep {exists $config->{$_}} qw/checkacls checkjira/) {
-            if (exists $config->{$plugin}{$var}) {
-                $config->{githooks}{$var} = $config->{$plugin}{$var};
-                next;
-            }
-        }
-    }
-
-    # Up to version 0.030 each plugin had its own configuration
-    # section. From v0.031 on each plugin uses a subsection of the
-    # "githooks" section for its configuration options. In order to
-    # maintain compatibility we move the plugin's section variables to
-    # its newer subsection location. But only for the plugins that
-    # existed up to v0.030.
-
-    foreach my $section (qw/checkacls checkjira checklog checkstructure gerritchangeid/) {
-        next unless exists $config->{$section};
-        if (exists $config->{"githooks.$section"}) {
-            # If there already exists a subsection we consider this a
-            # conflict and tell the user to fix it.
-            die  __PACKAGE__, ": you have incompatible configuration sections: '$section' and 'githooks.$section'.\n",
-                "Please, rename all variables from section '$section' to the subsection 'githooks.$section'.\n";
-        } else {
-            # Otherwise, we can simply turn the section into a subsection
-            $config->{"githooks.$section"} = delete $config->{$section};
-        }
-    }
-
-    # Up to v0.031 the plugins had to be hooked explicitly to the
-    # hooks they implement by configuring the githooks.HOOK
-    # options. From v0.032 on the plugins can hook themselves to any
-    # hooks they want. The users have simply to tell which plugins
-    # they are interested in by adding them to the githooks.plugin
-    # option. Here we construct this option from the HOOK options if
-    # it's not configured yet.
-
-    unless (exists $config->{'githooks.plugin'}) {
-        foreach my $hook (grep {exists $config->{githooks}{$_}} qw/commit-msg pre-commit pre-receive post-receive update/) {
-            push @{$config->{githooks}{plugin}}, @{$config->{githooks}{$hook}};
-        }
-    }
-
-    return;
-}
-
 sub get_config {
     my ($git, $section, $var) = @_;
 
@@ -157,8 +64,6 @@ EOT
         $config{githooks}{externals}       //= [1];
         $config{githooks}{gerrit}{enabled} //= [1];
         $config{githooks}{'abort-commit'}  //= [1];
-
-        _compatibilize_config(\%config);
 
         $git->{more}{config} = \%config;
     }
