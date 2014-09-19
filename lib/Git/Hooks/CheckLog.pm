@@ -163,7 +163,8 @@ sub check_body {
     return 1 unless defined $body && length $body;
 
     if (my $max_width = $git->get_config($CFG => 'body-max-width')) {
-        if (my @biggies = ($body =~ /^(.{$max_width,})/gm)) {
+        my $toobig = $max_width + 1;
+        if (my @biggies = ($body =~ /^(.{$toobig,})/gm)) {
             my $theseare = @biggies == 1 ? "this is" : "these are";
             $git->error($PKG,
                         "commit $id log body lines should be at most $max_width characters wide, but $theseare bigger",
