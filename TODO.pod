@@ -1,8 +1,7 @@
 =head1 TO-DO list of niceties for the future of Git::Hooks.
 
-The following list is in approximately my order of implementation
-intention. Any comments or other suggestion are welcome at gnustavo AT
-cpan.org.
+The following list is no order whatsoever. Any comments or other suggestion
+are welcome at gnustavo AT cpan.org.
 
 =head2 Support the WIN32 Platform
 
@@ -16,7 +15,9 @@ We need:
 
 =item * A user-friendly README
 
-=item * A user tutorial
+=item * A tutorial for Git server admins to use backend hooks.
+
+=item * A tutorial for Gerrit admins.
 
 =item * A plugin developer tutorial
 
@@ -35,17 +36,6 @@ Use Locale::TextDomain to internationalize it.
 
 As a first job after i18n I intend to nationalize it to Brazilian
 Portuguese.
-
-=head2 Let the user control which config files to read
-
-Let the user tell which configuration files Git::Hooks should
-consider. Currently it considers the three default ones (system,
-global, and local), without knowing which one sets what. Perhaps we
-could have a new option C<githooks.extra_config> that could be set
-with an array of filenames to invoke C<git config --file> with in
-succession. This option, if set in the default configuration files,
-could tell Git::Hooks to grok an extra set of configuration from
-specific files.
 
 =head2 In CheckAcls implement DENY for ACL operations
 
@@ -117,20 +107,3 @@ allow it.
 
 This way, the options are fixed for any file. Would it be desirable to
 have different options for different kind of files?
-
-=head2 Implement the Git::Hooks::CheckFile plugin
-
-Implement a hook to make it easy to perform some checks on
-added/modified files. For instance, Perl files should be syntax
-checked. This could be configured somewhat like this:
-
-    CheckFile.rule "\.p[lm]$ perl -c"
-
-The first 'word' in the value would be a regexp used to match the
-files we're interested in. All that follows would be a command to
-which the filename would be passed.
-
-This would allow for all kinds of checks specific for some kinds of
-files. Some interesting ideas here:
-L<http://tech.yipit.com/2011/11/16/183772396/>.
-
