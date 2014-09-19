@@ -144,7 +144,7 @@ $repo->command(config => 'githooks.checklog.title-max-width', 50);
 # body-max-width
 
 check_cannot_commit('deny large body',
-                    qr/log body lines should be at most 72 characters wide, but there is 1 bigger/, <<'EOF');
+                    qr/log body lines should be at most 72 characters wide, but/, <<'EOF');
 Title
 
 Body first line.
