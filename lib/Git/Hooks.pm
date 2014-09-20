@@ -214,28 +214,27 @@ sub file_temp {
 }
 
 sub grok_groups_spec {
-    my ($specs, $source) = @_;
-    my %groups;
+    my ($groups, $specs, $source) = @_;
     foreach (@$specs) {
         s/\#.*//;               # strip comments
         next unless /\S/;       # skip blank lines
         /^\s*(\w+)\s*=\s*(.+?)\s*$/
-            or die __PACKAGE__, ": invalid line in group file '$source': $_\n";
+            or die __PACKAGE__, ": invalid line in '$source': $_\n";
         my ($groupname, $members) = ($1, $2);
-        exists $groups{"\@$groupname"}
+        exists $groups->{"\@$groupname"}
             and die __PACKAGE__, ": redefinition of group ($groupname) in '$source': $_\n";
         foreach my $member (split / /, $members) {
             if ($member =~ /^\@/) {
                 # group member
-                $groups{"\@$groupname"}{$member} = $groups{$member}
+                $groups->{"\@$groupname"}{$member} = $groups->{$member}
                     or die __PACKAGE__, ": unknown group ($member) cited in '$source': $_\n";
             } else {
                 # user member
-                $groups{"\@$groupname"}{$member} = undef;
+                $groups->{"\@$groupname"}{$member} = undef;
             }
         }
     }
-    return \%groups;
+    return;
 }
 
 sub grok_groups {
@@ -244,18 +243,22 @@ sub grok_groups {
     my $cache = $git->cache('githooks');
 
     unless (exists $cache->{groups}) {
-        my $groups = $git->get_config(githooks => 'groups')
+        my @groups = $git->get_config(githooks => 'groups')
             or die __PACKAGE__, ": you have to define the githooks.groups option to use groups.\n";
 
-        if (my ($groupfile) = ($groups =~ /^file:(.*)/)) {
-            my @groupspecs = read_file($groupfile);
-            defined $groupspecs[0]
-                or die __PACKAGE__, ": can't open groups file ($groupfile): $!\n";
-            $cache->{groups} = grok_groups_spec(\@groupspecs, $groupfile);
-        } else {
-            my @groupspecs = split /\n/, $groups;
-            $cache->{groups} = grok_groups_spec(\@groupspecs, "githooks.groups");
+        my $groups = {};
+        foreach my $spec (@groups) {
+            if (my ($groupfile) = ($spec =~ /^file:(.*)/)) {
+                my @groupspecs = read_file($groupfile);
+                defined $groupspecs[0]
+                    or die __PACKAGE__, ": can't open groups file ($groupfile): $!\n";
+                grok_groups_spec($groups, \@groupspecs, $groupfile);
+            } else {
+                my @groupspecs = split /\n/, $spec;
+                grok_groups_spec($groups, \@groupspecs, "githooks.groups");
+            }
         }
+        $cache->{groups} = $groups;
     }
 
     return $cache->{groups};
@@ -1186,35 +1189,28 @@ configuration options.
 
 =head2 githooks.groups GROUPSPEC
 
-You can define user groups in order to make it easier to configure
-access control plugins. Use this option to tell where to find group
-definitions in one of these ways:
-
-=over
-
-=item * file:PATH/TO/FILE
-
-As a text file named by PATH/TO/FILE, which may be absolute or
-relative to the hooks current directory, which is usually the
-repository's root in the server. It's syntax is very simple. Blank
-lines are skipped. The hash (#) character starts a comment that goes
-to the end of the current line. Group definitions are lines like this:
+You can define user groups in order to make it easier to configure access
+control plugins. A group is specified by a GROUPSPEC, which is a multiline
+string containing a sequence of group definitions, one per line. Each line
+defines a group like this, where spaces are significant only between users
+and group references:
 
     groupA = userA userB @groupB userC
 
-Each group must be defined in a single line. Spaces are significant
-only between users and group references.
-
 Note that a group can reference other groups by name. To make a group
-reference, simple prefix its name with an at sign (@). Group
-references must reference groups previously defined in the file.
+reference, simply prefix its name with an at sign (@). Group references must
+reference groups previously defined.
 
-=item * GROUPS
+A GROUPSPEC may be in the format C<file:PATH/TO/FILE>, which means that the
+external text file C<PATH/TO/FILE> contains the group definitions. The path
+may be absolute or relative to the hooks current directory, which is usually
+the repository's root in the server. It's syntax is very simple. Blank lines
+are skipped. The hash (#) character starts a comment that goes to the end of
+the current line. The remaining lines must define groups in the same format
+exemplified above.
 
-If the option's value doesn't start with any of the above prefixes, it
-must contain the group definitions itself.
-
-=back
+The may be multiple definitions of this variable, each one defining
+different groups. You can't redefine a group.
 
 =head2 githooks.userenv STRING
 
