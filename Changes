@@ -2,6 +2,23 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.0.0     2014-09-20 16:59:47 America/Sao_Paulo
+
+  The jump to version 1.0.0 signify the module is considered mature. It's
+  being used now by at least two large enterprises and no big incompatible
+  change is predicted in the near future. We'll try to adhere to the
+  Semantic Versioning (http://semver.org/) specification from non on.
+
+  [New features]
+
+  - The githooks.group option is now treated as a multi-valued option,
+    allowing one to specify groups with more than one definition.
+
+  [Documentation]
+
+  - The TUTORIAL was revised and improved, with new sections for Git server
+    and Gerrit adminitrators.
+
 0.052     2014-09-18 21:41:12 America/Sao_Paulo
 
   [New Features]
