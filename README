@@ -7,7 +7,7 @@ script and to configure them using the standard "git config" command.
 Implementing new hooks is easy too. Simple hooks can be implemented as
 a simple Perl function in the same script.
 
-Available at CPAN (http://search.cpan.org/dist/Git-Hooks/)
+Available at CPAN (https://metacpan.org/release/Git-Hooks/)
 
 ### Instalation
 
