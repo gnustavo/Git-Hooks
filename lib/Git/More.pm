@@ -144,7 +144,7 @@ sub get_commits {
     # the hooks usually don't need to check them. So, in this
     # situation we simply return an empty list of commits.
 
-    return () if $new_commit eq '0' x 40;
+    return if $new_commit eq '0' x 40;
 
     # When a new branch is created $old_commit is null (i.e.,
     # '0'x40). In this case we want all commits reachable from

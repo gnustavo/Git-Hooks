@@ -543,7 +543,7 @@ sub _load_plugins {
     my @enabled_plugins  = map {split} $git->get_config(githooks => 'plugin');
     my %disabled_plugins = map {($_ => undef)} map {split} $git->get_config(githooks => 'disable');
 
-    return () unless @enabled_plugins; # no one configured
+    return unless @enabled_plugins; # no one configured
 
     # Define the list of directories where we'll look for the hook
     # plugins. First the local directory 'githooks' under the
