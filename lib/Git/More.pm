@@ -305,8 +305,10 @@ sub set_affected_ref {
 sub _get_affected_refs_hash {
     my ($git) = @_;
 
-    return $git->{more}{affected_refs}
+    $git->{more}{affected_refs}
         or die __PACKAGE__, ": get_affected_refs(): no affected refs set\n";
+
+    return $git->{more}{affected_refs};
 }
 
 sub get_affected_refs {
