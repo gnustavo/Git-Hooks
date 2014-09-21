@@ -2,6 +2,12 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.0.1     2014-09-21 20:07:44 America/Sao_Paulo
+
+  [Fixes]
+
+  - (RT-99019) Fix warning about precedence issues.
+
 1.0.0     2014-09-20 16:59:47 America/Sao_Paulo
 
   The jump to version 1.0.0 signify the module is considered mature. It's
