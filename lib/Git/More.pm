@@ -438,11 +438,8 @@ sub error {
 
 sub get_errors {
     my ($git) = @_;
-    if (exists $git->{more}{errors}) {
-        return @{$git->{more}{errors}};
-    } else {
-        return ();
-    }
+
+    return exists $git->{more}{errors} ? @{$git->{more}{errors}} : ();
 }
 
 sub nocarp {
