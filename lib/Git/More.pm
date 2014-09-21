@@ -463,7 +463,7 @@ __END__
 
     my $config  = $git->get_config();
     my $branch  = $git->get_current_branch();
-    my $commits = $git->get_commits($oldcommit, $newcommit);
+    my @commits = $git->get_commits($oldcommit, $newcommit);
     my $message = $git->get_commit_msg('HEAD');
 
     my $files_modified_by_commit = $git->filter_files_in_index('AM');
