@@ -1,7 +1,6 @@
 use strict;
 use warnings;
 use File::Spec::Functions;
-use File::Slurp;
 
 ##{ $perl_prereq ? qq[use $perl_prereq;] : ''; ##}
 
@@ -95,7 +94,14 @@ EOF
     foreach my $inc (@inc) {
         my $git_pm = catfile($inc, 'Git.pm');
         if (-r $git_pm) {
-            write_file(catfile(qw/t GITPERLLIB/), $inc);
+            if(open my $gitperllib_fh, '>', catfile(qw/t GITPERLLIB/)) {
+               print $gitperllib_fh $inc;
+               close $gitperllib_fh;
+            }
+            else {
+               warn "Cannot open file '" . catfile(qw/t GITPERLLIB/) . "'!\n";
+               exit 0;
+            }
             warn <<"EOF";
 Hey, you're lucky. I just found it at:
 
