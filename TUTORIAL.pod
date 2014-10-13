@@ -35,35 +35,6 @@ If you invoke it from the outside though, it should die:
     $ ~/bin/githooks.pl
     fatal: Not a git repository: . at /usr/share/perl5/Git.pm line 210.
 
-=head3 The GITPERLLIB environment variable
-
-Git::Hooks uses the L<Git> module which is part of the C<git>
-installation and not at L<CPAN|http://cpan.org> yet. So, depending on
-your environment, your Perl may not find it on its standard library
-directories. In this case, you'll get an error like this when you try
-to invoke the script:
-
-    $ ~/bin/githooks.pl
-    Can't locate Git.pm in @INC (@INC contains: /opt/perl/perl5/perlbrew...
-    BEGIN failed--compilation aborted at /opt/perl/perl5/perlbrew/.../Git/More.pm line 15.
-    Compilation failed in require at /opt/perl/perl5/perlbrew/.../Git/Hooks.pm line 51.
-    BEGIN failed--compilation aborted at /opt/perl/perl5/perlbrew/.../Git/Hooks.pm line 51.
-    Compilation failed in require at /home/gustavo/bin/githooks.pl line 5.
-    BEGIN failed--compilation aborted at /home/gustavo/bin/githooks.pl line 5.
-
-This is because the C<Git.pm> module can't be found in my standard
-@INC, since I'm using a L<perlbrew|http://perlbrew.pl/> installed
-Perl. If you get the same error, define the environment variable
-C<GITPERLLIB> in a BEGIN block before the C<use Git::Hooks> line in
-the script. In Debian/Ubuntu the module is installed as
-</usr/share/perl5/Git.pm> as part of the C<git> package. So, the
-script would be like this:
-
-    #!/usr/bin/env perl
-    BEGIN { $ENV{GITPERLLIB} = '/usr/share/perl5' };
-    use Git::Hooks;
-    run_hook($0, @ARGV);
-
 =head2 User Hook Links
 
 Now you must create symbolic links under the F<.git/hooks>
@@ -222,9 +193,6 @@ repositories can be used for server repositories:
 As a Git administrator, I save it as F</usr/local/bin/githooks.pl> in my Git
 server. You may save it elsewhere in the machine your hooks will run. Just
 do not forget to make it executable!
-
-Also, read the section about L</The GITPERLLIB environment variable> to
-know what to do in case your Perl can't find the L<Git> module.
 
 =head2 Server Hook Links
 
