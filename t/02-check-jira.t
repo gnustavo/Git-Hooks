@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 24;
+use Test::More tests => 26;
 use File::Slurp;
 
 BEGIN { require "test-functions.pl" };
@@ -30,9 +30,12 @@ sub new {
 }
 
 my %issues = (
-    'GIT-1' => {key => 'GIT-1', fields => { resolution => 1,     assignee => { name => 'user'}}},
-    'GIT-2' => {key => 'GIT-2', fields => { resolution => undef, assignee => { name => 'user'}}},
-    'GIT-3' => {key => 'GIT-3', fields => { resolution => undef, assignee => { name => 'user'}}},
+    'GIT-1' => {key => 'GIT-1', fields => { resolution => 1,     assignee => { name => 'user'},
+                                            status => { name => 'Closed' }}},
+    'GIT-2' => {key => 'GIT-2', fields => { resolution => undef, assignee => { name => 'user'},
+                                            status => { name => 'Open' }}},
+    'GIT-3' => {key => 'GIT-3', fields => { resolution => undef, assignee => { name => 'user'},
+                                            status => { name => 'Taken' }}},
 );
 
 sub GET {
@@ -142,6 +145,12 @@ check_can_commit('allow commit if by-assignee [GIT-2]');
 $repo->command(config => '--unset-all', 'githooks.checkjira.by-assignee');
 
 check_can_commit('allow commit if valid issue cited [GIT-2]');
+
+$repo->command(config => '--replace-all', 'githooks.checkjira.status', 'Taken');
+check_cannot_commit('deny commit if not in valid status [GIT-2]',
+		    qr/cannot be used because it is in status/);
+check_can_commit('allow commit if in valid status [GIT-3]');
+$repo->command(config => '--unset-all', 'githooks.checkjira.status');
 
 my $codefile = catfile($T, 'codefile');
 my $code = <<'EOF';

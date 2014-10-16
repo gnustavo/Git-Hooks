@@ -156,6 +156,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
 
     my %projects    = map {($_ => undef)} $git->get_config($CFG => 'project');
     my $unresolved  = $git->get_config($CFG => 'unresolved');
+    my %status      = map {($_ => undef)} $git->get_config($CFG => 'status');
     my $by_assignee = $git->get_config($CFG => 'by-assignee');
 
     my $errors = 0;
@@ -174,6 +175,12 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
 
         if ($unresolved && defined $issue->{fields}{resolution}) {
             $git->error($PKG, "issue $key is already resolved");
+            $errors++;
+            next KEY;
+        }
+
+        if (%status && ! exists $status{$issue->{fields}{status}{name}}) {
+            $git->error($PKG, "issue $key cannot be used because it is in status '$issue->{fields}{status}{name}'");
             $errors++;
             next KEY;
         }
@@ -465,6 +472,12 @@ make the reference optional by setting this option to 0.
 By default, every issue referenced must be unresolved, i.e., it must
 not have a resolution. You can relax this requirement by setting this
 option to 0.
+
+=head2 githooks.checkjira.status STATUSNAME
+
+By default, it doesn't matter in which status the JIRA issues are. By
+setting this multi-valued option you can restrict the valid statuses for the
+issues.
 
 =head2 githooks.checkjira.by-assignee [01]
 
