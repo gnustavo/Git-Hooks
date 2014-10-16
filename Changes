@@ -2,6 +2,16 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.2.0     2014-10-16 12:03:32 America/Sao_Paulo
+
+  [New features]
+
+  - CheckJira: implement option githooks.checkjira.status.
+
+  - CheckJira: implement option githooks.checkjira.issuetype.
+
+  - CheckJira: implement option githooks.checkjira.fixversion.
+
 1.1.0     2014-10-13 13:23:37 America/Sao_Paulo (TRIAL RELEASE)
 
   [Changes]
