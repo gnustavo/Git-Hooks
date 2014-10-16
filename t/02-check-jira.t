@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 35;
+use Test::More tests => 36;
 use File::Slurp;
 
 BEGIN { require "test-functions.pl" };
@@ -200,6 +200,8 @@ check_can_commit('allow commit matching capture branch [GIT-4]');
 $repo->command(config => '--replace-all', 'githooks.checkjira.fixversion', '^refs/heads/m(aste)r $+');
 check_cannot_commit('deny commit matching not matching capture branch [GIT-4]',
 		    qr/has no fixVersion matching/);
+$repo->command(config => '--replace-all', 'githooks.checkjira.fixversion', '^refs/heads/m(aste)r ^.$+.');
+check_can_commit('allow commit matching capture branch and fixversion [GIT-4]');
 $repo->command(config => '--unset-all', 'githooks.checkjira.fixversion');
 
 my $codefile = catfile($T, 'codefile');

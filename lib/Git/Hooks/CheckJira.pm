@@ -170,6 +170,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
             next unless $ref eq $branch;
         }
         if ($version =~ /^\^/) {
+            $version =~ s/\$\+/\Q$last_paren_match\E/g if defined $last_paren_match;
             push @versions, qr/$version/;
         } else {
             $version =~ s/\$\+/$last_paren_match/g if defined $last_paren_match;
@@ -538,10 +539,12 @@ or by a regular expression starting with a caret (C<^>), which is kept as
 part of the regexp (e.g. "^1\.2").
 
 As a special feature, if BRANCH is a regular expression containing capture
-groups and if FIXVERSION is a string, then every occurrence of the substring
-C<$+> in FIXVERSION, if any, is replaced by the text matched by the last
-capture group in BRANCH. (Hint: Perl's C<$+> variable is defined as "The
-text matched by the last bracket of the last successful search pattern.")
+groups, then every occurrence of the substring C<$+> in FIXVERSION, if any,
+is replaced by the text matched by the last capture group in BRANCH. (Hint:
+Perl's C<$+> variable is defined as "The text matched by the last bracket of
+the last successful search pattern.") If FIXVERSION is also a regular
+expression, the C<$+> are replaced by the text properly escaped so that it
+matches literally.
 
 Commits that do not affect any BRANCH are accepted by default.
 
@@ -549,7 +552,7 @@ So, suppose you have this configuration:
 
   [githooks "checkjira"]
     fixversion = refs/heads/master          future
-    fixversion = ^refs/heads/(\d+\.\d+)\.   $+
+    fixversion = ^refs/heads/(\d+\.\d+)\.   ^$+
 
 Then, commits affecting the C<master> branch must cite issues assigned to
 the C<future> version. Also, commits affecting any branch which name begins
