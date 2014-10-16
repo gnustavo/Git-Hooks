@@ -157,6 +157,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
     my %projects    = map {($_ => undef)} $git->get_config($CFG => 'project');
     my $unresolved  = $git->get_config($CFG => 'unresolved');
     my %status      = map {($_ => undef)} $git->get_config($CFG => 'status');
+    my %issuetype   = map {($_ => undef)} $git->get_config($CFG => 'issuetype');
     my $by_assignee = $git->get_config($CFG => 'by-assignee');
 
     my $errors = 0;
@@ -181,6 +182,12 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
 
         if (%status && ! exists $status{$issue->{fields}{status}{name}}) {
             $git->error($PKG, "issue $key cannot be used because it is in status '$issue->{fields}{status}{name}'");
+            $errors++;
+            next KEY;
+        }
+
+        if (%issuetype && ! exists $issuetype{$issue->{fields}{issuetype}{name}}) {
+            $git->error($PKG, "issue $key cannot be used because it is of type '$issue->{fields}{issuetype}{name}'");
             $errors++;
             next KEY;
         }
@@ -478,6 +485,11 @@ option to 0.
 By default, it doesn't matter in which status the JIRA issues are. By
 setting this multi-valued option you can restrict the valid statuses for the
 issues.
+
+=head2 githooks.checkjira.issuetype ISSUETYPENAME
+
+By default, it doesn't matter what type of JIRA issues are cited. By setting
+this multi-valued option you can restrict the valid issue types.
 
 =head2 githooks.checkjira.by-assignee [01]
 

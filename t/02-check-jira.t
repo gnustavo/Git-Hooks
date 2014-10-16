@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 26;
+use Test::More tests => 28;
 use File::Slurp;
 
 BEGIN { require "test-functions.pl" };
@@ -31,10 +31,13 @@ sub new {
 
 my %issues = (
     'GIT-1' => {key => 'GIT-1', fields => { resolution => 1,     assignee => { name => 'user'},
+                                            issuetype => { name => 'Task' },
                                             status => { name => 'Closed' }}},
     'GIT-2' => {key => 'GIT-2', fields => { resolution => undef, assignee => { name => 'user'},
+                                            issuetype => { name => 'Bug' },
                                             status => { name => 'Open' }}},
     'GIT-3' => {key => 'GIT-3', fields => { resolution => undef, assignee => { name => 'user'},
+                                            issuetype => { name => 'Improvement' },
                                             status => { name => 'Taken' }}},
 );
 
@@ -151,6 +154,12 @@ check_cannot_commit('deny commit if not in valid status [GIT-2]',
 		    qr/cannot be used because it is in status/);
 check_can_commit('allow commit if in valid status [GIT-3]');
 $repo->command(config => '--unset-all', 'githooks.checkjira.status');
+
+$repo->command(config => '--replace-all', 'githooks.checkjira.issuetype', 'Bug');
+check_cannot_commit('deny commit if not with valid type [GIT-3]',
+		    qr/cannot be used because it is of type/);
+check_can_commit('allow commit if with valid type [GIT-2]');
+$repo->command(config => '--unset-all', 'githooks.checkjira.issuetype');
 
 my $codefile = catfile($T, 'codefile');
 my $code = <<'EOF';
