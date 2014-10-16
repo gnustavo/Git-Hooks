@@ -159,6 +159,23 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
     my %status      = map {($_ => undef)} $git->get_config($CFG => 'status');
     my %issuetype   = map {($_ => undef)} $git->get_config($CFG => 'issuetype');
     my $by_assignee = $git->get_config($CFG => 'by-assignee');
+    my @versions;
+    foreach ($git->get_config($CFG => 'fixversion')) {
+        my ($branch, $version) = split ' ', $_, 2;
+        my $last_paren_match;
+        if ($branch =~ /^\^/) {
+            next unless $ref =~ qr/$branch/;
+            $last_paren_match = $+;
+        } else {
+            next unless $ref eq $branch;
+        }
+        if ($version =~ /^\^/) {
+            push @versions, qr/$version/;
+        } else {
+            $version =~ s/\$\+/$last_paren_match/g if defined $last_paren_match;
+            push @versions, $version;
+        }
+    }
 
     my $errors = 0;
 
@@ -188,6 +205,20 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
 
         if (%issuetype && ! exists $issuetype{$issue->{fields}{issuetype}{name}}) {
             $git->error($PKG, "issue $key cannot be used because it is of type '$issue->{fields}{issuetype}{name}'");
+            $errors++;
+            next KEY;
+        }
+
+      VERSION:
+        foreach my $version (@versions) {
+            foreach my $fixversion (@{$issue->{fields}{fixVersions}}) {
+                if (ref $version) {
+                    next VERSION if $fixversion->{name} =~ $version;
+                } else {
+                    next VERSION if $fixversion->{name} eq $version;
+                }
+            }
+            $git->error($PKG, "issue $key has no fixVersion matching '$version', which is required for commits affecting '$ref'");
             $errors++;
             next KEY;
         }
@@ -490,6 +521,40 @@ issues.
 
 By default, it doesn't matter what type of JIRA issues are cited. By setting
 this multi-valued option you can restrict the valid issue types.
+
+=head2 githooks.checkjira.fixversion BRANCH FIXVERSION
+
+This multi-valued option allows you to specify that commits affecting BRANCH
+must cite only issues that have their C<Fix For Version> field matching
+FIXVERSION. This may be useful if you have release branches associated with
+particular JIRA versions.
+
+BRANCH can be specified as a complete ref name (e.g. "refs/heads/master") or
+by a regular expression starting with a caret (C<^>), which is kept as part
+of the regexp (e.g. "^refs/heads/(master|fix)").
+
+FIXVERSION can be specified as a complete JIRA version name (e.g. "1.2.3")
+or by a regular expression starting with a caret (C<^>), which is kept as
+part of the regexp (e.g. "^1\.2").
+
+As a special feature, if BRANCH is a regular expression containing capture
+groups and if FIXVERSION is a string, then every occurrence of the substring
+C<$+> in FIXVERSION, if any, is replaced by the text matched by the last
+capture group in BRANCH. (Hint: Perl's C<$+> variable is defined as "The
+text matched by the last bracket of the last successful search pattern.")
+
+Commits that do not affect any BRANCH are accepted by default.
+
+So, suppose you have this configuration:
+
+  [githooks "checkjira"]
+    fixversion = refs/heads/master          future
+    fixversion = ^refs/heads/(\d+\.\d+)\.   $+
+
+Then, commits affecting the C<master> branch must cite issues assigned to
+the C<future> version. Also, commits affecting any branch which name begins
+with a version number (e.g. C<1.0.3>) be assinged to the corresponding JIRA
+version (e.g. C<1.0>).
 
 =head2 githooks.checkjira.by-assignee [01]
 
