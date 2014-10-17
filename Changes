@@ -2,6 +2,16 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.2.1     2014-10-17 15:47:34 America/Sao_Paulo
+
+  [Fixes]
+
+  - CheckJira: interpolate $+ into regexp fixversions too.
+
+  - CheckFile: fix patchset-created hook.
+
+  - Fix locale setting during tests.
+
 1.2.0     2014-10-16 12:03:32 America/Sao_Paulo
 
   [New features]
