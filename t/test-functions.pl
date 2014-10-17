@@ -12,7 +12,7 @@ use Git::More;
 use Error qw':try';
 
 # Make sure the git messages come in English.
-$ENV{LC_MESSAGES} = 'C';
+$ENV{LC_ALL} = 'C';
 
 # It's better to perform all tests in a temporary directory because
 # otherwise the author runs the risk of messing with its local
