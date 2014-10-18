@@ -59,12 +59,12 @@ sub check_new_files {
                 $command =~ s/\{\}/\'$file\'/g;
                 my $message = do {
                     if ($exit == -1) {
-                        "'$command' failed to execute: $!";
+                        "command '$command' could not be executed: $!";
                     } elsif ($exit & 127) {
-                        sprintf("'%s' died with signal %d, %s coredump",
+                        sprintf("command '%s' was killed by signal %d, %s coredump",
                                 $command, ($exit & 127), ($exit & 128) ? 'with' : 'without');
                     } else {
-                        sprintf("'%s' failed (exit = %d)", $command, $exit >> 8);
+                        sprintf("command '%s' failed with exit code %d", $command, $exit >> 8);
                     }
                 };
                 $git->error($PKG, $message, $output);

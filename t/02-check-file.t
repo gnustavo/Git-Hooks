@@ -89,13 +89,13 @@ check_can_commit('commit hit/pass', 'file.txt');
 
 $repo->command(config => '--replace-all', "githooks.checkfile.name", '*.txt false');
 
-check_cannot_commit('commit hit/fail', qr/failed \(exit/, 'file.txt');
+check_cannot_commit('commit hit/fail', qr/failed with exit code/, 'file.txt');
 
 $repo->command(config => '--replace-all', "githooks.checkfile.name", 'qr/\.txt$/ false');
 
-check_cannot_commit('commit hit/regexp', qr/failed \(exit/, 'file.txt');
+check_cannot_commit('commit hit/regexp', qr/failed with exit code/, 'file.txt');
 
-check_cannot_commit('commit add hit', qr/failed \(exit/, 'file2.txt');
+check_cannot_commit('commit add hit', qr/failed with exit code/, 'file2.txt');
 
 $repo->command(config => '--replace-all', "githooks.checkfile.name", '*.txt test -f {} && true');
 
@@ -115,4 +115,4 @@ check_can_push('commit hit/pass', 'file.txt');
 
 $clone->command(config => '--replace-all', "githooks.checkfile.name", '*.txt false');
 
-check_cannot_push('commit hit/fail', qr/failed \(exit/, 'file.txt');
+check_cannot_push('commit hit/fail', qr/failed with exit code/, 'file.txt');
