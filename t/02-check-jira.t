@@ -174,13 +174,13 @@ check_can_commit('allow commit if valid issue cited [GIT-2]');
 
 $repo->command(config => '--replace-all', 'githooks.checkjira.status', 'Taken');
 check_cannot_commit('deny commit if not in valid status [GIT-2]',
-		    qr/cannot be used because it is in status/);
+		    qr/cannot be used because it is in the unapproved status/);
 check_can_commit('allow commit if in valid status [GIT-3]');
 $repo->command(config => '--unset-all', 'githooks.checkjira.status');
 
 $repo->command(config => '--replace-all', 'githooks.checkjira.issuetype', 'Bug');
 check_cannot_commit('deny commit if not with valid type [GIT-3]',
-		    qr/cannot be used because it is of type/);
+		    qr/cannot be used because it is of the unapproved type/);
 check_can_commit('allow commit if with valid type [GIT-2]');
 $repo->command(config => '--unset-all', 'githooks.checkjira.issuetype');
 

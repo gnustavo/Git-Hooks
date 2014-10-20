@@ -192,20 +192,20 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
             or $errors++
                 and next KEY;
 
-        if ($unresolved && defined $issue->{fields}{resolution}) {
-            $git->error($PKG, "issue $key is already resolved");
+        if (%issuetype && ! exists $issuetype{$issue->{fields}{issuetype}{name}}) {
+            $git->error($PKG, "issue $key cannot be used because it is of the unapproved type '$issue->{fields}{issuetype}{name}'");
             $errors++;
             next KEY;
         }
 
         if (%status && ! exists $status{$issue->{fields}{status}{name}}) {
-            $git->error($PKG, "issue $key cannot be used because it is in status '$issue->{fields}{status}{name}'");
+            $git->error($PKG, "issue $key cannot be used because it is in the unapproved status '$issue->{fields}{status}{name}'");
             $errors++;
             next KEY;
         }
 
-        if (%issuetype && ! exists $issuetype{$issue->{fields}{issuetype}{name}}) {
-            $git->error($PKG, "issue $key cannot be used because it is of type '$issue->{fields}{issuetype}{name}'");
+        if ($unresolved && defined $issue->{fields}{resolution}) {
+            $git->error($PKG, "issue $key cannot be used because it is already resolved");
             $errors++;
             next KEY;
         }
