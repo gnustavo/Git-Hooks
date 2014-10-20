@@ -49,7 +49,8 @@ sub check_new_files {
                     and next;
 
             # interpolate filename in $command
-            (my $cmd = $command) =~ s/\{\}/"'" . $tmp->filename() . "'"/eg;
+            my $tmpfile = $tmp->filename;
+            (my $cmd = $command) =~ s/\{\}/\'$tmpfile\'/g;
 
             # execute command and update $errors
             my $saved_output = redirect_output();
@@ -67,6 +68,11 @@ sub check_new_files {
                         sprintf("command '%s' failed with exit code %d", $command, $exit >> 8);
                     }
                 };
+
+                # Replace any instance of the $tmpfile name in the output by
+                # $file to avoid confounding the user.
+                $output =~ s/\Q$tmpfile\E/$file/g;
+
                 $git->error($PKG, $message, $output);
                 ++$errors;
             } else {
