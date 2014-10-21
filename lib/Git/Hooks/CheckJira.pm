@@ -268,7 +268,14 @@ sub check_patchset {
     my $sha1   = $opts->{'--commit'};
     my $commit = $git->get_commit($sha1);
 
-    return check_commit_msg($git, $commit, $opts->{'--branch'});
+    # The --branch argument contains the branch short-name if it's in the
+    # refs/heads/ namespace. But we need to always use the branch long-name,
+    # so we change it here.
+    my $branch = $opts->{'--branch'};
+    $branch = "refs/heads/$branch"
+        unless $branch =~ m:^refs/:;
+
+    return check_commit_msg($git, $commit, $branch);
 }
 
 sub check_message_file {

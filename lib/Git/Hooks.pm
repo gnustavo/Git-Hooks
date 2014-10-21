@@ -438,7 +438,15 @@ sub _prepare_gerrit_ref_update {
     my ($git, $args) = @_;
 
     _prepare_gerrit_args($git, $args);
-    $git->set_affected_ref(@{$args->[0]}{qw/--refname --oldrev --newrev/});
+
+    # The --refname argument contains the branch short-name if it's in the
+    # refs/heads/ namespace. But we need to always use the branch long-name,
+    # so we change it here.
+    my $refname = $args->[0]{'--refname'};
+    $refname = "refs/heads/$refname"
+        unless $refname =~ m:^refs/:;
+
+    $git->set_affected_ref($refname, @{$args->[0]}{qw/--oldrev --newrev/});
     return;
 }
 
