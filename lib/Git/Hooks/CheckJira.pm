@@ -193,13 +193,23 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
                 and next KEY;
 
         if (%issuetype && ! exists $issuetype{$issue->{fields}{issuetype}{name}}) {
-            $git->error($PKG, "issue $key cannot be used because it is of the unapproved type '$issue->{fields}{issuetype}{name}'");
+            my @issuetypes = sort keys %issuetype;
+            $git->error(
+                $PKG,
+                "issue $key cannot be used because it is of the unapproved type '$issue->{fields}{issuetype}{name}'",
+                "You can use the following issue types: @issuetypes",
+            );
             $errors++;
             next KEY;
         }
 
         if (%status && ! exists $status{$issue->{fields}{status}{name}}) {
-            $git->error($PKG, "issue $key cannot be used because it is in the unapproved status '$issue->{fields}{status}{name}'");
+            my @statuses = sort keys %status;
+            $git->error(
+                $PKG,
+                "issue $key cannot be used because it is in the unapproved status '$issue->{fields}{status}{name}'",
+                "The following statuses are approved: @statuses",
+            );
             $errors++;
             next KEY;
         }
