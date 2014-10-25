@@ -1,33 +1,13 @@
 ### Git::Hooks - Framework for implementing Git (and Gerrit) hooks
 
-You can install this using in the usual Perl fashion
+Git hooks are programs installed in Git repositories so that Git invokes
+them during the execution of some operations in order to augment Git's
+functionality.
 
-    perl Makefile.PL
-    make
-    make test
-    make install
+Git::Hooks is a framework to make it easier to implement Git hooks.
 
-Or, if you have a Perl packager installed
-
-    # with cpanm
-    cpanm Git::Hooks
-
-    # with CPAN
-    cpan Git::Hooks
-
-The documentation is in the module file.  Once you install
-the file, you can read it with perldoc.
-
-    perldoc Git::Hooks
-
-If you want to read it before you install it, you can use
-perldoc directly on the module file.
-
-    perldoc lib/Git/Hooks.pm
-
-This module is also in Github
-
-    http://github.com/gnustavo/git-hooks
+Please, read the INSTALL file to know how to install it and how to read its
+documentation.
 
 ### Copyright & Licensing
 
