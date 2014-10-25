@@ -2,6 +2,31 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.3.0     2014-10-25 19:22:42 America/Sao_Paulo
+
+  [New features]
+
+  - The global variable $Git::More::CONFIG_ENCODING tells get_config which
+    encoding is used in Git's configuration files so that it can decode them
+    appropriately. This is necessary if your config files contain non-ASCII
+    characters.
+
+  [Changes]
+
+  - CheckFile: replace temporary filenames with the real filenames in the
+  error messages to make it consistent with the command line shown.
+
+  - CheckJira: re-order the checks so that it goes from the more general to
+    the more specific, e.g.: issuetype > status > unresolved.
+
+  - CheckJira: tell the user which issuetypes and statuses are approved when
+    an issue doesn't pass a check.
+
+  [Fixes]
+
+  - Normalize branch names gotten from Gerrit so that we can properly detect
+    which branches have been affected by git pushes.
+
 1.2.1     2014-10-17 15:47:34 America/Sao_Paulo
 
   [Fixes]
