@@ -292,7 +292,7 @@ Using include files you can manage complex configurations more easily.
 Gerrit is a Git server but since it uses L<JGit|http://eclipse.org/jgit/>
 instead of standard Git, it doesn't support the standard Git hooks. It
 supports its L<own
-hooks|https://gerrit-documentation.storage.googleapis.com/Documentation/2.9.1/config-hooks.html>
+hooks|https://gerrit-review.googlesource.com/Documentation/config-hooks.html>
 instead.
 
 Git::Hooks supports just three of the many Gerrit hooks so far:
@@ -303,11 +303,11 @@ Gerrit's revision process takes place before the commits are integrated,
 it's more useful to enable just the other two.
 
 First, you have to create the same driver script as L<described for the
-server|/Server Driver Script>. There is a catch though. Usually, Gerrit
-undefines the C<HOME> environment variable when it runs, so that when we
-invoke the C<git> command inside one of our hooks it won't be able to read
-the global configuration file F<~/.gitconfig>. So, you should define HOME in
-the script like this (obviously, using the correct value in the assignment):
+server|/Server Driver Script>. There is a catch though. Gerrit undefines the
+C<HOME> environment variable when it runs, so that when we invoke the C<git>
+command inside one of our hooks it won't be able to read the global
+configuration file F<~/.gitconfig>. So, you should define HOME in the script
+like this (obviously, using the correct value in the assignment):
 
     #!/usr/bin/env perl
     BEGIN { $ENV{HOME} = '/home/gerrit' }
@@ -326,12 +326,14 @@ directory. Create it and the two symlinks like so:
     $ ln -s /usr/local/bin/githooks.pl patchset-created
     $ ln -s /usr/local/bin/githooks.pl draft-published
 
-The C<patchset-created> hook is invoked when you push a non-draft patchset
-to Gerrit for revision. The C<draft-published> hook is invoked when you
-publish a draft-patchset. Both hooks run asynchronously so that they can't
-reject the push. Instead, they review the patchset as a normal reviewer,
-casting a positive or negative vote, depending on the result of the checks
-made by the enabled plugins.
+The C<patchset-created> hook is invoked when you push a patchset to Gerrit
+for revision, but Git::Hooks only enable it for non-draft patchsets, because
+draft patchsets can only be reviewed by their onwners and invited
+reviewers. The C<draft-published> hook is invoked when you publish a
+draft-patchset. Both hooks run asynchronously so that they can't reject the
+push. Instead, they review the patchset as a normal reviewer would, casting
+a positive or negative vote, depending on the result of the checks made by
+the enabled plugins.
 
 All the (standard) Git::Hooks plugins that attach to the C<pre-receive> and
 C<update> hooks also attach themselves to both the C<patchset-created> and
@@ -354,7 +356,7 @@ connect to Gerrit and with which user's credentials. This is the user that
 will appear to be making comments and reviewing the patchsets.
 
 Then you have to tell Git::Hooks how it should vote. First, you tell which
-C<label> it should vote in. By default it votes in the C<Core-Review>
+C<label> it should vote in. By default it votes in the C<Code-Review>
 label. In the example above I've changed it to vote in the C<Verification>
 label instead.
 
