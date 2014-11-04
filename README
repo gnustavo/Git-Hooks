@@ -1,21 +1,13 @@
 ### Git::Hooks - Framework for implementing Git (and Gerrit) hooks
 
-Git::Hooks comes with plugins implementing several hooks that you can
-use with Git and Gerrit. To use them you just need a single three-line
-script and to configure them using the standard "git config" command.
+Git hooks are programs installed in Git repositories so that Git invokes
+them during the execution of some operations in order to augment Git's
+functionality.
 
-Implementing new hooks is easy too. Simple hooks can be implemented as
-a simple Perl function in the same script.
+Git::Hooks is a framework to make it easier to implement Git hooks.
 
-Available at CPAN (https://metacpan.org/release/Git-Hooks/)
-
-### Instalation
-
-    # with CPAN
-    $ cpan Git::Hooks
-
-    # with cpanm
-    $ cpanm Git::Hooks
+Please, read the INSTALL file to know how to install it and how to read its
+documentation.
 
 ### Copyright & Licensing
 

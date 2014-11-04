@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 24;
+use Test::More tests => 36;
 use File::Slurp;
 
 BEGIN { require "test-functions.pl" };
@@ -30,9 +30,38 @@ sub new {
 }
 
 my %issues = (
-    'GIT-1' => {key => 'GIT-1', fields => { resolution => 1,     assignee => { name => 'user'}}},
-    'GIT-2' => {key => 'GIT-2', fields => { resolution => undef, assignee => { name => 'user'}}},
-    'GIT-3' => {key => 'GIT-3', fields => { resolution => undef, assignee => { name => 'user'}}},
+    'GIT-1' => {key => 'GIT-1',
+                fields => {
+                  resolution => 1,
+                  assignee => { name => 'user'},
+                  issuetype => { name => 'Task' },
+                  status => { name => 'Closed' },
+                  fixVersions => [],
+               }},
+    'GIT-2' => {key => 'GIT-2',
+                fields => {
+                  resolution => undef,
+                  assignee => { name => 'user'},
+                  issuetype => { name => 'Bug' },
+                  status => { name => 'Open' },
+                  fixVersions => [{name => '1.2.3'}],
+               }},
+    'GIT-3' => {key => 'GIT-3',
+                fields => {
+                  resolution => undef,
+                  assignee => { name => 'user'},
+                  issuetype => { name => 'Improvement' },
+                  status => { name => 'Taken' },
+                  fixVersions => [{name => '1.2.3'}, {name => '1.2'}],
+               }},
+    'GIT-4' => {key => 'GIT-3',
+                fields => {
+                  resolution => undef,
+                  assignee => { name => 'user'},
+                  issuetype => { name => 'Improvement' },
+                  status => { name => 'Taken' },
+                  fixVersions => [{name => 'master'}],
+               }},
 );
 
 sub GET {
@@ -142,6 +171,38 @@ check_can_commit('allow commit if by-assignee [GIT-2]');
 $repo->command(config => '--unset-all', 'githooks.checkjira.by-assignee');
 
 check_can_commit('allow commit if valid issue cited [GIT-2]');
+
+$repo->command(config => '--replace-all', 'githooks.checkjira.status', 'Taken');
+check_cannot_commit('deny commit if not in valid status [GIT-2]',
+		    qr/cannot be used because it is in the unapproved status/);
+check_can_commit('allow commit if in valid status [GIT-3]');
+$repo->command(config => '--unset-all', 'githooks.checkjira.status');
+
+$repo->command(config => '--replace-all', 'githooks.checkjira.issuetype', 'Bug');
+check_cannot_commit('deny commit if not with valid type [GIT-3]',
+		    qr/cannot be used because it is of the unapproved type/);
+check_can_commit('allow commit if with valid type [GIT-2]');
+$repo->command(config => '--unset-all', 'githooks.checkjira.issuetype');
+
+$repo->command(config => '--replace-all', 'githooks.checkjira.fixversion', 'refs/heads/xpto 1.2');
+check_can_commit('allow commit with fixversion if do not match branch [GIT-2]');
+$repo->command(config => '--replace-all', 'githooks.checkjira.fixversion', 'refs/heads/master 1.2');
+check_cannot_commit('deny commit matching branch but not version [GIT-2]',
+		    qr/has no fixVersion matching/);
+check_can_commit('allow commit matching branch and version [GIT-3]');
+$repo->command(config => '--replace-all', 'githooks.checkjira.fixversion', '^.+/master ^1.2');
+check_can_commit('allow commit matching branch and version [GIT-2]');
+$repo->command(config => '--replace-all', 'githooks.checkjira.fixversion', '^.+/(master) ^1.2$');
+check_cannot_commit('deny commit matching branch but not regexp version [GIT-2]',
+		    qr/has no fixVersion matching/);
+$repo->command(config => '--replace-all', 'githooks.checkjira.fixversion', '^refs/heads/m(aste)r m$+r');
+check_can_commit('allow commit matching capture branch [GIT-4]');
+$repo->command(config => '--replace-all', 'githooks.checkjira.fixversion', '^refs/heads/m(aste)r $+');
+check_cannot_commit('deny commit matching not matching capture branch [GIT-4]',
+		    qr/has no fixVersion matching/);
+$repo->command(config => '--replace-all', 'githooks.checkjira.fixversion', '^refs/heads/m(aste)r ^.$+.');
+check_can_commit('allow commit matching capture branch and fixversion [GIT-4]');
+$repo->command(config => '--unset-all', 'githooks.checkjira.fixversion');
 
 my $codefile = catfile($T, 'codefile');
 my $code = <<'EOF';

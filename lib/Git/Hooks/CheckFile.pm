@@ -49,7 +49,8 @@ sub check_new_files {
                     and next;
 
             # interpolate filename in $command
-            (my $cmd = $command) =~ s/\{\}/"'" . $tmp->filename() . "'"/eg;
+            my $tmpfile = $tmp->filename;
+            (my $cmd = $command) =~ s/\{\}/\'$tmpfile\'/g;
 
             # execute command and update $errors
             my $saved_output = redirect_output();
@@ -59,14 +60,19 @@ sub check_new_files {
                 $command =~ s/\{\}/\'$file\'/g;
                 my $message = do {
                     if ($exit == -1) {
-                        "'$command' failed to execute: $!";
+                        "command '$command' could not be executed: $!";
                     } elsif ($exit & 127) {
-                        sprintf("'%s' died with signal %d, %s coredump",
+                        sprintf("command '%s' was killed by signal %d, %s coredump",
                                 $command, ($exit & 127), ($exit & 128) ? 'with' : 'without');
                     } else {
-                        sprintf("'%s' failed (exit = %d)", $command, $exit >> 8);
+                        sprintf("command '%s' failed with exit code %d", $command, $exit >> 8);
                     }
                 };
+
+                # Replace any instance of the $tmpfile name in the output by
+                # $file to avoid confounding the user.
+                $output =~ s/\Q$tmpfile\E/$file/g;
+
                 $git->error($PKG, $message, $output);
                 ++$errors;
             } else {
@@ -107,7 +113,7 @@ sub check_patchset {
 
     return 1 if im_admin($git);
 
-    return check_new_files($git, ':0', $git->filter_files_in_commit('AM', $opts->{'--commit'}));
+    return check_new_files($git, $opts->{'--commit'}, $git->filter_files_in_commit('AM', $opts->{'--commit'}));
 }
 
 # Install hooks

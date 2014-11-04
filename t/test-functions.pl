@@ -8,24 +8,11 @@ use File::Spec::Functions qw/catdir catfile/;
 use File::Temp 'tempdir';
 use File::pushd;
 use URI::file;
-
-# The distribution's Makefile.PL might have created a GITPERLLIB file
-# inside the test directory if it detected that we can't find Git with
-# the default @INC.
-
-BEGIN {
-    if (my $gitperllib = read_file(catfile(qw/t GITPERLLIB/), err_mode => 'quiet')) {
-        chomp($ENV{GITPERLLIB} = $gitperllib);
-    }
-    eval { require Git::More }
-      or BAIL_OUT("Can't require Git::More: $@");
-};
-
-# use Error after Git::More to use the same module distributed along with Git
+use Git::More;
 use Error qw':try';
 
 # Make sure the git messages come in English.
-$ENV{LC_MESSAGES} = 'C';
+$ENV{LC_ALL} = 'C';
 
 # It's better to perform all tests in a temporary directory because
 # otherwise the author runs the risk of messing with its local
@@ -78,10 +65,6 @@ EOF
 		say $fh "use lib '$path';" if $path;
 	    }
 	}
-
-        if (my $gitperllib = $ENV{GITPERLLIB}) {
-            say $fh "BEGIN { \$ENV{GITPERLLIB} = '$ENV{GITPERLLIB}' };";
-        }
 
 	print $fh <<EOF;
 use Git::Hooks;

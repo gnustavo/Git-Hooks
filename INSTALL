@@ -1,0 +1,45 @@
+Git::Hooks is managed with Dist::Zilla, so that you can't install it
+directly from the repository. Instead, you must download a package from CPAN
+(https://metacpan.org/release/Git-Hooks) in order to install it the usual
+Perl fashion:
+
+    perl Makefile.PL
+    make
+    make test
+    make install
+
+A Perl packager can do everything automatically for you:
+
+    # with cpanm
+    cpanm Git::Hooks
+
+    # with CPAN
+    cpan Git::Hooks
+
+It's possible to use it directly from the Git repository, like so:
+
+    #!/usr/bin/env perl
+    use lib '/path/to/git/Git-Hooks/lib';
+    use Git::Hooks;
+    run_hooks($0, @ARGV);
+
+The documentation is in the module file.  Once you install the file, you can
+read it with perldoc.
+
+    perldoc Git::Hooks
+
+If you want to read it before you install it, you can use perldoc directly
+on the module file.
+
+    perldoc lib/Git/Hooks.pm
+
+This module is also in Github
+
+    http://github.com/gnustavo/git-hooks
+
+### Copyright & Licensing
+
+Copyright (c) 2012-2014 by CPqD (http://www.cpqd.com.br/)
+
+This is free software; you can redistribute it and/or modify it under the
+same terms as the Perl 5 programming language system itself.

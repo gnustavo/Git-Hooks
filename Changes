@@ -2,6 +2,67 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.3.0     2014-10-25 19:22:42 America/Sao_Paulo
+
+  [New features]
+
+  - The global variable $Git::More::CONFIG_ENCODING tells get_config which
+    encoding is used in Git's configuration files so that it can decode them
+    appropriately. This is necessary if your config files contain non-ASCII
+    characters.
+
+  [Changes]
+
+  - CheckFile: replace temporary filenames with the real filenames in the
+  error messages to make it consistent with the command line shown.
+
+  - CheckJira: re-order the checks so that it goes from the more general to
+    the more specific, e.g.: issuetype > status > unresolved.
+
+  - CheckJira: tell the user which issuetypes and statuses are approved when
+    an issue doesn't pass a check.
+
+  [Fixes]
+
+  - Normalize branch names gotten from Gerrit so that we can properly detect
+    which branches have been affected by git pushes.
+
+1.2.1     2014-10-17 15:47:34 America/Sao_Paulo
+
+  [Fixes]
+
+  - CheckJira: interpolate $+ into regexp fixversions too.
+
+  - CheckFile: fix patchset-created hook.
+
+  - Fix locale setting during tests.
+
+1.2.0     2014-10-16 12:03:32 America/Sao_Paulo
+
+  [New features]
+
+  - CheckJira: implement option githooks.checkjira.status.
+
+  - CheckJira: implement option githooks.checkjira.issuetype.
+
+  - CheckJira: implement option githooks.checkjira.fixversion.
+
+1.1.0     2014-10-13 13:23:37 America/Sao_Paulo (TRIAL RELEASE)
+
+  [Changes]
+
+  - Use the CPAN distribution of the Git module instead of the Git.pm that
+  comes with the git package. This makes Git::Hooks properly dependent of
+  Git, which also means that the GITPERLLIB environment variable isn't
+  needed anymore. (Many thanks to Mike South for taking care of the Git
+  module maintenance.)
+
+1.0.2     2014-10-02 08:52:36 America/Sao_Paulo
+
+  [Fixes]
+
+  - (PR#5) Remove the need to use File::Slurp in Makefile.PL.
+
 1.0.1     2014-09-21 20:07:44 America/Sao_Paulo
 
   [Fixes]
