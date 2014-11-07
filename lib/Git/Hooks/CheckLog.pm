@@ -177,6 +177,15 @@ sub check_body {
     return 1;
 }
 
+sub message_on_failure {
+    my ($git) = @_;
+
+    my $msg = $git->get_config($CFG => 'message-on-failure');
+    defined $msg && $git->error($PKG, $msg);
+
+    return 1;
+}
+
 sub check_message {
     my ($git, $commit, $msg) = @_;
 
@@ -195,6 +204,8 @@ sub check_message {
     check_title($git, $id, $cmsg->title) or $errors++;
 
     check_body($git, $id, $cmsg->body) or $errors++;
+
+    if($errors) { message_on_failure($git); } 
 
     return $errors == 0;
 }
@@ -406,6 +417,12 @@ defaults to C<utf-8>.
 When this plugin is used in the C<commit-msg> hook, the message file
 is read and its contents are checked against the encoding specified by
 this option.
+
+=head2 githooks.checklog.message-on-failure
+
+If there are any errors, then the contents of this option will be
+displayed after the other errors. It can contain e.g. instructions
+to the user on the commit restrictions.
 
 =head1 EXPORTS
 
