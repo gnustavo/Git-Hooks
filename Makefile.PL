@@ -119,8 +119,6 @@ EOF
     exit 0 unless $found;
 }
 
-=======
->>>>>>> 851a4d1be2db884f284fc7486f67659178606dab
 use ExtUtils::MakeMaker ##{ $eumm_version ##};
 
 ##{ $share_dir_code{preamble} || '' ##}
