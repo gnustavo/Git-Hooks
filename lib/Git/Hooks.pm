@@ -8,6 +8,8 @@ use Exporter qw/import/;
 use Data::Util qw(:all);
 use File::Slurp;
 use File::Temp qw/tempfile/;
+use File::Path qw/make_path/;
+use FileHandle;
 use File::Basename;
 use File::Spec::Functions;
 use List::MoreUtils qw/uniq/;
@@ -186,9 +188,21 @@ sub file_temp {
 
     my $blob = "$rev:$file";
 
+    my ($dummy1,$directories,$dummy2) = File::Spec->splitpath( $file );
+    my $tmpfilepath;
     unless (exists $cache->{$blob}) {
         # create temporary file and copy contents to it
-        my $tmp = File::Temp->new(@args);
+        my $tmpdir;
+        if(defined $cache->{'tmpdir'}) {
+            $tmpdir = $cache->{'tmpdir'};
+        }
+        else {
+            $tmpdir = File::Temp->newdir(@args);
+        }
+        my $dirpath = File::Spec->catdir($tmpdir->dirname, $directories);
+        File::Path::make_path($dirpath);
+        $tmpfilepath = File::Spec->catdir($tmpdir->dirname, $file);
+        my $tmp = FileHandle->new(">" . $tmpfilepath);
         my ($pipe, $ctx) = $git->command_output_pipe(qw/cat-file blob/, $blob);
         my $read;
         while ($read = sysread $pipe, my $buffer, 64 * 1024) {
@@ -197,7 +211,7 @@ sub file_temp {
             while ($length) {
                 my $written = syswrite $tmp, $buffer, $length, $offset;
                 defined $written
-                    or $git->error(__PACKAGE__, "Internal error: can't write to '$tmp->filename()': $!")
+                    or $git->error(__PACKAGE__, "Internal error: can't write to '$tmpfilepath': $!")
                         and return;
                 $length -= $written;
                 $offset += $written;
@@ -209,9 +223,10 @@ sub file_temp {
         $git->command_close_pipe($pipe, $ctx);
         $tmp->close();
         $cache->{$blob} = $tmp;
+        $cache->{'tmpdir'} = $tmpdir;
     }
 
-    return $cache->{$blob};
+    return $cache->{$blob}, $tmpfilepath;
 }
 
 sub grok_groups_spec {
