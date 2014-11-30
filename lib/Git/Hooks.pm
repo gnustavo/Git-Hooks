@@ -33,7 +33,8 @@ BEGIN {                ## no critic (Subroutines::RequireArgUnpacking)
             __PACKAGE__,
             $installer => sub (&) {
                 my ($foo) = @_;
-                $Hooks{$hook}{$foo} ||= sub { $foo->(@_); };
+                my ($package) = get_code_info($foo);
+                $Hooks{$hook}{$foo} ||= [ $package, sub { $foo->(@_); } ];
             }
         );
     }
@@ -619,11 +620,20 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
     _load_plugins($git);
 
     # Call every hook function installed by the hook scripts before.
-    foreach my $hook (values %{$Hooks{$hook_name}}) {
+    foreach my $hook_def (values %{$Hooks{$hook_name}}) {
+        my ($package, $hook) = @$hook_def;
         my $ok = eval { $hook->($git, @args) };
         if (defined $ok) {
             # Modern hooks return a boolean value indicating their success.
             # If they fail they invoke Git::More::error.
+            unless ($ok) {
+                # Let's see if there is a help-on-error message configured
+                # specifically for this plugin.
+                (my $CFG = $package) =~ s/.*::/githooks./;
+                if (my $help = $git->get_config(lc $CFG => 'help-on-error')) {
+                    $git->error($package, $help);
+                }
+            }
         } elsif (length $@) {
             # Old hooks die when they fail...
             $git->error(__PACKAGE__ . "($hook_name)", "Hook failed", $@);
@@ -654,6 +664,11 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
     }
 
     if (scalar($git->get_errors())) {
+        # Let's see if there is a help-on-error message configured globally.
+        if (my $help = $git->get_config(githooks => 'help-on-error')) {
+            $git->error(__PACKAGE__, $help);
+        }
+
         if (($hook_name eq 'commit-msg' or $hook_name eq 'pre-commit')
                 and not $git->get_config(githooks => 'abort-commit')) {
             warn <<"EOF";
@@ -1356,6 +1371,16 @@ a comment like this in addition to casting the vote:
   [Git::Hooks] COMMENT
 
 You may want to use a simple comment like 'OK'.
+
+=head2 githooks.help-on-error MESSAGE
+
+This option allows you to specify a helpful message that will be shown if
+any hook fails. This may be useful, for instance, to provide information to
+users about how to get help from your site's Git gurus.
+
+=head2 githooks.PLUGIN.help-on-error MESSAGE
+
+You can also provide helpful messages specific to each enabled PLUGIN.
 
 =head1 MAIN FUNCTION
 
