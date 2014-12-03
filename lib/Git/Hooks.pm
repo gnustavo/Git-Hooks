@@ -186,22 +186,23 @@ sub file_temp {
 
     state $cache = {};
 
+    my $tmpdir;
+    if(defined $cache->{'tmpdir'}) {
+        $tmpdir = $cache->{'tmpdir'};
+    }
+    else {
+        $tmpdir = File::Temp->newdir(@args, 'CLEANUP' => 1); 
+        $cache->{'tmpdir'} = $tmpdir;
+    }
+    my ($dummy,$directories,$filename) = File::Spec->splitpath( $file );
+    my $dirpath = File::Spec->catdir($tmpdir->dirname, length $rev >= 8 ? substr($rev, 0, 8) : '', $directories);
+    my $tmpfilepath = File::Spec->catdir($dirpath, $filename);
     my $blob = "$rev:$file";
 
-    my ($dummy1,$directories,$dummy2) = File::Spec->splitpath( $file );
-    my $tmpfilepath;
-    unless (exists $cache->{$blob}) {
-        # create temporary file and copy contents to it
-        my $tmpdir;
-        if(defined $cache->{'tmpdir'}) {
-            $tmpdir = $cache->{'tmpdir'};
-        }
-        else {
-            $tmpdir = File::Temp->newdir(@args);
-        }
-        my $dirpath = File::Spec->catdir($tmpdir->dirname, $directories);
+    unless (-e $tmpfilepath) {
+        # Create directory path for the file.
         File::Path::make_path($dirpath);
-        $tmpfilepath = File::Spec->catdir($tmpdir->dirname, $file);
+        # create temporary file and copy contents to it
         my $tmp = FileHandle->new(">" . $tmpfilepath);
         my ($pipe, $ctx) = $git->command_output_pipe(qw/cat-file blob/, $blob);
         my $read;
@@ -222,11 +223,9 @@ sub file_temp {
                 and return;
         $git->command_close_pipe($pipe, $ctx);
         $tmp->close();
-        $cache->{$blob} = $tmp;
-        $cache->{'tmpdir'} = $tmpdir;
     }
 
-    return $cache->{$blob}, $tmpfilepath;
+    return $tmpfilepath;
 }
 
 sub grok_groups_spec {

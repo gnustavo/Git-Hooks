@@ -44,7 +44,7 @@ sub check_new_files {
     foreach my $file (@files) {
         my $basename = basename($file);
         foreach my $command (map {$_->[1]} grep {$basename =~ $_->[0]} @checks) {
-            my ($tmp,$tmpfile) = file_temp($git, $commit, $file)
+            my ($tmpfile) = file_temp($git, $commit, $file)
                 or ++$errors
                     and next;
 
