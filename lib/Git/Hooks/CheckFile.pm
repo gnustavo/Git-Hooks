@@ -204,4 +204,4 @@ Some real examples:
     git config --add githooks.checkfile.name *.pp    puppet-lint --no-variable_scope-check
     git config --add githooks.checkfile.name *.sh    bash -n
     git config --add githooks.checkfile.name *.sh    shellcheck --exclude=SC2046,SC2053,SC2086
-    git config --add githooks.checkfile.name *.erb   erb -P -x -T - {} | ruby -c | sed '/Syntax OK/d'
+    git config --add githooks.checkfile.name *.erb   erb -P -x -T - {} | ruby -c
