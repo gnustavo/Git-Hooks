@@ -4,3 +4,6 @@
 *.tar.gz
 *~
 /.tidyall.d/
+
+# For Plenv users
+.perl-version
