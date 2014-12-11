@@ -44,12 +44,11 @@ sub check_new_files {
     foreach my $file (@files) {
         my $basename = basename($file);
         foreach my $command (map {$_->[1]} grep {$basename =~ $_->[0]} @checks) {
-            my $tmp = file_temp($git, $commit, $file)
+            my $tmpfile = file_temp($git, $commit, $file)
                 or ++$errors
                     and next;
 
             # interpolate filename in $command
-            my $tmpfile = $tmp->filename;
             (my $cmd = $command) =~ s/\{\}/\'$tmpfile\'/g;
 
             # execute command and update $errors
