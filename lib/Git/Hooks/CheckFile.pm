@@ -9,9 +9,9 @@ use strict;
 use warnings;
 use Git::Hooks qw/:DEFAULT :utils/;
 use Data::Util qw(:check);
-use File::Basename;
 use File::Slurp;
 use Text::Glob qw/glob_to_regex/;
+use File::Spec::Functions qw/splitpath/;
 use Error qw(:try);
 
 my $PKG = __PACKAGE__;
@@ -42,7 +42,7 @@ sub check_new_files {
     my $errors = 0;
 
     foreach my $file (@files) {
-        my $basename = basename($file);
+        my $basename = (splitpath($file))[2];
         foreach my $command (map {$_->[1]} grep {$basename =~ $_->[0]} @checks) {
             my $tmpfile = file_temp($git, $commit, $file)
                 or ++$errors
@@ -168,8 +168,7 @@ The plugin is configured by the following git options.
 This directive tells which COMMAND should be used to check files matching
 PATTERN.
 
-Only the file's L<basename|https://metacpan.org/pod/File::Basename> is
-matched against PATTERN.
+Only the file's basename is matched against PATTERN.
 
 PATTERN is usually expressed with
 L<globbing|https://metacpan.org/pod/File::Glob> to match files based on

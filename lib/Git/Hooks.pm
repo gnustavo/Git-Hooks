@@ -9,7 +9,6 @@ use Data::Util qw(:all);
 use File::Slurp;
 use File::Temp qw/tempfile/;
 use File::Path qw/make_path/;
-use File::Basename;
 use File::Spec::Functions qw/catdir catfile splitpath/;
 use List::MoreUtils qw/uniq/;
 
@@ -112,7 +111,7 @@ sub restore_output {
 sub spawn_external_hook {
     my ($git, $file, $hook, @args) = @_;
 
-    my $prefix  = '[' . __PACKAGE__ . '(' . basename($file) . ')]';
+    my $prefix  = '[' . __PACKAGE__ . '(' . (splitpath($file))[2] . ')]';
     my $saved_output = redirect_output();
 
     if ($hook =~ /^(?:pre-receive|post-receive|pre-push|post-rewrite)$/) {
@@ -574,7 +573,7 @@ sub _load_plugins {
     my @plugin_dirs = grep {-d} (
         'githooks',
         $git->get_config(githooks => 'plugins'),
-        catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks'),
+        catfile((splitpath($INC{'Git/Hooks.pm'}))[1], 'Hooks'),
     );
 
     foreach my $plugin (uniq @enabled_plugins) {
@@ -617,7 +616,7 @@ sub _load_plugins {
 sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplexity)
     my ($hook_name, @args) = @_;
 
-    $hook_name = basename $hook_name;
+    $hook_name = (splitpath($hook_name))[2];
 
     my $git = Git::More->repository();
 
