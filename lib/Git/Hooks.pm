@@ -9,9 +9,7 @@ use Data::Util qw(:all);
 use File::Slurp;
 use File::Temp qw/tempfile/;
 use File::Path qw/make_path/;
-use FileHandle;
-use File::Basename;
-use File::Spec::Functions;
+use File::Spec::Functions qw/catdir catfile splitpath/;
 use List::MoreUtils qw/uniq/;
 
 our (@EXPORT, @EXPORT_OK, %EXPORT_TAGS); ## no critic (Modules::ProhibitAutomaticExportation)
@@ -113,7 +111,7 @@ sub restore_output {
 sub spawn_external_hook {
     my ($git, $file, $hook, @args) = @_;
 
-    my $prefix  = '[' . __PACKAGE__ . '(' . basename($file) . ')]';
+    my $prefix  = '[' . __PACKAGE__ . '(' . (splitpath($file))[2] . ')]';
     my $saved_output = redirect_output();
 
     if ($hook =~ /^(?:pre-receive|post-receive|pre-push|post-rewrite)$/) {
@@ -199,11 +197,20 @@ sub file_temp {
     my $tmpfilepath = File::Spec->catdir($dirpath, $filename);
     my $blob = "$rev:$file";
 
-    unless (-e $tmpfilepath) {
-        # Create directory path for the file.
-        File::Path::make_path($dirpath);
+    unless (exists $cache->{$blob}) {
+        $cache->{tmpdir} //= File::Temp->newdir(@args);
+
+        my (undef, $dirname, $basename) = splitpath($file);
+
+        # Create directory path for the temporary file.
+        my $dirpath = catdir($cache->{tmpdir}->dirname, $rev, $dirname);
+        make_path($dirpath);
+
         # create temporary file and copy contents to it
-        my $tmp = FileHandle->new(">" . $tmpfilepath);
+        my $filepath = catfile($dirpath, $basename);
+        open my $tmp, '>:', $filepath ## no critic (RequireBriefOpen)
+            or git->error(__PACKAGE__, "Internal error: can't create file '$filepath': $!")
+                and return;
         my ($pipe, $ctx) = $git->command_output_pipe(qw/cat-file blob/, $blob);
         my $read;
         while ($read = sysread $pipe, my $buffer, 64 * 1024) {
@@ -212,7 +219,7 @@ sub file_temp {
             while ($length) {
                 my $written = syswrite $tmp, $buffer, $length, $offset;
                 defined $written
-                    or $git->error(__PACKAGE__, "Internal error: can't write to '$tmpfilepath': $!")
+                    or $git->error(__PACKAGE__, "Internal error: can't write to '$filepath': $!")
                         and return;
                 $length -= $written;
                 $offset += $written;
@@ -223,6 +230,7 @@ sub file_temp {
                 and return;
         $git->command_close_pipe($pipe, $ctx);
         $tmp->close();
+        $cache->{$blob} = $filepath;
     }
 
     return $tmpfilepath;
@@ -576,7 +584,7 @@ sub _load_plugins {
     my @plugin_dirs = grep {-d} (
         'githooks',
         $git->get_config(githooks => 'plugins'),
-        catfile(dirname($INC{'Git/Hooks.pm'}), 'Hooks'),
+        catfile((splitpath($INC{'Git/Hooks.pm'}))[1], 'Hooks'),
     );
 
     foreach my $plugin (uniq @enabled_plugins) {
@@ -619,7 +627,7 @@ sub _load_plugins {
 sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplexity)
     my ($hook_name, @args) = @_;
 
-    $hook_name = basename $hook_name;
+    $hook_name = (splitpath($hook_name))[2];
 
     my $git = Git::More->repository();
 
