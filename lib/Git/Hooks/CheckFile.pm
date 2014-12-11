@@ -56,7 +56,7 @@ sub check_new_files {
             my $exit = system $cmd;
             my $output = restore_output($saved_output);
             if ($exit != 0) {
-                $command =~ s/\{\}/\'$file\'/g;
+                $command =~ s/\{\}/\'$tmpfile\'/g;
                 my $message = do {
                     if ($exit == -1) {
                         "command '$command' could not be executed: $!";
