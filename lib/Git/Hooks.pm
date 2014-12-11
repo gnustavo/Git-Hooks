@@ -184,6 +184,17 @@ sub file_temp {
 
     state $cache = {};
 
+    my $tmpdir;
+    if(defined $cache->{'tmpdir'}) {
+        $tmpdir = $cache->{'tmpdir'};
+    }
+    else {
+        $tmpdir = File::Temp->newdir(@args, 'CLEANUP' => 1); 
+        $cache->{'tmpdir'} = $tmpdir;
+    }
+    my ($dummy,$directories,$filename) = File::Spec->splitpath( $file );
+    my $dirpath = File::Spec->catdir($tmpdir->dirname, length $rev >= 8 ? substr($rev, 0, 8) : '', $directories);
+    my $tmpfilepath = File::Spec->rel2abs(File::Spec->catdir($dirpath, $filename));
     my $blob = "$rev:$file";
 
     unless (exists $cache->{$blob}) {
@@ -192,7 +203,7 @@ sub file_temp {
         my (undef, $dirname, $basename) = splitpath($file);
 
         # Create directory path for the temporary file.
-        my $dirpath = catdir($cache->{tmpdir}->dirname, $rev, $dirname);
+        my $dirpath = catdir($cache->{tmpdir}->dirname, length $rev >= 8 ? substr($rev, 0, 8) : '', $dirname);
         make_path($dirpath);
 
         # create temporary file and copy contents to it
@@ -222,7 +233,7 @@ sub file_temp {
         $cache->{$blob} = $filepath;
     }
 
-    return $cache->{$blob};
+    return $tmpfilepath;
 }
 
 sub grok_groups_spec {
