@@ -2,6 +2,31 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.4.0     2014-12-16 21:06:16 America/Sao_Paulo
+
+  [New features]
+
+  - The new options 'githooks.help-on-error' (global) and
+    'githooks.PLUGIN.help-on-error' (local) allows one to provide helpful
+    messages to the users in case of errors.
+
+  [Changes]
+
+  - The temporary files created by Git::Hooks::file_temp to dump the
+    contents of <path> at <commit> are now constructed as
+    <File::Temp::newdir>/<commit>/<path> so that they end with <path>. Some
+    file checkers, e.g. PerlCritic and Python Lint, that are invoked by
+    Git::Hooks::CheckFile complain if the filename doesn't match the name of
+    the package/module defined in it.
+    
+    Moreover, the contents of all temporary files are cached so that they
+    can be reused, possibly by different Git::Hooks plugins. The temporary
+    directory is removed with all of its contents when the hook exits.
+
+  - Require File::pushd to run tests.
+
+  - Drop dependency on File::Basename.
+
 1.3.0     2014-10-25 19:22:42 America/Sao_Paulo
 
   [New features]
@@ -14,7 +39,7 @@ Revision history for perl module Git-Hooks. -*- text -*-
   [Changes]
 
   - CheckFile: replace temporary filenames with the real filenames in the
-  error messages to make it consistent with the command line shown.
+    error messages to make it consistent with the command line shown.
 
   - CheckJira: re-order the checks so that it goes from the more general to
     the more specific, e.g.: issuetype > status > unresolved.
