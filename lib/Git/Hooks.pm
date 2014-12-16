@@ -192,7 +192,8 @@ sub file_temp {
         my (undef, $dirname, $basename) = splitpath($file);
 
         # Create directory path for the temporary file.
-        my $dirpath = catdir($cache->{tmpdir}->dirname, $rev, $dirname);
+        (my $revdir = $rev) =~ s/^://; # remove ':' from ':0' because Windows don't like ':' in filenames
+        my $dirpath = catdir($cache->{tmpdir}->dirname, $revdir, $dirname);
         make_path($dirpath);
 
         # create temporary file and copy contents to it
