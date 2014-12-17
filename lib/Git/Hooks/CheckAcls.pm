@@ -7,7 +7,6 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
-use File::Slurp;
 use Error qw(:try);
 use Git::Hooks qw/:DEFAULT :utils/;
 

@@ -9,7 +9,6 @@ use strict;
 use warnings;
 use Git::Hooks qw/:DEFAULT :utils/;
 use Git::More::Message;
-use File::Slurp;
 use List::MoreUtils qw/uniq/;
 
 my $PKG = __PACKAGE__;

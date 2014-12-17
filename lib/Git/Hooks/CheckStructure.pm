@@ -9,7 +9,6 @@ use strict;
 use warnings;
 use Git::Hooks qw/:DEFAULT :utils/;
 use Data::Util qw(:check);
-use File::Slurp;
 use Error qw(:try);
 
 my $PKG = __PACKAGE__;

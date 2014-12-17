@@ -9,7 +9,6 @@ use strict;
 use warnings;
 use Git::Hooks qw/:DEFAULT :utils/;
 use Data::Util qw(:check);
-use File::Slurp;
 use Text::Glob qw/glob_to_regex/;
 use File::Spec::Functions qw/splitpath/;
 use Error qw(:try);
