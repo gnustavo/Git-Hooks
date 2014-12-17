@@ -411,6 +411,19 @@ sub get_current_branch {
     return $branch;
 }
 
+sub get_head_or_empty_tree {
+    my ($git) = @_;
+
+    my $head = 'HEAD';
+    try {
+        scalar($git->command_oneline([qw/rev-parse --verify HEAD/], {STDERR => 0}));
+    } otherwise {
+        # Initial commit: return the empty tree object
+        $head = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+    };
+    return $head;
+}
+
 sub error {
     my ($git, $prefix, $message, $details) = @_;
     $message =~ s/\n*$//s;    # strip trailing newlines
@@ -798,6 +811,15 @@ by the C<git symbolic-ref HEAD> command.
 
 If the repository is in a dettached head state, i.e., if HEAD points
 to a commit instead of to a branch, the method returns undef.
+
+=head2 get_head_or_empty_tree
+
+This method returns the string "HEAD" if the repository already has
+commits. Otherwise, if it is a brand new repository, it returns the SHA1
+representing the empty tree. It's useful to come up with the correct
+argument for, e.g., C<git diff> during a pre-commit hook. (See the default
+pre-commit.sample script which comes with Git to understand how this is
+used.)
 
 =head2 error PREFIX MESSAGE [DETAILS]
 
