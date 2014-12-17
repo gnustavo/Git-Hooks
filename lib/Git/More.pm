@@ -266,7 +266,7 @@ sub filter_files_in_index {
     my ($git, $filter) = @_;
     my $output = $git->command(
         qw/diff-index --name-only --no-commit-id --cached -r -z/,
-        "--diff-filter=$filter", 'HEAD',
+        "--diff-filter=$filter", $git->get_head_or_empty_tree(),
     );
     return split /\0/, $output;
 }
