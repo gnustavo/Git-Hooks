@@ -2,6 +2,20 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.5.0     2014-12-22 22:49:24 America/Sao_Paulo
+
+  [New features]
+
+  - New plugin CheckWhitespace to detect whitespace errors in files.
+
+  - New routine Git::More::get_head_or_empty_tree returns the SHA1
+    representing the empty tree when HEAD is undefined, which happens in a
+    brand new repository.
+
+  [Fixes]
+
+  - Fix Git::More::filter_files_in_index to work in brand new repositories.
+
 1.4.0     2014-12-16 21:06:16 America/Sao_Paulo
 
   [New features]
