@@ -5,31 +5,30 @@ use strict;
 use warnings;
 use lib 't';
 use Test::More tests => 21;
-use File::Slurp;
-use File::Spec::Functions 'catfile';
+use Path::Tiny;
 
 BEGIN { require "test-functions.pl" };
 
 my ($repo, $file, $clone, $T) = new_repos();
 
-my $msgfile = catfile($T, 'msg.txt');
+my $msgfile = path($T)->child('msg.txt');
 
 sub check_can_commit {
     my ($testname, $msg) = @_;
-    write_file($msgfile, {err_mode => 'carp'}, $msg)
-        or BAIL_OUT("check_can_commit: can't write_file('$msgfile', '$msg')\n");
-    append_file($file, {err_mode => 'carp'}, $testname)
-        or BAIL_OUT("check_can_commit: can't append_file('$file', '$testname')\n");
+    $msgfile->spew($msg)
+        or BAIL_OUT("check_can_commit: can't '$msgfile'->spew('$msg')\n");
+    $file->append($testname)
+        or BAIL_OUT("check_can_commit: can't '$file'->append('$testname')\n");
     $repo->command(add => $file);
     test_ok($testname, $repo, 'commit', '-F', $msgfile);
 }
 
 sub check_cannot_commit {
     my ($testname, $regex, $msg) = @_;
-    write_file($msgfile, {err_mode => 'carp'}, $msg)
-        or BAIL_OUT("check_cannot_commit: can't write_file('$msgfile', '$msg')\n");
-    append_file($file, {err_mode => 'carp'}, $testname)
-        or BAIL_OUT("check_cannot_commit: can't append_file('$file', '$testname')\n");
+    $msgfile->spew($msg)
+        or BAIL_OUT("check_cannot_commit: can't '$msgfile'->spew('$msg')\n");
+    $file->append($testname)
+        or BAIL_OUT("check_cannot_commit: can't '$file'->append('$testname')\n");
     $repo->command(add => $file);
     if ($regex) {
 	test_nok_match($testname, $regex, $repo, 'commit', '-F', $msgfile);

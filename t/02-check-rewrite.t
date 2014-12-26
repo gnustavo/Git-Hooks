@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use lib 't';
 use Test::More tests => 6;
-use File::Slurp;
+use Path::Tiny;
 
 BEGIN { require "test-functions.pl" };
 
@@ -13,18 +13,18 @@ my ($repo, $file, $clone) = new_repos();
 
 # We'll change $file on master and another file on the branch to avoid
 # conflicts.
-my $bfile = "$file.txt";
+my $bfile = path("$file.txt");
 
 sub commit_on_master {
     $repo->command(checkout => '-q', 'master');
-    append_file($file, 'xxx');
+    $file->append('xxx');
     $repo->command(add => $file);
     $repo->command(commit => '-m', "commit on master");
 }
 
 sub commit_on_branch {
     $repo->command(checkout => '-q', 'fork');
-    append_file($bfile, 'xxx');
+    $bfile->append('xxx');
     $repo->command(add => $bfile);
     $repo->command(commit => '-m', "commit on branch");
 }
@@ -35,7 +35,7 @@ sub commit_on_branch {
 
 sub check_can_amend {
     my ($testname) = @_;
-    append_file($file, $testname);
+    $file->append($testname);
     $repo->command(add => $file);
 
     test_ok_match($testname, qr/^\[master /s, $repo, 'commit', '--amend', '-m', $testname);
@@ -43,7 +43,7 @@ sub check_can_amend {
 
 sub check_cannot_amend {
     my ($testname, $regex) = @_;
-    append_file($file, $testname);
+    $file->append($testname);
     $repo->command(add => $file);
 
     test_ok_match($testname, $regex, $repo, 'commit', '--amend', '-m', $testname);

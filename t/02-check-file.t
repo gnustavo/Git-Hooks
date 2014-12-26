@@ -5,8 +5,6 @@ use strict;
 use warnings;
 use lib 't';
 use Test::More tests => 10;
-use File::Path 2.08 qw'make_path';
-use File::Slurp;
 
 BEGIN { require "test-functions.pl" };
 
@@ -22,15 +20,16 @@ sub setup_repos {
 sub modify_file {
     my ($testname, $file) = @_;
     my @path = split '/', $file;
-    my $filename = catfile($repo->wc_path(), @path);
+    my $wcpath = path($repo->wc_path());
+    my $filename = $wcpath->child(@path);
 
     unless (-e $filename) {
         pop @path;
-        my $dirname  = catfile($repo->wc_path(), @path);
-        make_path($dirname);
+        my $dirname  = $wcpath->child(@path);
+        $dirname->mkpath;
     }
 
-    unless (append_file($filename, {err_mode => 'carp'}, 'data')) {
+    unless ($filename->append('data')) {
 	fail($testname);
 	diag("[TEST FRAMEWORK INTERNAL ERROR] Cannot write to file: $filename; $!\n");
     }

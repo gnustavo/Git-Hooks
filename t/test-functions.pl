@@ -2,10 +2,7 @@ use 5.010;
 use strict;
 use warnings;
 use Config;
-use File::Remove 'remove';
-use File::Slurp;
-use File::Spec::Functions qw/catdir catfile/;
-use File::Temp 'tempdir';
+use Path::Tiny;
 use File::pushd;
 use URI::file;
 use Git::More;
@@ -18,15 +15,15 @@ $ENV{LC_ALL} = 'C';
 # otherwise the author runs the risk of messing with its local
 # Git::Hooks git repository.
 
-our $T = tempdir('githooks.XXXXX', TMPDIR => 1, CLEANUP => $ENV{REPO_CLEANUP} || 1);
-use Cwd; our $cwd = cwd;
+our $T = Path::Tiny->tempdir(TEMPLATE => 'githooks.XXXXX', TMPDIR => 1, CLEANUP => $ENV{REPO_CLEANUP} || 1);
+use Cwd; our $cwd = path(cwd);
 chdir $T or die "Can't chdir $T: $!";
 END { chdir '/' }
 
-my $tmpldir = catfile($T, 'templates');
+my $tmpldir = $T->child('templates');
 mkdir $tmpldir, 0777 or BAIL_OUT("can't mkdir $tmpldir: $!");
 {
-    my $hooksdir = catfile($tmpldir, 'hooks');
+    my $hooksdir = $tmpldir->child('hooks');
     mkdir $hooksdir, 0777 or BAIL_OUT("can't mkdir $hooksdir: $!");
 }
 
@@ -39,19 +36,19 @@ try {
 
 sub newdir {
     my $num = 1 + Test::Builder->new()->current_test();
-    my $dir = catdir($T, $num);
+    my $dir = $T->child($num);
     mkdir $dir;
     $dir;
 }
 
 sub install_hooks {
     my ($git, $extra_perl, @hooks) = @_;
-    my $hooks_dir = catfile($git->repo_path(), 'hooks');
-    my $hook_pl   = catfile($hooks_dir, 'hook.pl');
+    my $hooks_dir = path($git->repo_path())->child('hooks');
+    my $hook_pl   = $hooks_dir->child('hook.pl');
     {
 	open my $fh, '>', $hook_pl or BAIL_OUT("Can't create $hook_pl: $!");
 	state $debug = $ENV{DBG} ? '-d' : '';
-	state $bliblib = catdir($cwd, 'blib', 'lib');
+	state $bliblib = $cwd->child('blib', 'lib');
 	print $fh <<EOF;
 #!$Config{perlpath} $debug
 use strict;
@@ -106,7 +103,7 @@ EOF
                      unless @hooks;
 
     foreach my $hook (@hooks) {
-	my $hookfile = catfile($hooks_dir, $hook);
+	my $hookfile = $hooks_dir->child($hook);
 	if ($^O eq 'MSWin32') {
             (my $perl = $^X) =~ tr:\\:/:;
             $hook_pl =~ tr:\\:/:;
@@ -115,8 +112,8 @@ EOF
 #!/bin/sh
 $perl $d $hook_pl $hook \"\$@\"
 EOF
-            write_file($hookfile, {err_mode => 'carp'}, $script)
-                or BAIL_OUT("can't write_file('$hookfile', '$script')\n");
+            path($hookfile)->spew($script)
+                or BAIL_OUT("can't path('$hookfile')->spew('$script')\n");
 	    chmod 0755 => $hookfile;
 	} else {
             symlink 'hook.pl', $hookfile
@@ -126,12 +123,13 @@ EOF
 }
 
 sub new_repos {
-    my $repodir  = catfile($T, 'repo');
-    my $filename = catfile($repodir, 'file.txt');
-    my $clonedir = catfile($T, 'clone');
+    my $repodir  = $T->child('repo');
+    my $filename = $repodir->child('file.txt');
+    my $clonedir = $T->child('clone');
 
     # Remove the directories recursively to create new ones.
-    remove(\1, $repodir, $clonedir);
+    $repodir->remove_tree({safe => 0});
+    $clonedir->remove_tree({safe => 0});
 
     mkdir $repodir, 0777 or BAIL_OUT("can't mkdir $repodir: $!");
     {
@@ -179,7 +177,7 @@ sub new_repos {
 sub new_commit {
     my ($git, $file, $msg) = @_;
 
-    append_file($file, $msg || 'new commit');
+    $file->append($msg || 'new commit');
 
     $git->command(add => $file);
     $git->command(commit => '-q', '-m', $msg || 'commit');
@@ -212,7 +210,7 @@ sub test_command {
         or die "Can't redirect STDERR back to its original value: $!";
 
     # Grok the subcomand's STDERR
-    my $stderr = read_file('stderr');
+    my $stderr = path('stderr')->slurp;
 
     if (defined $exception) {
 	return (0, $?, $exception, $stderr);

@@ -9,7 +9,8 @@ use strict;
 use warnings;
 use Git::Hooks qw/:DEFAULT :utils/;
 use Git::More::Message;
-use File::Temp qw/tempfile/;
+use Path::Tiny;
+use Carp;
 use Error qw(:try);
 
 my $PKG = __PACKAGE__;
@@ -20,7 +21,9 @@ my $PKG = __PACKAGE__;
 sub gen_change_id {
     my ($git, $msg) = @_;
 
-    my ($fh, $filename) = tempfile(UNLINK => 1);
+    my $filename = Path::Tiny->tempfile(UNLINK => 1);
+    open my $fh, '>', $filename ## no critic (RequireBriefOpen)
+        or croak "$PKG: internal error: can't open $filename for writing: $!";
 
     foreach my $info (
         [ tree      => [qw/write-tree/] ],

@@ -5,8 +5,7 @@ use strict;
 use warnings;
 use lib 't';
 use Test::More tests => 4;
-use File::Path 2.08 qw'make_path';
-use File::Slurp;
+use Path::Tiny;
 
 BEGIN { require "test-functions.pl" };
 
@@ -21,9 +20,9 @@ sub setup_repos {
 
 sub add_file {
     my ($testname, $contents) = @_;
-    my $filename = catfile($repo->wc_path(), 'file.txt');
+    my $filename = path($repo->wc_path())->child('file.txt');
 
-    unless (write_file($filename, {err_mode => 'carp'}, $contents)) {
+    unless ($filename->spew($contents)) {
 	fail($testname);
 	diag("[TEST FRAMEWORK INTERNAL ERROR] Cannot create file: $filename; $!\n");
     }

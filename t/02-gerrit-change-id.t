@@ -6,7 +6,7 @@ use warnings;
 use lib 't';
 use Test::More tests => 44;
 use File::pushd;
-use File::Slurp;
+use Path::Tiny;
 
 BEGIN { require "test-functions.pl" };
 
@@ -16,11 +16,11 @@ my ($repo, $filename, undef, $T) = new_repos();
 
 # Save Gerrit's standard shell commit-msg hook in our test temporary
 # directory.
-my $gerrit_script = catfile($T, 'gerrit-commit-msg');
+my $gerrit_script = $T->child('gerrit-commit-msg');
 {
     local $/ = undef;
-    write_file($gerrit_script, {err_mode => 'carp'}, <DATA>)
-        or BAIL_OUT("can't write_file('$gerrit_script', <DATA>)\n");
+    $gerrit_script->spew(<DATA>)
+        or BAIL_OUT("can't '$gerrit_script'->spew(<DATA>)\n");
     chmod 0755, $gerrit_script;
 };
 
@@ -36,14 +36,14 @@ sub diag_last_log {
     diag(" LAST LOG[", length($last_log), "]<<<$last_log>>>\n");
 }
 
-my $msgfile = catfile($T, 'msg.txt');
+my $msgfile = $T->child('msg.txt');
 
 sub cannot_commit {
     my ($testname, $regex, $msg) = @_;
-    append_file($filename, "new line\n");
+    $filename->append("new line\n");
     $repo->command(add => $filename);
-    write_file($msgfile, {err_mode => 'carp'}, $msg)
-        or BAIL_OUT("cannot_commit: can't write_file('$msgfile', '$msg')\n");
+    $msgfile->spew($msg)
+        or BAIL_OUT("cannot_commit: can't '$msgfile'->spew('$msg')\n");
     unless (test_nok_match($testname, $regex, $repo, 'commit', '-F', $msgfile)) {
 	diag_last_log();
     }
@@ -51,10 +51,10 @@ sub cannot_commit {
 
 sub can_commit {
     my ($testname, $msg) = @_;
-    append_file($filename, "new line\n");
+    $filename->append("new line\n");
     $repo->command(add => $filename);
-    write_file($msgfile, {err_mode => 'carp'}, $msg)
-        or BAIL_OUT("can_commit: can't write_file('$msgfile', '$msg')\n");
+    $msgfile->spew($msg)
+        or BAIL_OUT("can_commit: can't '$msgfile'->spew('$msg')\n");
     return test_ok("$testname [commit]", $repo, 'commit', '-F', $msgfile);
 }
 
@@ -118,24 +118,24 @@ foreach my $test (
 sub expected {
     my ($msg) = @_;
 
-    write_file($msgfile, {err_mode => 'carp'}, $msg)
-        or BAIL_OUT("check_can_commit: can't write_file('$msgfile', '$msg')\n");
+    $msgfile->spew($msg)
+        or BAIL_OUT("check_can_commit: can't '$msgfile'->spew('$msg')\n");
 
     my $dir = pushd($repo->repo_path());
 
     system('sh', $gerrit_script, $msgfile);
 
-    return read_file($msgfile);
+    return $msgfile->slurp;
 }
 
 sub produced {
     my ($msg) = @_;
 
     # Check how our hook change the message
-    write_file($msgfile, {err_mode => 'carp'}, $msg)
-        or BAIL_OUT("check_can_commit: can't write_file('$msgfile', '$msg')\n");
+    $msgfile->spew($msg)
+        or BAIL_OUT("check_can_commit: can't '$msgfile'->spew('$msg')\n");
     Git::Hooks::GerritChangeId::rewrite_message($repo, $msgfile);
-    read_file($msgfile);
+    $msgfile->slurp;
 }
 
 sub compare {

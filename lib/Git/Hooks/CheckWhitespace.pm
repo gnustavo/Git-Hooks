@@ -10,7 +10,6 @@ use warnings;
 use Git::Hooks qw/:DEFAULT :utils/;
 use Data::Util qw(:check);
 use Text::Glob qw/glob_to_regex/;
-use File::Spec::Functions qw/splitpath/;
 use Error qw(:try);
 
 my $PKG = __PACKAGE__;

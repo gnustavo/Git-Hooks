@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use lib 't';
 use Test::More tests => 36;
-use File::Slurp;
+use Path::Tiny;
 
 BEGIN { require "test-functions.pl" };
 
@@ -92,14 +92,14 @@ EOF
 
 sub check_can_commit {
     my ($testname) = @_;
-    append_file($file, $testname);
+    $file->append($testname);
     $repo->command(add => $file);
     test_ok($testname, $repo, 'commit', '-m', $testname);
 }
 
 sub check_cannot_commit {
     my ($testname, $regex) = @_;
-    append_file($file, $testname);
+    $file->append($testname);
     $repo->command(add => $file);
     if ($regex) {
 	test_nok_match($testname, $regex, $repo, 'commit', '-m', $testname);
@@ -204,7 +204,7 @@ $repo->command(config => '--replace-all', 'githooks.checkjira.fixversion', '^ref
 check_can_commit('allow commit matching capture branch and fixversion [GIT-4]');
 $repo->command(config => '--unset-all', 'githooks.checkjira.fixversion');
 
-my $codefile = catfile($T, 'codefile');
+my $codefile = $T->child('codefile');
 my $code = <<'EOF';
 sub {
     my ($git, $commit_id, $jira, @issues) = @_;
@@ -213,8 +213,8 @@ sub {
     die "You must cite issues GIT-2 and GIT-3 only: not '$keys'\n";
 }
 EOF
-write_file($codefile, {err_mode => 'carp'}, $code)
-    or BAIL_OUT("can't write_file('$codefile', <>code>)\n");
+path($codefile)->spew($code)
+    or BAIL_OUT("can't path('$codefile')->spew(<code>)\n");
 
 $repo->command(config => 'githooks.checkjira.check-code', "file:$codefile");
 

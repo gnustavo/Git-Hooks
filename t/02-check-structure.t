@@ -5,8 +5,7 @@ use strict;
 use warnings;
 use lib 't';
 use Test::More tests => 19;
-use File::Path 2.08 qw'make_path';
-use File::Slurp;
+use Path::Tiny;
 
 BEGIN { require "test-functions.pl" };
 
@@ -22,7 +21,7 @@ sub setup_repos {
 sub setup_structure {
     my ($git, $structure, $kind) = @_;
     $kind //= 'file';
-    my $filedef = catfile($git->repo_path(), 'hooks', "structure.$kind");
+    my $filedef = path($git->repo_path())->child('hooks', "structure.$kind");
     open my $fh, '>', "$filedef" or die "Can't create $filedef: $!\n";
     $fh->print($structure);
     $git->command(config => '--replace-all', "githooks.checkstructure.$kind", "file:$filedef");
@@ -31,17 +30,18 @@ sub setup_structure {
 sub add_file {
     my ($testname, $file) = @_;
     my @path = split '/', $file;
-    my $filename = catfile($repo->wc_path(), @path);
+    my $wcpath = path($repo->wc_path());
+    my $filename = $wcpath->child(@path);
     if (-e $filename) {
 	fail($testname);
 	diag("[TEST FRAMEWORK INTERNAL ERROR] File already exists: $filename\n");
     }
 
     pop @path;
-    my $dirname  = catfile($repo->wc_path(), @path);
-    make_path($dirname);
+    my $dirname  = $wcpath->child(@path);
+    $dirname->mkpath;
 
-    unless (write_file($filename, {err_mode => 'carp'}, 'data')) {
+    unless ($filename->spew('data')) {
 	fail($testname);
 	diag("[TEST FRAMEWORK INTERNAL ERROR] Cannot create file: $filename; $!\n");
     }

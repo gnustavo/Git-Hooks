@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use lib 't';
 use Config;
-use File::Slurp;
+use Path::Tiny;
 use Test::More;
 if ($^O eq 'MSWin32') {
     plan skip_all => 'External hooks are not implemented for Windows yet.';
@@ -20,14 +20,14 @@ install_hooks($repo, undef, qw/pre-commit/);
 
 sub check_can_commit {
     my ($testname) = @_;
-    append_file($file, $testname);
+    $file->append($testname);
     $repo->command(add => $file);
     test_ok($testname, $repo, 'commit', '-m', $testname);
 }
 
 sub check_cannot_commit {
     my ($testname, $regex) = @_;
-    append_file($file, $testname);
+    $file->append($testname);
     $repo->command(add => $file);
     if ($regex) {
 	test_nok_match($testname, $regex, $repo, 'commit', '-m', $testname);
@@ -37,12 +37,12 @@ sub check_cannot_commit {
 }
 
 # install a hook that succeeds
-my $hooksd = catfile($repo->repo_path(), 'hooks.d');
+my $hooksd = path($repo->repo_path())->child('hooks.d');
 mkdir $hooksd or die "Can't mkdir $hooksd: $!";
-my $hookd  = catfile($hooksd, 'pre-commit');
+my $hookd  = $hooksd->child('pre-commit');
 mkdir $hookd or die "Can't mkdir $hookd: $!";
-my $hook   = catfile($hookd, 'script.pl');
-my $mark   = catfile($hooksd, 'mark');
+my $hook   = $hookd->child('script.pl');
+my $mark   = $hooksd->child('mark');
 
 my $hook_script = <<"EOF";
 #!$Config{perlpath}
@@ -51,8 +51,8 @@ print FH "line\\n";
 close FH;
 exit 0;
 EOF
-write_file($hook, {err_mode => 'carp'}, $hook_script)
-    or BAIL_OUT("can't write_file('$hook', <hook_script 1>)\n");
+$hook->spew($hook_script)
+    or BAIL_OUT("can't '$hook'->spew(<hook_script 1>)\n");
 
 chmod 0755, $hook or die "Cannot chmod $hook: $!\n";
 
@@ -67,8 +67,9 @@ $hook_script = <<"EOF";
 #!$Config{perlpath}
 die "external hook failure\n";
 EOF
-write_file($hook, {err_mode => 'carp'}, $hook_script)
-    or BAIL_OUT("can't write_file('$hook', <hook_script 2>)\n");
+# We have to use append instead of spew to keep the $hook file modes.
+$hook->append({truncate => 1}, $hook_script)
+    or BAIL_OUT("can't '$hook'->spew(<hook_script 2>)\n");
 
 check_cannot_commit('execute a hook that fails', qr/external hook failure/);
 

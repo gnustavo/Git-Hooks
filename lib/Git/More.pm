@@ -8,7 +8,7 @@ use parent 'Git';
 
 use Error qw(:try);
 use Carp;
-use File::Slurp;
+use Path::Tiny;
 use Git::Hooks qw/:utils/;
 use File::Path qw/make_path/;
 use File::Spec::Functions qw/catdir catfile splitpath/;
@@ -218,10 +218,10 @@ sub read_commit_msg_file {
 
     my $encoding = $git->get_config(i18n => 'commitencoding') || 'utf-8';
 
-    my $msg_ref = read_file($msgfile, {binmode => ":encoding($encoding)", scalar_ref => 1});
+    my $msg = path($msgfile)->slurp({binmode => ":encoding($encoding)"});
 
     # Truncate the message just before the diff, if any.
-    $$msg_ref =~ s:\ndiff --git .*::s;
+    $msg =~ s:\ndiff --git .*::s;
 
     # The comments in the following lines were taken from the "git
     # help stripspace" documentation to guide the
@@ -230,7 +230,7 @@ sub read_commit_msg_file {
     # but it seems that it doesn't work on FreeBSD. So, we reimplement
     # its functionality here.
 
-    for ($$msg_ref) {
+    for ($msg) {
         # Skip and remove all lines starting with comment character
         # (default #).
         s/^#.*//gm;
@@ -251,7 +251,7 @@ sub read_commit_msg_file {
         s/^\s+$//s;
     }
 
-    return $$msg_ref;
+    return $msg;
 }
 
 sub write_commit_msg_file {
@@ -259,7 +259,7 @@ sub write_commit_msg_file {
 
     my $encoding = $git->get_config(i18n => 'commitencoding') || 'utf-8';
 
-    write_file($msgfile, {binmode => ":encoding($encoding)"}, @msg);
+    path($msgfile)->spew({binmode => ":encoding($encoding)"}, @msg);
 
     return;
 }
@@ -434,17 +434,18 @@ sub blob {
     my $blob = "$rev:$file";
 
     unless (exists $cache->{$blob}) {
-        $cache->{tmpdir} //= File::Temp->newdir(@args);
+        $cache->{tmpdir} //= Path::Tiny->tempdir(@args);
 
-        my (undef, $dirname, $basename) = splitpath($file);
+        my $path = path($file);
+
+        # Calculate temporary file path
+        (my $revdir  = $rev) =~ s/^://; # remove ':' from ':0' because Windows don't like ':' in filenames
+        my $filepath = $cache->{tmpdir}->child($revdir, $path);
 
         # Create directory path for the temporary file.
-        (my $revdir = $rev) =~ s/^://; # remove ':' from ':0' because Windows don't like ':' in filenames
-        my $dirpath = catdir($cache->{tmpdir}->dirname, $revdir, $dirname);
-        make_path($dirpath);
+        $filepath->parent->mkpath;
 
-        # create temporary file and copy contents to it
-        my $filepath = catfile($dirpath, $basename);
+        # Create temporary file and copy contents to it
         open my $tmp, '>:', $filepath ## no critic (RequireBriefOpen)
             or git->error(__PACKAGE__, "Internal error: can't create file '$filepath': $!")
                 and return;
@@ -470,7 +471,7 @@ sub blob {
         $cache->{$blob} = $filepath;
     }
 
-    return $cache->{$blob};
+    return $cache->{$blob}->stringify;
 }
 
 sub error {

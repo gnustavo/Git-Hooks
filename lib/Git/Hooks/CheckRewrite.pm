@@ -8,8 +8,7 @@ use utf8;
 use strict;
 use warnings;
 use Error qw(:try);
-use File::Slurp;
-use File::Spec::Functions qw/catfile/;
+use Path::Tiny;
 use Git::Hooks qw/:DEFAULT :utils/;
 
 my $PKG = __PACKAGE__;
@@ -17,12 +16,13 @@ my $PKG = __PACKAGE__;
 
 ##########
 
-# Returns the name of a file where we record information about a
-# commit that has to be shared between the pre- and post-commit hooks.
+# Returns a Path::Tiny object represeting the name of a file where we record
+# information about a commit that has to be shared between the pre- and
+# post-commit hooks.
 sub _record_filename {
     my ($git) = @_;
 
-    return catfile($git->repo_path(), 'GITHOOKS_CHECKREWRITE');
+    return path($git->repo_path())->child('GITHOOKS_CHECKREWRITE');
 }
 
 # Returns all branches containing a specific commit. The command "git
@@ -46,8 +46,9 @@ sub record_commit_parents {
     # The first line holds the HEAD commit's id and the second the ids
     # of its parents.
 
-    write_file(_record_filename($git),
-               scalar($git->command(qw/rev-list --pretty=format:%P -n 1 HEAD/)));
+    _record_filename($git)->spew(
+        scalar($git->command(qw/rev-list --pretty=format:%P -n 1 HEAD/))
+    );
 
     return 1;
 }
@@ -61,7 +62,7 @@ sub check_commit_amend {
         or $git->error($PKG, "cannot read $record_file. You probably forgot to symlink the pre-commit hook")
             and return 0;
 
-    my ($old_commit, $old_parents) = read_file($record_file);
+    my ($old_commit, $old_parents) = $record_file->lines;
 
     chomp $old_commit;
     $old_commit =~ s/^commit\s+//;

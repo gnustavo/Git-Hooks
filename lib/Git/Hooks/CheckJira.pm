@@ -8,7 +8,7 @@ use utf8;
 use strict;
 use warnings;
 use Git::Hooks qw/:DEFAULT :utils/;
-use File::Slurp;
+use Path::Tiny;
 use Data::Util qw(:check);
 use List::MoreUtils qw/uniq/;
 use JIRA::REST;
@@ -296,8 +296,9 @@ sub check_message_file {
     my $current_branch = $git->get_current_branch();
     return 1 unless is_ref_enabled($current_branch, $git->get_config($CFG => 'ref'));
 
-    my $msg = read_file($commit_msg_file)
-        or $git->error($PKG, "cannot open file '$commit_msg_file' for reading: $!")
+    my $msg = eval { path($commit_msg_file)->slurp };
+    defined $msg
+        or $git->error($PKG, "cannot open file '$commit_msg_file' for reading: $@")
             and return 0;
 
     # Remove comment lines from the message file contents.

@@ -10,7 +10,7 @@ use warnings;
 use Git::Hooks qw/:DEFAULT :utils/;
 use Data::Util qw(:check);
 use Text::Glob qw/glob_to_regex/;
-use File::Spec::Functions qw/splitpath/;
+use Path::Tiny;
 use Error qw(:try);
 
 my $PKG = __PACKAGE__;
@@ -41,7 +41,7 @@ sub check_new_files {
     my $errors = 0;
 
     foreach my $file (@files) {
-        my $basename = (splitpath($file))[2];
+        my $basename = path($file)->basename;
         foreach my $command (map {$_->[1]} grep {$basename =~ $_->[0]} @checks) {
             my $tmpfile = $git->blob($commit, $file)
                 or ++$errors

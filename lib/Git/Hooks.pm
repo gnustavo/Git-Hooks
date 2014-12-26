@@ -7,9 +7,7 @@ use warnings;
 use Carp;
 use Exporter qw/import/;
 use Data::Util qw(:all);
-use File::Slurp;
-use File::Temp qw/tempfile/;
-use File::Spec::Functions qw/catfile splitpath/;
+use Path::Tiny;
 use List::MoreUtils qw/uniq/;
 
 our (@EXPORT, @EXPORT_OK, %EXPORT_TAGS); ## no critic (Modules::ProhibitAutomaticExportation)
@@ -84,7 +82,7 @@ sub redirect_output {
     ## no critic (RequireBriefOpen, RequireCarping)
     open(my $oldout, '>&', \*STDOUT)  or die "Can't dup STDOUT: $!";
     open(my $olderr, '>&', \*STDERR)  or die "Can't dup STDERR: $!";
-    my ($tempfh, $tempfile) = tempfile(UNLINK => 1);
+    my $tempfile = Path::Tiny->tempfile(UNLINK => 1);
     open(STDOUT    , '>' , $tempfile) or die "Can't redirect STDOUT to \$tempfile: $!";
     open(STDERR    , '>&', \*STDOUT)  or die "Can't dup STDOUT for STDERR: $!";
     ## use critic
@@ -102,7 +100,7 @@ sub restore_output {
     open(STDOUT, '>&', $oldout) or die "Can't dup \$oldout: $!";
     open(STDERR, '>&', $olderr) or die "Can't dup \$olderr: $!";
     ## use critic
-    return read_file($tempfile);
+    return $tempfile->slurp;
 }
 
 # This is an internal routine used to invoke external hooks, feed them
@@ -111,7 +109,7 @@ sub restore_output {
 sub spawn_external_hook {
     my ($git, $file, $hook, @args) = @_;
 
-    my $prefix  = '[' . __PACKAGE__ . '(' . (splitpath($file))[2] . ')]';
+    my $prefix  = '[' . __PACKAGE__ . '(' . path($file)->basename . ')]';
     my $saved_output = redirect_output();
 
     if ($hook =~ /^(?:pre-receive|post-receive|pre-push|post-rewrite)$/) {
@@ -223,7 +221,7 @@ sub grok_groups {
         my $groups = {};
         foreach my $spec (@groups) {
             if (my ($groupfile) = ($spec =~ /^file:(.*)/)) {
-                my @groupspecs = read_file($groupfile);
+                my @groupspecs = path($groupfile)->lines;
                 defined $groupspecs[0]
                     or die __PACKAGE__, ": can't open groups file ($groupfile): $!\n";
                 grok_groups_spec($groups, \@groupspecs, $groupfile);
@@ -535,7 +533,7 @@ sub _load_plugins {
     my @plugin_dirs = grep {-d} (
         'githooks',
         $git->get_config(githooks => 'plugins'),
-        catfile((splitpath($INC{'Git/Hooks.pm'}))[1], 'Hooks'),
+        path($INC{'Git/Hooks.pm'})->parent->child('Hooks'),
     );
 
     foreach my $plugin (uniq @enabled_plugins) {
@@ -554,7 +552,7 @@ sub _load_plugins {
                 # Otherwise, it's a basename that we must look for
                 # in @plugin_dirs
                 $plugin .= '.pm' unless $plugin =~ /\.p[lm]$/i;
-                my @scripts = grep {-f} map {catfile($_, $plugin)} @plugin_dirs;
+                my @scripts = grep {-f} map {path($_)->child($plugin)} @plugin_dirs;
                 my $script = shift @scripts
                     or die __PACKAGE__, ": can't find enabled hook $plugin.\n";
                 $plugin = $script; # for the error messages below
@@ -578,7 +576,7 @@ sub _load_plugins {
 sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplexity)
     my ($hook_name, @args) = @_;
 
-    $hook_name = (splitpath($hook_name))[2];
+    $hook_name = path($hook_name)->basename;
 
     my $git = Git::More->repository();
 
@@ -618,13 +616,13 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
     # Invoke enabled external hooks. This doesn't work in Windows yet.
     if ($^O ne 'MSWin32' && $git->get_config(githooks => 'externals')) {
         foreach my $dir (
-            grep {-e} map {catfile($_, $hook_name)}
-                ($git->get_config(githooks => 'hooks'), catfile($git->repo_path(), 'hooks.d'))
+            grep {-e} map {path($_)->child($hook_name)}
+                ($git->get_config(githooks => 'hooks'), path($git->repo_path())->child('hooks.d'))
         ) {
             opendir my $dh, $dir
                 or $git->error(__PACKAGE__, ": cannot opendir '$dir'", $!)
                     and next;
-            foreach my $file (grep {-f && -x} map {catfile($dir, $_)} readdir $dh) {
+            foreach my $file (grep {-f && -x} map {path($dir)->child($_)} readdir $dh) {
                 spawn_external_hook($git, $file, $hook_name, @args)
                     or $git->error(__PACKAGE__, ": error in external hook '$file'");
             }
@@ -1610,13 +1608,13 @@ the file FILE in revision REV has been copied.
 It's useful for hooks that need to read the contents of changed files in
 order to check anything in them.
 
-These objects are cached so that if more than one hook needs to get at them
+These files are cached so that if more than one hook needs to get at them
 they're created only once.
 
 By default, all temporary files are removed when the hook exits.
 
-Any remaining ARGS are passed as arguments to C<File::Temp::new> so that you
-can have more control over the temporary file creation.
+Any remaining ARGS are passed as arguments to C<Path::Tiny::tempfile> so
+that you can have more control over the temporary file creation.
 
 =head1 SEE ALSO
 
