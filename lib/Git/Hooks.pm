@@ -750,19 +750,19 @@ site.
 A L<Git hook|http://schacon.github.com/git/githooks.html> is a
 specifically named program that is called by the git program during
 the execution of some operations. At the last count, there were
-exactly 16 different hooks which can be used. They must reside under
+17 different hooks. They must be kept under
 the C<.git/hooks> directory in the repository. When you create a new
 repository, you get some template files in this directory, all of them
 having the C<.sample> suffix and helpful instructions inside
 explaining how to convert them into working hooks.
 
-When Git is performing a commit operation, for example, it calls these
-four hooks in order: C<pre-commit>, C<prepare-commit-msg>,
-C<commit-msg>, and C<post-commit>. The first three can gather all
-sorts of information about the specific commit being performed and
-decide to reject it in case it doesn't comply to specified
-policies. The C<post-commit> can be used to log or alert interested
-parties about the commit just done.
+When Git is performing a commit operation, for example, it calls these four
+hooks in order: C<pre-commit>, C<prepare-commit-msg>, C<commit-msg>, and
+C<post-commit>. The first can gather all sorts of information about the
+specific commit being performed and decide to reject it in case it doesn't
+comply to specified policies. The next two can be used to format or check
+the commit message.  The C<post-commit> can be used to log or alert
+interested parties about the commit just performed.
 
 There are several useful hook scripts available elsewhere, e.g.
 L<https://github.com/gitster/git/tree/master/contrib/hooks> and
@@ -786,7 +786,7 @@ This arrangement is inefficient in two ways. First because each script
 runs as a separate process, which usually have a high start up cost
 because they are, well, scripts and not binaries. (For a dissent view
 on this, see
-L<this|http://gnustavo.wordpress.com/2012/06/28/programming-languages-start-up-times/>.)
+L<this|http://blog.gnustavo.com/2013/07/programming-languages-startup-times.html>.)
 And second, because as each script is called in turn they have no
 memory of the scripts called before and have to gather the information
 about the transaction again and again, normally by calling the C<git>
@@ -839,7 +839,7 @@ are interested in. For example, if you are interested in a
 C<commit-msg> hook, create a symbolic link called C<commit-msg>
 pointing to the C<git-hooks.pl> file. This way, Git will invoke the
 generic script for all hooks you are interested in. (You may create
-symbolic links for all 16 hooks, but this will make Git call the
+symbolic links for all hooks, but this will make Git call the
 script for all hooked operations, even for those that you may not be
 interested in. Nothing wrong will happen, but the server will be doing
 extra work for nothing.)
