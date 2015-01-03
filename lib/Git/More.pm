@@ -10,6 +10,8 @@ use Error qw(:try);
 use Carp;
 use File::Slurp;
 use Git::Hooks qw/:utils/;
+use File::Path qw/make_path/;
+use File::Spec::Functions qw/catdir catfile splitpath/;
 
 # This package variable tells get_config which character encoding is used in
 # the output of the git-config command. Usually none, and decoding isn't
@@ -424,6 +426,53 @@ sub get_head_or_empty_tree {
     return $head;
 }
 
+sub blob {
+    my ($git, $rev, $file, @args) = @_;
+
+    my $cache = $git->cache('blob');
+
+    my $blob = "$rev:$file";
+
+    unless (exists $cache->{$blob}) {
+        $cache->{tmpdir} //= File::Temp->newdir(@args);
+
+        my (undef, $dirname, $basename) = splitpath($file);
+
+        # Create directory path for the temporary file.
+        (my $revdir = $rev) =~ s/^://; # remove ':' from ':0' because Windows don't like ':' in filenames
+        my $dirpath = catdir($cache->{tmpdir}->dirname, $revdir, $dirname);
+        make_path($dirpath);
+
+        # create temporary file and copy contents to it
+        my $filepath = catfile($dirpath, $basename);
+        open my $tmp, '>:', $filepath ## no critic (RequireBriefOpen)
+            or git->error(__PACKAGE__, "Internal error: can't create file '$filepath': $!")
+                and return;
+        my ($pipe, $ctx) = $git->command_output_pipe(qw/cat-file blob/, $blob);
+        my $read;
+        while ($read = sysread $pipe, my $buffer, 64 * 1024) {
+            my $length = length $buffer;
+            my $offset = 0;
+            while ($length) {
+                my $written = syswrite $tmp, $buffer, $length, $offset;
+                defined $written
+                    or $git->error(__PACKAGE__, "Internal error: can't write to '$filepath': $!")
+                        and return;
+                $length -= $written;
+                $offset += $written;
+            }
+        }
+        defined $read
+            or $git->error(__PACKAGE__, "Internal error: can't read from git cat-file pipe: $!")
+                and return;
+        $git->command_close_pipe($pipe, $ctx);
+        $tmp->close();
+        $cache->{$blob} = $filepath;
+    }
+
+    return $cache->{$blob};
+}
+
 sub error {
     my ($git, $prefix, $message, $details) = @_;
     $message =~ s/\n*$//s;    # strip trailing newlines
@@ -820,6 +869,23 @@ representing the empty tree. It's useful to come up with the correct
 argument for, e.g., C<git diff> during a pre-commit hook. (See the default
 pre-commit.sample script which comes with Git to understand how this is
 used.)
+
+=head2 blob REV, FILE, ARGS...
+
+This method returns the name of a temporary file into which the contents of
+the file FILE in revision REV has been copied.
+
+It's useful for hooks that need to read the contents of changed files in
+order to check anything in them.
+
+These objects are cached so that if more than one hook needs to get at them
+they're created only once.
+
+By default, all temporary files are removed when the Git::More object is
+destroyed.
+
+Any remaining ARGS are passed as arguments to C<File::Temp::newdir> so that you
+can have more control over the temporary file creation.
 
 =head2 error PREFIX MESSAGE [DETAILS]
 

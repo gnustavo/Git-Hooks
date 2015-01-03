@@ -43,7 +43,7 @@ sub check_new_files {
     foreach my $file (@files) {
         my $basename = (splitpath($file))[2];
         foreach my $command (map {$_->[1]} grep {$basename =~ $_->[0]} @checks) {
-            my $tmpfile = file_temp($git, $commit, $file)
+            my $tmpfile = $git->blob($commit, $file)
                 or ++$errors
                     and next;
 

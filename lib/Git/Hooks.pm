@@ -4,12 +4,12 @@ package Git::Hooks;
 use 5.010;
 use strict;
 use warnings;
+use Carp;
 use Exporter qw/import/;
 use Data::Util qw(:all);
 use File::Slurp;
 use File::Temp qw/tempfile/;
-use File::Path qw/make_path/;
-use File::Spec::Functions qw/catdir catfile splitpath/;
+use File::Spec::Functions qw/catfile splitpath/;
 use List::MoreUtils qw/uniq/;
 
 our (@EXPORT, @EXPORT_OK, %EXPORT_TAGS); ## no critic (Modules::ProhibitAutomaticExportation)
@@ -182,48 +182,9 @@ sub spawn_external_hook {
 sub file_temp {
     my ($git, $rev, $file, @args) = @_;
 
-    state $cache = {};
+    carp 'Invoking deprecated routine ', __PACKAGE__, '::file_temp. Please, see documentation.';
 
-    my $blob = "$rev:$file";
-
-    unless (exists $cache->{$blob}) {
-        $cache->{tmpdir} //= File::Temp->newdir(@args);
-
-        my (undef, $dirname, $basename) = splitpath($file);
-
-        # Create directory path for the temporary file.
-        (my $revdir = $rev) =~ s/^://; # remove ':' from ':0' because Windows don't like ':' in filenames
-        my $dirpath = catdir($cache->{tmpdir}->dirname, $revdir, $dirname);
-        make_path($dirpath);
-
-        # create temporary file and copy contents to it
-        my $filepath = catfile($dirpath, $basename);
-        open my $tmp, '>:', $filepath ## no critic (RequireBriefOpen)
-            or git->error(__PACKAGE__, "Internal error: can't create file '$filepath': $!")
-                and return;
-        my ($pipe, $ctx) = $git->command_output_pipe(qw/cat-file blob/, $blob);
-        my $read;
-        while ($read = sysread $pipe, my $buffer, 64 * 1024) {
-            my $length = length $buffer;
-            my $offset = 0;
-            while ($length) {
-                my $written = syswrite $tmp, $buffer, $length, $offset;
-                defined $written
-                    or $git->error(__PACKAGE__, "Internal error: can't write to '$filepath': $!")
-                        and return;
-                $length -= $written;
-                $offset += $written;
-            }
-        }
-        defined $read
-            or $git->error(__PACKAGE__, "Internal error: can't read from git cat-file pipe: $!")
-                and return;
-        $git->command_close_pipe($pipe, $ctx);
-        $tmp->close();
-        $cache->{$blob} = $filepath;
-    }
-
-    return $cache->{$blob};
+    return $git->blob($rev, $file, @args);
 }
 
 sub grok_groups_spec {
@@ -1640,6 +1601,8 @@ STDOUT and STDERR to their previous state and returns a string containing
 every output since the previous call to redirect_output.
 
 =head2 file_temp REV, FILE, ARGS...
+
+This routine is DEPRECATED and has been replaced by the L<Git::More::blob> method.
 
 This routine returns the name of a temporary file into which the contents of
 the file FILE in revision REV has been copied.
