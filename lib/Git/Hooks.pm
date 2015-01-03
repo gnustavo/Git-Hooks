@@ -1641,10 +1641,8 @@ every output since the previous call to redirect_output.
 
 =head2 file_temp REV, FILE, ARGS...
 
-This routine returns a C<File::Temp> object representing a temporary file
-into which the contents of the file FILE in revision REV has been copied.
-
-The object's filehandle is closed before being returned.
+This routine returns the name of a temporary file into which the contents of
+the file FILE in revision REV has been copied.
 
 It's useful for hooks that need to read the contents of changed files in
 order to check anything in them.
