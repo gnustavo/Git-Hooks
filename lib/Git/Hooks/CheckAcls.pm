@@ -159,18 +159,6 @@ option:
 
 The plugin is configured by the following git options.
 
-=head2 githooks.checkacls.userenv STRING
-
-This variable is deprecated. Please, use the C<githooks.userenv>
-variable, which is defined in the Git::Hooks module. Please, see its
-documentation to understand it.
-
-=head2 githooks.checkacls.admin USERSPEC
-
-This variable is deprecated. Please, use the C<githooks.admin>
-variable, which is defined in the Git::Hooks module. Please, see its
-documentation to understand it.
-
 =head2 githooks.checkacls.acl ACL
 
 The authorization specification for a repository is defined by the set

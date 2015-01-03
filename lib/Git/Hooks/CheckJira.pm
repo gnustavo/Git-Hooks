@@ -432,18 +432,6 @@ The refs can be specified as a complete ref name
 caret (C<^>), which is kept as part of the regexp
 (e.g. "^refs/heads/(master|fix)").
 
-=head2 githooks.checkjira.userenv STRING
-
-This variable is deprecated. Please, use the C<githooks.userenv>
-variable, which is defined in the Git::Hooks module. Please, see its
-documentation to understand it.
-
-=head2 githooks.checkjira.admin USERSPEC
-
-This variable is deprecated. Please, use the C<githooks.admin>
-variable, which is defined in the Git::Hooks module. Please, see its
-documentation to understand it.
-
 =head2 githooks.checkjira.jiraurl URL
 
 This option specifies the JIRA server HTTP URL, used to construct the
