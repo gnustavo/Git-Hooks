@@ -2,6 +2,31 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.6.0     2015-01-04 16:57:32 America/Sao_Paulo
+
+  [New features]
+
+  - The new method Git::More::blob replaces the routine
+    Git::Hooks::file_temp which is now deprecated.
+
+  [Fixes]
+
+  - Contrary to what the documentation said, the Git::Hooks::file_temp
+    routine always returned a string containing the temporary file name
+    where the blob was written to, not a File::Temp object.
+
+  - The documentation doesn't mention any more the deprecated option
+    variables githooks.checkacls.userenv, githooks.checkacls.admin,
+    githooks.checkjira.userenv, and githooks.checkjira.admin, which weren't
+    supported for a long time.
+
+  [Internal changes]
+
+  - All uses of the modules File::Slurp, File::Spec, and File::Path were
+    changed to use module Path::Tiny instead. This refactoring was inspired
+    by Matt S. Trout's module review at
+    http://shadow.cat/blog/matt-s-trout/mstpan-5/.
+
 1.5.0     2014-12-22 22:49:24 America/Sao_Paulo
 
   [New features]
