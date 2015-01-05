@@ -452,12 +452,8 @@ sub _gerrit_patchset_post_hook {
         }
     }
 
-    my $eval = eval { $args->{gerrit}->POST($resource, \%params) };
-    unless ($eval) {
-        my $error = $@;
-        require Data::Dumper;
-        die __PACKAGE__ . ": error in Gerrit::REST::POST(\n" . Data::Dumper::Dumper($resource, \%params) . ")\n: $error\n";
-    }
+    eval { $args->{gerrit}->POST($resource, \%params) }
+        or die __PACKAGE__ . ": error in Gerrit::REST::POST($resource): $@\n";
 
     return;
 }
