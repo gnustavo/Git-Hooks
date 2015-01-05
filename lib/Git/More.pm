@@ -10,8 +10,6 @@ use Error qw(:try);
 use Carp;
 use Path::Tiny;
 use Git::Hooks qw/:utils/;
-use File::Path qw/make_path/;
-use File::Spec::Functions qw/catdir catfile splitpath/;
 
 # This package variable tells get_config which character encoding is used in
 # the output of the git-config command. Usually none, and decoding isn't
