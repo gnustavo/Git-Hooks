@@ -340,11 +340,7 @@ sub get_affected_ref_commit_ids {
         or die __PACKAGE__, ": get_affected_ref_commit_ids($ref): no such affected ref\n";
 
     unless (exists $affected->{$ref}{ids}) {
-        my @range = $git->get_affected_ref_range($ref);
-        # Avoid getting rev-list from null commit, getting from initial commit instead
-        # (useful if ref was created by current push)
-        @range = ($range[1]) if ($range[0] eq '0' x 40);
-        $affected->{$ref}{ids} = [$git->command('rev-list' => join('..', @range))];
+        $affected->{$ref}{ids} = [ map { $_->{'commit'} } $git->get_affected_ref_commits($ref) ];
     }
 
     return @{$affected->{$ref}{ids}};
