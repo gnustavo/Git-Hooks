@@ -67,9 +67,9 @@ $hook_script = <<"EOF";
 #!$Config{perlpath}
 die "external hook failure\n";
 EOF
-# We have to use append instead of spew to keep the $hook file modes.
-$hook->append({truncate => 1}, $hook_script)
+$hook->spew($hook_script)
     or BAIL_OUT("can't '$hook'->spew(<hook_script 2>)\n");
+chmod 0755, $hook or die "Cannot chmod $hook: $!\n";
 
 check_cannot_commit('execute a hook that fails', qr/external hook failure/);
 
