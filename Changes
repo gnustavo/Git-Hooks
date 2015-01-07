@@ -2,6 +2,18 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.6.1     2015-01-07 11:55:44 America/Sao_Paulo
+
+  [Fixes]
+
+  - Fix Git::More::get_affected_ref_commit_ids for newly created refs.  When
+    a new ref is pushed it's old commit is represented by the null id
+    ('0'x40'), which the git-rev-list command doesn't like. So, instead of
+    invoking git-rev-list directly, get_affected_ref_commit_ids invokes
+    get_affected_ref_commits which already knows how to deal with these edge
+    cases. Moreover, get_affected_ref_commits caches the results of
+    git-rev-list, making it possible to reuse it in different hooks.
+
 1.6.0     2015-01-04 16:57:32 America/Sao_Paulo
 
   [New features]
