@@ -8,6 +8,7 @@ use utf8;
 use strict;
 use warnings;
 use Git::Hooks qw/:DEFAULT :utils/;
+use Git::More;
 use Data::Util qw(:check);
 use Text::Glob qw/glob_to_regex/;
 use Error qw(:try);
@@ -25,6 +26,7 @@ sub check_affected_refs {
 
     foreach my $ref ($git->get_affected_refs()) {
         my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
+        $old_commit = $Git::More::EMPTY_COMMIT if $old_commit eq $Git::More::UNDEF_COMMIT;
         $errors += try {
             # WHY SCALAR? Even though we aren't interested in the command
             # output we can't invoke Git::command in void context. I don't

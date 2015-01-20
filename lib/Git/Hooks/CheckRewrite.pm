@@ -43,12 +43,16 @@ sub record_commit_parents {
     # commit SHA1
     # SHA1 SHA1 ...
 
-    # The first line holds the HEAD commit's id and the second the ids
-    # of its parents.
+    # The first line holds the HEAD commit's id and the second the ids of
+    # its parents. In a brand new repository the rev-list command applied to
+    # HEAD dies in error because HEAD isn't defined yet. This is why we
+    # evaluate the command and replace its value by the empty string below.
 
-    _record_filename($git)->spew(
-        scalar($git->command(qw/rev-list --pretty=format:%P -n 1 HEAD/))
-    );
+    my $commit_parents = eval {
+        $git->command([qw/rev-list --pretty=format:%P -n 1 HEAD/], { STDERR => 0 })
+    } || '';
+
+    _record_filename($git)->spew($commit_parents);
 
     return 1;
 }
@@ -63,6 +67,10 @@ sub check_commit_amend {
             and return 0;
 
     my ($old_commit, $old_parents) = $record_file->lines;
+
+    # For a brand new repository the commit information is empty and we
+    # don't have to check anything.
+    return unless $old_commit;
 
     chomp $old_commit;
     $old_commit =~ s/^commit\s+//;

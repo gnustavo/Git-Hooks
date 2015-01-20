@@ -153,11 +153,12 @@ sub new_repos {
 
 	    $repo->command(config => 'user.email', 'myself@example.com');
 	    $repo->command(config => 'user.name',  'My Self');
-	    $repo->command(add    => $filename);
-	    $repo->command(commit => '-mx');
 	}
 
-        Git::command(qw/clone -q --bare --no-hardlinks/, "--template=$tmpldir", $repodir, $clonedir);
+        Git::command(
+            [qw/clone -q --bare --no-hardlinks/, "--template=$tmpldir", $repodir, $clonedir],
+            { STDERR => 0 },    # do not complain about cloning an empty repo
+        );
 
 	$clone = Git::More->repository(Repository => $clonedir);
 

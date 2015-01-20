@@ -19,10 +19,10 @@ our $CONFIG_ENCODING = undef;
 # The UNDEF_COMMIT is a special SHA-1 used by Git in the update and
 # pre-receive hooks to signify that a reference either was just created (as
 # the old commit) or has been just deleted (as the new commit).
-my $UNDEF_COMMIT = '0000000000000000000000000000000000000000';
+our $UNDEF_COMMIT = '0000000000000000000000000000000000000000';
 
 # The EMPTY_COMMIT represents a commit with an empty tree.
-my $EMPTY_COMMIT = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+our $EMPTY_COMMIT = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
 sub get_config {
     my ($git, $section, $var) = @_;
