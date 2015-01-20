@@ -1,3 +1,4 @@
+## no critic (RequireExplicitPackage)
 use 5.010;
 use strict;
 use warnings;
@@ -6,17 +7,17 @@ use Path::Tiny;
 use File::pushd;
 use URI::file;
 use Git::More;
-use Error qw':try';
+use Error ':try';
 
 # Make sure the git messages come in English.
-$ENV{LC_ALL} = 'C';
+local $ENV{LC_ALL} = 'C';
 
 # It's better to perform all tests in a temporary directory because
 # otherwise the author runs the risk of messing with its local
 # Git::Hooks git repository.
 
 our $T = Path::Tiny->tempdir(TEMPLATE => 'githooks.XXXXX', TMPDIR => 1, CLEANUP => $ENV{REPO_CLEANUP} || 1);
-use Cwd; our $cwd = path(cwd);
+use Cwd; my $cwd = path(cwd);
 chdir $T or die "Can't chdir $T: $!";
 END { chdir '/' }
 
@@ -27,7 +28,7 @@ mkdir $tmpldir, 0777 or BAIL_OUT("can't mkdir $tmpldir: $!");
     mkdir $hooksdir, 0777 or BAIL_OUT("can't mkdir $hooksdir: $!");
 }
 
-our $git_version;
+my $git_version;
 try {
     $git_version = Git::command_oneline('version');
 } otherwise {
@@ -38,7 +39,7 @@ sub newdir {
     my $num = 1 + Test::Builder->new()->current_test();
     my $dir = $T->child($num);
     mkdir $dir;
-    $dir;
+    return $dir;
 }
 
 sub install_hooks {
@@ -46,10 +47,11 @@ sub install_hooks {
     my $hooks_dir = path($git->repo_path())->child('hooks');
     my $hook_pl   = $hooks_dir->child('hook.pl');
     {
+        ## no critic (RequireBriefOpen)
 	open my $fh, '>', $hook_pl or BAIL_OUT("Can't create $hook_pl: $!");
 	state $debug = $ENV{DBG} ? '-d' : '';
 	state $bliblib = $cwd->child('blib', 'lib');
-	print $fh <<EOF;
+	print $fh <<"EOF";
 #!$Config{perlpath} $debug
 use strict;
 use warnings;
@@ -63,7 +65,7 @@ EOF
 	    }
 	}
 
-	print $fh <<EOF;
+	print $fh <<'EOF';
 use Git::Hooks;
 EOF
 
@@ -120,6 +122,7 @@ EOF
                 or BAIL_OUT("can't symlink '$hooks_dir', '$hook': $!");
         }
     }
+    return;
 }
 
 sub new_repos {
@@ -135,9 +138,10 @@ sub new_repos {
     {
 	open my $fh, '>', $filename or die BAIL_OUT("can't open $filename: $!");
 	say $fh "first line";
+        close $fh;
     }
 
-    try {
+    return try {
 	my ($repo, $clone);
 
         {
@@ -182,6 +186,8 @@ sub new_commit {
 
     $git->command(add => $file);
     $git->command(commit => '-q', '-m', $msg || 'commit');
+
+    return;
 }
 
 
@@ -190,6 +196,8 @@ sub new_commit {
 # code, (c) the command's STDOUT, and (d) the command's STDERR.
 sub test_command {
     my ($git, $cmd, @args) = @_;
+
+    ## no critic (RequireBriefOpen)
 
     # Redirect STDERR to a temporary file
     open my $oldstderr, '>&', \*STDERR
@@ -203,7 +211,7 @@ sub test_command {
 	$stdout = $git->command($cmd, @args);
 	$stdout = '' unless defined $stdout;
     } otherwise {
-	$exception = "$_[0]";	# stringify the exception
+        $exception = "$_[0]";	# stringify the exception
     };
 
     # Redirect STDERR back to its original value
