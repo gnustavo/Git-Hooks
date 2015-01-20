@@ -16,6 +16,14 @@ use Git::Hooks qw/:utils/;
 # necessary. But sometimes it is...
 our $CONFIG_ENCODING = undef;
 
+# The UNDEF_COMMIT is a special SHA-1 used by Git in the update and
+# pre-receive hooks to signify that a reference either was just created (as
+# the old commit) or has been just deleted (as the new commit).
+my $UNDEF_COMMIT = '0000000000000000000000000000000000000000';
+
+# The EMPTY_COMMIT represents a commit with an empty tree.
+my $EMPTY_COMMIT = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+
 sub get_config {
     my ($git, $section, $var) = @_;
 
@@ -147,7 +155,7 @@ sub get_commits {
     # the hooks usually don't need to check them. So, in this
     # situation we simply return an empty list of commits.
 
-    return if $new_commit eq '0' x 40;
+    return if $new_commit eq $UNDEF_COMMIT;
 
     # When a new branch is created $old_commit is null (i.e.,
     # '0'x40). In this case we want all commits reachable from
@@ -161,7 +169,7 @@ sub get_commits {
     # be prefixed with carets in the git rev-list command invokation.
 
     my @excludes =
-        $old_commit eq '0' x 40
+        $old_commit eq $UNDEF_COMMIT
         ? grep {$_ ne $new_commit} $git->command(qw:for-each-ref --format=%(objectname) refs/heads/:)
         : $old_commit;
 
@@ -273,6 +281,7 @@ sub filter_files_in_index {
 
 sub filter_files_in_range {
     my ($git, $filter, $from, $to) = @_;
+    $from = $EMPTY_COMMIT if $from eq $UNDEF_COMMIT;
     my $output = $git->command(
         qw/diff-tree --name-only --no-commit-id -r -z/,
         "--diff-filter=$filter", $from, $to,
@@ -418,7 +427,7 @@ sub get_head_or_empty_tree {
         scalar($git->command_oneline([qw/rev-parse --verify HEAD/], {STDERR => 0}));
     } otherwise {
         # Initial commit: return the empty tree object
-        $head = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+        $head = $EMPTY_COMMIT;
     };
     return $head;
 }
