@@ -2,6 +2,13 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.6.2     2015-01-20 17:13:24-02:00 America/Sao_Paulo
+
+  [Fixes]
+
+  - Git::More::filter_files_in_range was broken for ranges where the
+    old-commit was undefined.
+
 1.6.1     2015-01-07 11:55:44 America/Sao_Paulo
 
   [Fixes]
