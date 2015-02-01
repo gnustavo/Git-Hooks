@@ -53,7 +53,9 @@ sub insert_change_id {
     my $cmsg = Git::More::Message->new($msg);
 
     # Don't mess with the message if it's empty.
-    if ($cmsg->title !~ /\S/ && $cmsg->body !~ /\S/) {
+    if (   (! defined $cmsg->title || $cmsg->title !~ /\S/)
+        && (! defined $cmsg->body  || $cmsg->body  !~ /\S/)
+       ) {
         # (Signed-off-by footers don't count.)
         my @footer = $cmsg->get_footer_keys;
         return if @footer == 0 || @footer == 1 && $footer[0] eq 'signed-off-by';
