@@ -28,7 +28,7 @@ my $gerrit_script = $T->child('gerrit-commit-msg');
 install_hooks($repo, undef, qw/commit-msg/);
 
 sub last_log {
-    return $repo->get_commit_msg('HEAD');
+    return eval { $repo->get_commit_msg('HEAD') } || 'NO LOG FOR EMPTY REPO';
 }
 
 sub diag_last_log {
