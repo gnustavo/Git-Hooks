@@ -2,6 +2,12 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.6.4     2015-02-01 16:57:10-02:00 America/Sao_Paulo
+
+  [Fixes]
+
+  - Fix still more tests that break on brand new repositories.
+
 1.6.3     2015-02-01 11:30:27-02:00 America/Sao_Paulo
 
   [Fixes]
