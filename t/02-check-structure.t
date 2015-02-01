@@ -64,7 +64,7 @@ sub check_cannot_commit {
     } else {
 	test_nok($testname, $repo, 'commit', '-m', $testname);
     }
-    $repo->command(reset => 'HEAD', '--', $filename);
+    $repo->command(reset => '--', $filename);
 }
 
 sub check_can_push {
