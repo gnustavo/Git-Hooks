@@ -189,7 +189,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
                     and next KEY;
 
         my $issue = get_issue($git, $key)
-            or $errors++
+            or ++$errors
                 and next KEY;
 
         if (%issuetype && ! exists $issuetype{$issue->{fields}{issuetype}{name}}) {
@@ -237,14 +237,14 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
         if ($by_assignee) {
             my $user = $git->authenticated_user()
                 or $git->error($PKG, "cannot grok the authenticated user")
-                    and $errors++
+                    and ++$errors
                         and next KEY;
 
             my $assignee = $issue->{fields}{assignee}{name};
 
             $user eq $assignee
                 or $git->error($PKG, "issue $key should be assigned to '$user', not '$assignee'")
-                    and $errors++
+                    and ++$errors
                         and next KEY;
         }
 
