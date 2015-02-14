@@ -849,7 +849,7 @@ For example:
             my $size = $git->command('cat-file' => '-s', $sha);
             $size <= $LIMIT
                 or $git->error('CheckSize', "File '$name' has $size bytes, more than our limit of $LIMIT"
-                    and $errors++;
+                    and ++$errors;
         }
 
         return $errors == 0;

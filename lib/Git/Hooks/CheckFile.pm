@@ -94,7 +94,7 @@ sub check_affected_refs {
     foreach my $ref ($git->get_affected_refs()) {
         my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
         check_new_files($git, $new_commit, $git->filter_files_in_range('AM', $old_commit, $new_commit))
-            or $errors++;
+            or ++$errors;
     }
 
     return $errors == 0;

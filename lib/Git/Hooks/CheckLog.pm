@@ -104,11 +104,11 @@ sub check_patterns {
         if ($match =~ s/^!\s*//) {
             $msg !~ /$match/m
                 or $git->error($PKG, "commit $id log SHOULD NOT match '\Q$match\E'")
-                    and $errors++;
+                    and ++$errors;
         } else {
             $msg =~ /$match/m
                 or $git->error($PKG, "commit $id log SHOULD match '\Q$match\E'")
-                    and $errors++;
+                    and ++$errors;
         }
     }
 
@@ -135,21 +135,21 @@ sub check_title {
         my $tlen = length($title) - 1; # discount the newline
         $tlen <= $max_width
             or $git->error($PKG, "commit $id log title should be at most $max_width characters wide, but it has $tlen")
-                and $errors++;
+                and ++$errors;
     }
 
     if (my $period = $git->get_config($CFG => 'title-period')) {
         if ($period eq 'deny') {
             $title !~ /\.$/
                 or $git->error($PKG, "commit $id log title SHOULD NOT end in a period")
-                    and $errors++;
+                    and ++$errors;
         } elsif ($period eq 'require') {
             $title =~ /\.$/
                 or $git->error($PKG, "commit $id log title SHOULD end in a period")
-                    and $errors++;
+                    and ++$errors;
         } elsif ($period ne 'allow') {
             $git->error($PKG, "invalid value for the $CFG.title-period option: '$period'")
-                and $errors++;
+                and ++$errors;
         }
     }
 
@@ -185,15 +185,15 @@ sub check_message {
 
     my $errors = 0;
 
-    check_spelling($git, $id, $msg) or $errors++;
+    check_spelling($git, $id, $msg) or ++$errors;
 
-    check_patterns($git, $id, $msg) or $errors++;
+    check_patterns($git, $id, $msg) or ++$errors;
 
     my $cmsg = Git::More::Message->new($msg);
 
-    check_title($git, $id, $cmsg->title) or $errors++;
+    check_title($git, $id, $cmsg->title) or ++$errors;
 
-    check_body($git, $id, $cmsg->body) or $errors++;
+    check_body($git, $id, $cmsg->body) or ++$errors;
 
     return $errors == 0;
 }
@@ -231,7 +231,7 @@ sub check_ref {
 
     foreach my $commit ($git->get_affected_ref_commits($ref)) {
         check_message($git, $commit, $commit->{body})
-            or $errors++;
+            or ++$errors;
     }
 
     return $errors == 0;
@@ -249,7 +249,7 @@ sub check_affected_refs {
 
     foreach my $ref ($git->get_affected_refs()) {
         check_ref($git, $ref)
-            or $errors++;
+            or ++$errors;
     }
 
     return $errors == 0;

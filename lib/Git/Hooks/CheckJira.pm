@@ -199,7 +199,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
                 "issue $key cannot be used because it is of the unapproved type '$issue->{fields}{issuetype}{name}'",
                 "You can use the following issue types: @issuetypes",
             );
-            $errors++;
+            ++$errors;
             next KEY;
         }
 
@@ -210,13 +210,13 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
                 "issue $key cannot be used because it is in the unapproved status '$issue->{fields}{status}{name}'",
                 "The following statuses are approved: @statuses",
             );
-            $errors++;
+            ++$errors;
             next KEY;
         }
 
         if ($unresolved && defined $issue->{fields}{resolution}) {
             $git->error($PKG, "issue $key cannot be used because it is already resolved");
-            $errors++;
+            ++$errors;
             next KEY;
         }
 
@@ -230,7 +230,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
                 }
             }
             $git->error($PKG, "issue $key has no fixVersion matching '$version', which is required for commits affecting '$ref'");
-            $errors++;
+            ++$errors;
             next KEY;
         }
 
@@ -254,10 +254,10 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
     foreach my $code (check_codes($git)) {
         my $ok = eval { $code->($git, $commit, _jira($git), @issues) };
         if (defined $ok) {
-            $errors++ unless $ok;
+            ++$errors unless $ok;
         } elsif (length $@) {
             $git->error($PKG, "error while evaluating check-code: $@");
-            $errors++;
+            ++$errors;
         }
     }
 
@@ -320,7 +320,7 @@ sub check_ref {
 
     foreach my $commit ($git->get_affected_ref_commits($ref)) {
         check_commit_msg($git, $commit, $ref)
-            or $errors++;
+            or ++$errors;
     }
 
     # Disconnect from JIRA
@@ -341,7 +341,7 @@ sub check_affected_refs {
 
     foreach my $ref ($git->get_affected_refs()) {
         check_ref($git, $ref)
-            or $errors++;
+            or ++$errors;
     }
 
     # Disconnect from JIRA

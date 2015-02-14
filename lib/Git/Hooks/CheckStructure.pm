@@ -118,7 +118,7 @@ sub check_added_files {
         my ($code, $error) = check_structure(get_structure($git, 'file'), [split '/', "/$file"]);
         unless ($code) {
             $git->error($PKG, "$error: $file");
-            $errors++;
+            ++$errors;
         }
     }
 
@@ -137,14 +137,14 @@ sub check_ref {
         if ($old_commit eq '0' x 40) {
             check_structure($structure, [split '/', "/$ref"])
                 or $git->error($PKG, "reference name '$ref' not allowed")
-                    and $errors++;
+                    and ++$errors;
         }
     }
 
     # Check names of newly added files
     if (get_structure($git, 'file')) {
         check_added_files($git, $git->filter_files_in_range('A', $old_commit, $new_commit))
-            or $errors++;
+            or ++$errors;
     }
 
     return $errors == 0;
@@ -160,7 +160,7 @@ sub check_affected_refs {
 
     foreach my $ref ($git->get_affected_refs()) {
         check_ref($git, $ref)
-            or $errors++;
+            or ++$errors;
     }
 
     return $errors == 0;
