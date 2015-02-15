@@ -2,6 +2,13 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.6.7     2015-02-15 19:38:29-02:00 America/Sao_Paulo
+
+  [Fixes]
+
+  - Fix the t/02-gerrit-change-it.t test so that it does not depend on the
+    locale.
+
 1.6.6     2015-02-14 02:45:32-02:00 America/Sao_Paulo
 
   [Fixes]
