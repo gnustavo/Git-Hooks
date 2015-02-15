@@ -39,12 +39,12 @@ sub diag_last_log {
 my $msgfile = $T->child('msg.txt');
 
 sub cannot_commit {
-    my ($testname, $regex, $msg) = @_;
+    my ($testname, $msg) = @_;
     $filename->append("new line\n");
     $repo->command(add => $filename);
     $msgfile->spew($msg)
         or BAIL_OUT("cannot_commit: can't '$msgfile'->spew('$msg')\n");
-    unless (test_nok_match($testname, $regex, $repo, 'commit', '-F', $msgfile)) {
+    unless (test_nok($testname, $repo, 'commit', '-F', $msgfile)) {
 	diag_last_log();
     }
 }
@@ -69,7 +69,7 @@ foreach my $test (
     [ newlines  => "\n\n" ],
     [ sp_nl_sp  => " \n " ],
 ) {
-    cannot_commit("empty: $test->[0]", qr/Aborting commit due to empty commit message/, $test->[1]);
+    cannot_commit("empty: $test->[0]", $test->[1]);
 }
 
 # test CommentOnlyMessages
