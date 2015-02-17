@@ -395,17 +395,6 @@ The Text::SpellChecker module uses defaults to infer which language it
 must use to spell check the message. You can make it use a particular
 language passing its ISO code to this option.
 
-=head2 i18n.commitEncoding ENCODING
-
-This is not a CheckLog option. In fact, this is a native option of
-Git, which semantics is defined in C<git help config>. It tells Git
-which character encoding the commit messages are stored in and
-defaults to C<utf-8>.
-
-When this plugin is used in the C<commit-msg> hook, the message file
-is read and its contents are checked against the encoding specified by
-this option.
-
 =head1 EXPORTS
 
 This module exports the following routines that can be used directly
