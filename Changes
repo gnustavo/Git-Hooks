@@ -2,6 +2,21 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.6.8     2015-02-17 19:42:38-02:00 America/Sao_Paulo
+
+  [Internal changes]
+
+  - Clean up module prerequisite list in dist.ini.
+
+  - Use Dist::Zilla::Plugin::MetaProvide to insert provides into META.yml.
+
+  - Move TUTORIAL.pod and TODO.pod into lib/Git/Hooks directory so that they
+    can be read as 'perldoc Git/Hooks/TUTORIAL'.
+
+  - Replace README/INSTALL with brian d foy's README.pod template.
+
+  - Update documentation.
+
 1.6.7     2015-02-15 19:38:29-02:00 America/Sao_Paulo
 
   [Fixes]
