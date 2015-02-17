@@ -1,3 +1,6 @@
+# PODNAME: TUTORIAL
+# ABSTRACT: Gentle tutorial for Git::Hooks users
+
 =head1 USER TUTORIAL
 
 As a Git user you may be interested in enabling some hooks for your
