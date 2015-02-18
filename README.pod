@@ -26,13 +26,13 @@ instead of the file location:
 
 You can read the documentation and inspect the meta data on one of the CPAN
 web interfaces, such as L<CPAN Search|http://search.cpan.org/dist/Git-Hooks>
-or L<MetaCPAN|http://www.metacpan.org/module/Git::Hooks>:
+or L<MetaCPAN|http://metacpan.org/release/Git::Hooks>:
 
 =over 4
 
 =item *	L<http://search.cpan.org/dist/Git-Hooks>
 
-=item *	L<http://www.metacpan.org/module/Git::Hooks>
+=item *	L<http://metacpan.org/release/Git::Hooks>
 
 =back
 
