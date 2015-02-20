@@ -430,12 +430,27 @@ sub _gerrit_patchset_post_hook {
     my ($hook_name, $git, $args) = @_;
 
     my $resource = do {
-        my $change   = $args->{'--change'}
-            or die __PACKAGE__, ": Missing --change argument to Gerrit's $hook_name hook.\n";
-        my $patchset = $args->{'--patchset'}
-            or die __PACKAGE__, ": Missing --patchset argument to Gerrit's $hook_name hook.\n";
+        for my $arg (qw/project branch change patchset/) {
+            exists $args->{"--$arg"}
+                or die __PACKAGE__, ": Missing --$arg argument to Gerrit's $hook_name hook.\n"
+        }
 
-        "/changes/$change/revisions/$patchset/review";
+        # We have to use the most complete form of Gerrit change ids because
+        # it's the only unanbiguous one. Vide:
+        # https://gerrit.cpqd.com.br/Documentation/rest-api-changes.html#change-id.
+
+        # Also, we have to escape it because the project name may contain
+        # slashes (and perhaps other reserved characters). This is possibly
+        # not a complete solution. Vide:
+        # http://mark.stosberg.com/blog/2010/12/percent-encoding-uris-in-perl.html.
+        require URI::Escape;
+        my $id = URI::Escape::uri_escape(
+            join('~', @{$args}{qw/--project --branch --change/}),
+        );
+
+        my $patchset = $args->{'--patchset'};
+
+        "/changes/$id/revisions/$patchset/review";
     };
 
     my $review_label = $git->get_config('githooks.gerrit' => 'review-label') || 'Code-Review';
