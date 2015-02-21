@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 package Git::Hooks::CheckLog;
-# ABSTRACT: Git::Hooks plugin to enforce commit log policies.
+# ABSTRACT: Git::Hooks plugin to enforce commit log policies
 
 use 5.010;
 use utf8;

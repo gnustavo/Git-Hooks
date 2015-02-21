@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 package Git::Hooks::CheckStructure;
-# ABSTRACT: Git::Hooks plugin for ref/file structure validation.
+# ABSTRACT: Git::Hooks plugin for ref/file structure validation
 
 use 5.010;
 use utf8;

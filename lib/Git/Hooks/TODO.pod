@@ -1,3 +1,10 @@
+# PODNAME: TODO
+# ABSTRACT: Ideas for future versions of Git::Hooks
+
+=pod
+
+=encoding utf8
+
 =head1 TO-DO list of niceties for the future of Git::Hooks.
 
 The following list is no order whatsoever. Any comments or other suggestion
@@ -13,24 +20,18 @@ We need:
 
 =over
 
-=item * A user-friendly README
-
-=item * A tutorial for Git server admins to use backend hooks.
-
-=item * A tutorial for Gerrit admins.
-
 =item * A plugin developer tutorial
 
 =item * Revise documentation and make it more uniform
 
-=item * Follow the advice in
-L<http://blog.smartbear.com/software-quality/bid/256072>
+=item * Follow the advice in L<13 Things People Hate about Your Open Source
+Docs|http://blog.smartbear.com/careers/13-things-people-hate-about-your-open-source-docs/>
 
 =back
 
 =head2 I18N
 
-Use Locale::TextDomain to internationalize it.
+Use Locale::TextDomain to internationalize it?
 
 =head2 L10N pt_BR
 
@@ -43,12 +44,11 @@ Along the lines of NFSv4 ACLs
 (L<http://tools.ietf.org/html/rfc5661#section-6>). I'm thinking about
 prefixing the what component with a '!'.
 
-=head2 Implement equivalents for the SVN::Hooks plugins
+=head2 Implement equivalents for the L<SVN::Hooks> plugins
 
-In L<http://metacpan.org/release/SVN-Hooks/>. Currently we're missing
-DenyFilenames and UpdateConfFile. Actually, I'm thinking that
-UpdateConfFile is too much specific. Perhaps something along the lines
-of this post-update hook would be more interesting:
+Currently we're missing DenyFilenames and UpdateConfFile. Actually, I'm
+thinking that UpdateConfFile is too much specific. Perhaps something along
+the lines of this post-update hook would be more interesting:
 L<http://stackoverflow.com/questions/279169/deploy-a-project-using-git-push>.
 
 =head2 Implement the Scott Chacon example hooks
@@ -74,39 +74,6 @@ used here. Some other things to check:
 (L<https://github.com/icefox/git-hooks/blob/master/contrib/commit-msg/duplicate-signedoffby>)
 
 =back
-
-=head2 Implement the Git::Hooks::CheckWhiteSpace plugin
-
-Some people (e.g. Linus Torvalds) prefer spaces, others prefer tabs.
-
-Some people prefer tab size at 8 characters, others prefer at 4.
-
-This plugin should be able to check these preferences for selected
-types of files. Some configuration would be like this:
-
-=over
-
-=item * githooks.checkwhitespace.indentation [tab|space|any]
-
-By default any kind of white-space should be allowed. But one could
-specify B<tab> for tabs only or B<space> for space only.
-
-Note that this checks only the indentation space in each line.
-
-=item * githooks.checkwhitespace.files REGEXP
-
-This multi-valued option defines the files that should be checked. By
-default, no file is checked.
-
-=item * githooks.checkwhitespace.trailing [allow|deny]
-
-By default trailing white space is denied. But one should be able to
-allow it.
-
-=back
-
-This way, the options are fixed for any file. Would it be desirable to
-have different options for different kind of files?
 
 =head2 CheckJira post-receive hook
 

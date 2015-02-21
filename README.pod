@@ -1,3 +1,6 @@
+# PODNAME: README
+# ABSTRACT: All you need to know to start using Git::Hooks
+
 =pod
 
 =encoding utf8

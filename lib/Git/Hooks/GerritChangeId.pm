@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 package Git::Hooks::GerritChangeId;
-# ABSTRACT: Git::Hooks plugin to insert a Change-Id in a commit message.
+# ABSTRACT: Git::Hooks plugin to insert a Change-Id in a commit message
 
 use 5.010;
 use utf8;

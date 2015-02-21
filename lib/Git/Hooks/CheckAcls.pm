@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 package Git::Hooks::CheckAcls;
-# ABSTRACT: Git::Hooks plugin for branch/tag access control.
+# ABSTRACT: Git::Hooks plugin for branch/tag access control
 
 use 5.010;
 use utf8;

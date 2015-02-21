@@ -1,5 +1,5 @@
 package Git::More;
-# ABSTRACT: A Git extension with some goodies for hook developers.
+# ABSTRACT: A Git extension with some goodies for hook developers
 
 use strict;
 use warnings;

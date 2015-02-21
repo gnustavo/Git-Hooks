@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 package Git::Hooks::CheckJira;
-# ABSTRACT: Git::Hooks plugin which requires citation of JIRA issues in commit messages.
+# ABSTRACT: Git::Hooks plugin which requires citation of JIRA issues in commit messages
 
 use 5.010;
 use utf8;

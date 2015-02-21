@@ -1,5 +1,9 @@
 # PODNAME: TUTORIAL
-# ABSTRACT: Gentle tutorial for Git::Hooks users
+# ABSTRACT: Gentle tutorial for Git::Hooks users and Git administrators
+
+=pod
+
+=encoding utf8
 
 =head1 USER TUTORIAL
 
