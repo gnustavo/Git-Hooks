@@ -80,3 +80,9 @@ used here. Some other things to check:
 Mikko Koivunalho suggested that Git::Hooks::CheckJira could be modified so
 that it would not just check that the ticket exists, but actually copy the
 commit message to the ticket.
+
+=head2 Turn t/test-functions.pl into a module
+
+Idea provided by Skye Shaw to make its functions usable by third-party
+plugins. Something like Git::Hooks::Test.
+
