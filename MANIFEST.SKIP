@@ -56,5 +56,3 @@
 # Avoid MYMETA files
 ^MYMETA\.
 #!end included /usr/share/perl/5.18/ExtUtils/MANIFEST.SKIP
-
-\bTODO.pod$
