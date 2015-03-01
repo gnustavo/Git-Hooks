@@ -48,7 +48,7 @@ sub _spell_checker {
 
     unless (state $tried_to_check) {
         unless (eval { require Text::SpellChecker; }) {
-            $git->error($PKG, "could not require Text::SpellChecker module to spell messages", $@);
+            $git->error($PKG, "Please, install Perl module Text::SpellChecker to spell messages", $@);
             return;
         }
 

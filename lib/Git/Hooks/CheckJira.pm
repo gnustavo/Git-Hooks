@@ -11,7 +11,6 @@ use Git::Hooks qw/:DEFAULT :utils/;
 use Path::Tiny;
 use Data::Util qw(:check);
 use List::MoreUtils qw/uniq/;
-use JIRA::REST;
 
 my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
@@ -66,6 +65,11 @@ sub _jira {
 
     # Connect to JIRA if not yet connected
     unless (exists $cache->{jira}) {
+        unless (eval { require JIRA::REST; }) {
+            $git->error($PKG, "Please, install Perl module JIRA::REST to use the CheckJira plugin", $@);
+            return;
+        }
+
         my %jira;
         for my $option (qw/jiraurl jirauser jirapass/) {
             $jira{$option} = $git->get_config($CFG => $option)
