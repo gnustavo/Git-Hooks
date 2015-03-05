@@ -227,8 +227,8 @@ This is useful, for instance, if you want developers to be restricted
 in what they can do to official branches but to have complete control
 with their own branch namespace.
 
-    git config CheckAcls.acl '^. CRUD ^refs/heads/{USER}/'
-    git config CheckAcls.acl '^. U    ^refs/heads'
+    git config githooks.CheckAcls.acl '^. CRUD ^refs/heads/{USER}/'
+    git config githooks.CheckAcls.acl '^. U    ^refs/heads'
 
 In this example, every user (^.) has complete control (CRUD) to the
 branches below "refs/heads/{USER}". Supposing the environment variable
