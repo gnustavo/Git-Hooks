@@ -2,6 +2,22 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.6.10    2015-03-14 19:33:16-03:00 America/Sao_Paulo
+
+  [Fixes]
+
+  - Do not install README.pod anymore since it's not useful after
+    installation and when installed it ends up as Git::README instead of
+    Git::Hooks::README. Many thanks to Karen Etheridge who kindly explained
+    the problem to me.
+    [https://github.com/gnustavo/Git-Hooks/issues/10]
+
+  - Make JIRA::REST and Text::SpellChecker distribution recommendations
+    instead of requirements. Text::SpellChecker has some installation
+    problems in some platforms. Both are needed only for specific plugins
+    which not every user may need.
+    [https://github.com/gnustavo/Git-Hooks/issues/14]
+
 1.6.9     2015-02-20 16:47:44-02:00 America/Sao_Paulo
 
   [Fixes]
