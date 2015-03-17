@@ -466,4 +466,9 @@ This L<StackOverflow
 question|http://stackoverflow.com/questions/2290016/git-commit-messages-50-72-formatting>
 has a good discussion about the topic.
 
+=item * B<What do you try to leave in your commit messages?>
+
+A blog post from Kohsuke Kawaguchi, Jenkins's author, explaining what
+information he usually includes in his commit messages and why.
+
 =back
