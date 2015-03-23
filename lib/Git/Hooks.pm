@@ -380,7 +380,7 @@ sub _prepare_gerrit_args {
     # used if one sets up Gerrit hooks, which may not be the most
     # common usage of Git::Hooks.
     eval {require Gerrit::REST}
-        or die __PACKAGE__, ": Can't require Gerrit::REST module.\n";
+        or die __PACKAGE__, ": Please, install the Gerrit::REST module to use Gerrit hooks.\n";
 
     $opt{gerrit} = do {
         my %info;
