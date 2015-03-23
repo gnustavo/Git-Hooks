@@ -2,6 +2,15 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.6.11    2015-03-22 22:19:06-03:00 America/Sao_Paulo
+
+  [Internal changes]
+
+  - Make the module Gerrit::REST a recommendation instead of a requirement
+    since it's only needed when one want's to use Gerrit hooks.
+
+  - Remove the README.3 and TODO.3 manpages from the distribution.
+
 1.6.10    2015-03-14 19:33:16-03:00 America/Sao_Paulo
 
   [Fixes]
