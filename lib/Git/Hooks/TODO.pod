@@ -86,3 +86,6 @@ commit message to the ticket.
 Idea provided by Skye Shaw to make its functions usable by third-party
 plugins. Something like Git::Hooks::Test.
 
+=head2 Emulate the uploadvalidator Gerrit plugin
+
+L<https://gerrit.googlesource.com/plugins/uploadvalidator/+/master/src/main/resources/Documentation/config.md>
