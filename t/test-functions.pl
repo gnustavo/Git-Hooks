@@ -148,22 +148,22 @@ sub new_repos {
     }
 
     return try {
-	my ($repo, $clone);
+        my ($repo, $clone);
 
         {
-	    # It would be easier to pass a directory argument to
-	    # git-init but it started to accept it only on v1.6.5. To
-	    # support previous gits we chdir to $repodir to avoid the
-	    # need to pass the argument. Then we have to go back to
-	    # where we were.
+            # It would be easier to pass a directory argument to
+            # git-init but it started to accept it only on v1.6.5. To
+            # support previous gits we chdir to $repodir to avoid the
+            # need to pass the argument. Then we have to go back to
+            # where we were.
             my $dir = pushd($repodir);
             Git::command(qw/init -q/, "--template=$tmpldir");
 
-	    $repo = Git::More->repository(Directory => '.');
+            $repo = Git::More->repository(Directory => '.');
 
-	    $repo->command(config => 'user.email', 'myself@example.com');
-	    $repo->command(config => 'user.name',  'My Self');
-	}
+            $repo->command(config => 'user.email', 'myself@example.com');
+            $repo->command(config => 'user.name',  'My Self');
+        }
 
         Git::command(
             [qw/clone -q --bare --no-hardlinks/, "--template=$tmpldir", $repodir, $clonedir],
@@ -281,7 +281,7 @@ sub test_nok_match {
     if ($ok) {
         fail($testname);
         diag(" succeeded without intention\n exit=$exit\n stdout=$stdout\n stderr=$stderr\n git-version=$git_version\n");
-	return 0;
+        return 0;
     } elsif ($stdout =~ $regex || $stderr =~ $regex) {
         pass($testname);
         return 1;
