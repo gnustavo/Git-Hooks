@@ -1,5 +1,6 @@
 ## no critic (Modules::RequireVersionVar)
 package Git::Hooks::CheckCommitAuthor;
+
 # ABSTRACT: Git::Hooks plugin to enforce commit author policies
 
 use 5.010;
@@ -12,7 +13,7 @@ use File::Slurp::Tiny 'read_file';
 require Git::Mailmap;
 
 my $PKG = __PACKAGE__;
-(my $CFG = __PACKAGE__) =~ s/.*::/githooks./msx;
+( my $CFG = __PACKAGE__ ) =~ s/.*::/githooks./msx;
 
 #############
 # Grok hook configuration, check it and set defaults.
@@ -24,11 +25,12 @@ sub _setup_config {
 
     # TODO Global flag: use-extended-regexp
 
-    $config->{lc $CFG} //= {};
+    $config->{ lc $CFG } //= {};
 
-    my $default = $config->{lc $CFG};
-    $default->{'match-mailmap-name'}  //= ['1'];
+    my $default = $config->{ lc $CFG };
+    $default->{'match-mailmap-name'}    //= ['1'];
     $default->{'allow-mailmap-aliases'} //= ['1'];
+
     # $default->{'body-max-width'}  //= [72];
 
     return;
@@ -43,36 +45,39 @@ sub check_author {
 
     return 1 if im_admin($git);
 
-    my $author_name   = $ENV{'GIT_AUTHOR_NAME'};
-    my $author_email  = '<' . $ENV{'GIT_AUTHOR_EMAIL'} . '>';
+    my $author_name  = $ENV{'GIT_AUTHOR_NAME'};
+    my $author_email = '<' . $ENV{'GIT_AUTHOR_EMAIL'} . '>';
 
     my $errors = 0;
-    check_patterns($git, $author_name, $author_email) or ++$errors;
-    check_mailmap($git, $author_name, $author_email) or ++$errors;
-    check_git_user($git, $author_name, $author_email) or ++$errors;
+    check_patterns( $git, $author_name, $author_email ) or ++$errors;
+    check_mailmap( $git, $author_name, $author_email ) or ++$errors;
+    check_git_user( $git, $author_name, $author_email ) or ++$errors;
 
     return $errors == 0;
 }
 
 sub check_patterns {
-    my ($git, $author_name, $author_email) = @_;
+    my ( $git, $author_name, $author_email ) = @_;
 
     my $errors = 0;
 
     my $author = "$author_name $author_email";
-    foreach my $match ($git->get_config($CFG => 'match')) {
-        if ($match =~ s/^![[:space:]]*//msx) {
+    foreach my $match ( $git->get_config( $CFG => 'match' ) ) {
+        if ( $match =~ s/^![[:space:]]*//msx ) {
             ## no critic (RegularExpressions::RequireExtendedFormatting)
             $author !~ /$match/ms
-                or $git->error($PKG, 'commit author '
-                . "'\Q$author_name $author_email\Q' SHOULD NOT match '\Q$match\E'")
-                    and ++$errors;
-        } else {
+              or $git->error( $PKG,
+                    'commit author '
+                  . "'\Q$author_name $author_email\Q' SHOULD NOT match '\Q$match\E'"
+              ) and ++$errors;
+        }
+        else {
             ## no critic (RegularExpressions::RequireExtendedFormatting)
             $author =~ /$match/ms
-                or $git->error($PKG, 'commit author '
-                . "'\Q$author_name $author_email\Q' SHOULD match '\Q$match\E'")
-                    and ++$errors;
+              or $git->error( $PKG,
+                    'commit author '
+                  . "'\Q$author_name $author_email\Q' SHOULD match '\Q$match\E'"
+              ) and ++$errors;
         }
     }
 
@@ -80,16 +85,16 @@ sub check_patterns {
 }
 
 sub check_mailmap {
-    my ($git, $author_name, $author_email) = @_;
+    my ( $git, $author_name, $author_email ) = @_;
 
     my $errors = 0;
 
     my $author = "$author_name $author_email";
-    my ($mapfile_location) = $git->get_config($CFG => 'mailmap');
+    my ($mapfile_location) = $git->get_config( $CFG => 'mailmap' );
     my $mailmap_as_string;
-    return 1 if(!defined $mapfile_location);
+    return 1 if ( !defined $mapfile_location );
 
-    if($mapfile_location eq '1') {
+    if ( $mapfile_location eq '1' ) {
         croak 'This option is not yet implemented.';
     }
     else {
@@ -98,52 +103,57 @@ sub check_mailmap {
     my $mailmap = Git::Mailmap->new();
     $mailmap->from_string( 'mailmap' => $mailmap_as_string );
     my $verified = 0;
+
     # Always search (first) among proper emails (and names if wanted).
-    my %search_params = ('proper-email' => $author_email);
-    if($git->get_config($CFG => 'match-mailmap-name') eq '1') {
+    my %search_params = ( 'proper-email' => $author_email );
+    if ( $git->get_config( $CFG => 'match-mailmap-name' ) eq '1' ) {
         $search_params{'proper-name'} = $author_name;
     }
     $verified = $mailmap->search(%search_params);
+
     # If was not found among proper-*, and user wants, search aliases.
-    if( !$verified && $git->get_config($CFG => 'allow-mailmap-aliases') eq '1') {
-        my %c_search_params = ('commit-email' => $author_email);
-        if($git->get_config($CFG => 'match-mailmap-name') eq '1') {
+    if (  !$verified
+        && $git->get_config( $CFG => 'allow-mailmap-aliases' ) eq '1' )
+    {
+        my %c_search_params = ( 'commit-email' => $author_email );
+        if ( $git->get_config( $CFG => 'match-mailmap-name' ) eq '1' ) {
             $c_search_params{'commit-name'} = $author_name;
         }
         $verified = $mailmap->search(%c_search_params);
     }
-    if($verified == 0) {
-        $git->error($PKG, 'commit author '
-            . "'\Q$author\Q' does not match in mailmap file.")
-            and ++$errors;
+    if ( $verified == 0 ) {
+        $git->error( $PKG,
+            'commit author ' . "'\Q$author\Q' does not match in mailmap file." )
+          and ++$errors;
     }
 
     return $errors == 0;
 }
 
 sub check_git_user {
-    my ($git, $author_name, $author_email) = @_;
+    my ( $git, $author_name, $author_email ) = @_;
 
     my $errors = 0;
 
     my $author = "$author_name $author_email";
-    if($git->get_config($CFG => 'match-with-git-user')) {
-            $git-error($PKG, 'the parameter match-with-git-user'
-                . ' is not yet implemented.')
-                and ++$errors;
+    if ( $git->get_config( $CFG => 'match-with-git-user' ) ) {
+        $git -
+          error( $PKG,
+            'the parameter match-with-git-user' . ' is not yet implemented.' )
+          and ++$errors;
     }
 
     return $errors == 0;
 }
 
 sub check_ref {
-    my ($git, $ref) = @_;
+    my ( $git, $ref ) = @_;
 
     my $errors = 0;
 
-    foreach my $commit ($git->get_affected_ref_commits($ref)) {
-        check_message($git, $commit, $commit->{body})
-            or ++$errors;
+    foreach my $commit ( $git->get_affected_ref_commits($ref) ) {
+        check_message( $git, $commit, $commit->{body} )
+          or ++$errors;
     }
 
     return $errors == 0;
@@ -159,21 +169,21 @@ sub check_affected_refs {
 
     my $errors = 0;
 
-    foreach my $ref ($git->get_affected_refs()) {
-        check_ref($git, $ref)
-            or ++$errors;
+    foreach my $ref ( $git->get_affected_refs() ) {
+        check_ref( $git, $ref )
+          or ++$errors;
     }
 
     return $errors == 0;
 }
 
 # Install hooks
-PRE_COMMIT       \&check_author;
-UPDATE           \&check_affected_refs; # TODO server-side stuff!
-PRE_RECEIVE      \&check_affected_refs;
-REF_UPDATE       \&check_affected_refs;
+PRE_COMMIT \&check_author;
+UPDATE \&check_affected_refs;    # TODO server-side stuff!
+PRE_RECEIVE \&check_affected_refs;
+REF_UPDATE \&check_affected_refs;
 PATCHSET_CREATED \&check_patchset;
-DRAFT_PUBLISHED  \&check_patchset;
+DRAFT_PUBLISHED \&check_patchset;
 
 1;
 
