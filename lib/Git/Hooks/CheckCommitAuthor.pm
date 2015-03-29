@@ -23,15 +23,11 @@ sub _setup_config {
 
     my $config = $git->get_config();
 
-    # TODO Global flag: use-extended-regexp
-
     $config->{ lc $CFG } //= {};
 
     my $default = $config->{ lc $CFG };
     $default->{'match-mailmap-name'}    //= ['1'];
     $default->{'allow-mailmap-aliases'} //= ['1'];
-
-    # $default->{'body-max-width'}  //= [72];
 
     return;
 }
@@ -137,8 +133,7 @@ sub check_git_user {
 
     my $author = "$author_name $author_email";
     if ( $git->get_config( $CFG => 'match-with-git-user' ) ) {
-        $git -
-          error( $PKG,
+        $git->error( $PKG,
             'the parameter match-with-git-user' . ' is not yet implemented.' )
           and ++$errors;
     }
@@ -315,58 +310,3 @@ This is the routine used to implement the C<patchset-created> Gerrit
 hook. It needs a C<Git::More> object and the hash containing the
 arguments passed to the hook by Gerrit.
 
-=head1 REFERENCES
-
-=over
-
-=item * B<git-commit(1) Manual Page>
-
-This L<Git manual
-page|<http://www.kernel.org/pub/software/scm/git/docs/git-commit.html>
-has a section called DISCUSSION which discusses some common log
-message policies.
-
-=item * B<Linus Torvalds GitHub rant>
-
-In L<this
-note|https://github.com/torvalds/linux/pull/17#issuecomment-5659933>,
-Linus says why he dislikes GitHub's pull request interface, mainly
-because it doesn't allow him to enforce log message formatting
-policies.
-
-=item * B<MediaWiki Git/Commit message guidelines>
-
-L<This
-document|http://www.mediawiki.org/wiki/Git/Commit_message_guidelines>
-defines MediaWiki's project commit log message guidelines.
-
-=item * B<Proper Git Commit Messages and an Elegant Git History>
-
-L<This is a good
-discussion|http://ablogaboutcode.com/2011/03/23/proper-git-commit-messages-and-an-elegant-git-history/>
-about commit log message formatting and the reasons behind them.
-
-=item * B<GIT Commit Good Practice>
-
-L<This document|https://wiki.openstack.org/wiki/GitCommitMessages>
-defines the OpenStack's project commit policies.
-
-=item * B<A Note About Git Commit Messages>
-
-This L<blog
-post|http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html>
-argues briefly and convincingly for the use of a particular format for Git
-commit messages.
-
-=item * B<Git Commit Messages: 50/72 Formatting>
-
-This L<StackOverflow
-question|http://stackoverflow.com/questions/2290016/git-commit-messages-50-72-formatting>
-has a good discussion about the topic.
-
-=item * B<What do you try to leave in your commit messages?>
-
-A blog post from Kohsuke Kawaguchi, Jenkins's author, explaining what
-information he usually includes in his commit messages and why.
-
-=back
