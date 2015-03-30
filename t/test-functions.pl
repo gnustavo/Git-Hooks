@@ -17,12 +17,11 @@ local $ENV{LC_ALL} = 'C';
 # otherwise the author runs the risk of messing with its local
 # Git::Hooks git repository.
 
-my %tempdir_options = ('TEMPLATE' => 'githooks.XXXXX', 'TMPDIR' => 1);
-$tempdir_options{'CLEANUP'} = 1;
-if( exists $ENV{REPO_CLEANUP} && $ENV{REPO_CLEANUP} == 0 ) {
-    $tempdir_options{'CLEANUP'} = 0;
-}
-our $T = Path::Tiny->tempdir(%tempdir_options);
+our $T = Path::Tiny->tempdir(
+    TEMPLATE => 'githooks.XXXXX',
+    TMPDIR   => 1,
+    CLEANUP  => exists $ENV{REPO_CLEANUP} ? $ENV{REPO_CLEANUP} : 1,
+);
 use Cwd; my $cwd = path(cwd);
 chdir $T or die "Can't chdir $T: $!";
 END { chdir '/' }
