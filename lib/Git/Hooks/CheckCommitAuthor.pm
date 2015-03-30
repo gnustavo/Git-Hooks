@@ -1,7 +1,8 @@
 ## no critic (Modules::RequireVersionVar)
+## no critic (Documentation)
 package Git::Hooks::CheckCommitAuthor;
 
-# ABSTRACT: Git::Hooks plugin to enforce commit author policies
+# ABSTRACT: Git::Hooks plugin to enforce policies on commit author name and email.
 
 use 5.010;
 use utf8;
@@ -185,14 +186,35 @@ DRAFT_PUBLISHED \&check_patchset;
 __END__
 =for Pod::Coverage check_spelling check_patterns check_title check_body check_message check_ref
 
-=head1 NAME
-
-Git::Hooks::CheckCommitAuthor - Git::Hooks plugin to enforce commit log policies.
-
 =head1 DESCRIPTION
 
-This Git::Hooks plugin hooks itself to the hooks below to enforce
-policies on commit author names and email addresses.
+By its very nature, the Git VCS (version control system) is open
+and with very little access control. It is common in many instances to run
+Git under one user id (often "git") and allowing access to it
+via L<SSH|http://en.wikipedia.org/wiki/Secure_Shell> and 
+L<public keys|http://en.wikipedia.org/wiki/Public-key_cryptography>.
+This means that user can push commits without any control on either commit
+message or the commit author.
+
+This plugin allows one to enforce policies on the author information
+in a commit. Author information consists of author name and author email.
+Email is the more important of these. In principle, email is used to identify
+committers, and in some Git clients, 
+L<GitWeb|http://git-scm.com/book/en/v2/Git-on-the-Server-GitWeb>
+WWW-interface, for instance,
+email is also used to show a picture of the committer
+via L<Gravatar|http://en.gravatar.com>.
+The common way for user to set the author is to use the
+(normally user global)
+configuration options I<user.name> and I<user.email>. When doing a commit,
+user can override these via the command line option I<--author>. The
+
+To enable CheckCommitAuthor plugin, you should 
+add it to the githooks.plugin configuration option:
+
+    git config --add githooks.plugin CheckCommitAuthor
+
+Git::Hooks::CheckCommitAuthor plugin hooks itself to the hooks below:
 
 =over
 
@@ -225,20 +247,12 @@ This hook is invoked when a push request is received by Gerrit Code
 Review for a virtual branch (refs/for/*), to check if the commit 
 author name and email address of all commits being pushed comply.
 
+=item * B<draft-published>
+
+The draft-published hook is executed when the user publishes a draft change,
+making it visible to other users.
+
 =back
-
-Projects using Git, probably more than projects using any other
-version control system, have a tradition of establishing policies on
-the format of commit log messages. The REFERENCES section below lists
-some of the most important.
-
-This plugin allows one to enforce most of the established policies. The
-default configuration already enforces the most common one.
-
-To enable it you should add it to the githooks.plugin configuration
-option:
-
-    git config --add githooks.plugin CheckCommitAuthor
 
 =head1 CONFIGURATION
 
@@ -256,17 +270,19 @@ REGEXP.
 The filename for the mailmap file to use, normally F<ROOT/.mailmap.>
 If this option is not specified, the author is not matched against the
 mailmap. If this option is "1" (i.e. true), mailmap file is searched for
-in the normal locations: (Not yet implemented)
+in the normal locations:
 
-=over 8
+This option is not yet implemented!
 
-=item TODO
+=over
 
-=item 1) toplevel of the repository
+=item Possible .mailmap locations:
 
-=item 2) the location pointed to by the mailmap.file or
+=item 1) the location pointed to by the mailmap.file or
 
-=item 3) mailmap.blob configuration options
+=item 2) mailmap.blob configuration options
+
+=item 3) toplevel of the repository
 
 =back
 
@@ -285,8 +301,11 @@ B<match-mailmap-name>), not with the aliases. Default: Off.
 
 =head2 githooks.checkcommitauthor.match-with-user [01]
 
-Match commit author with the contents of the environment variable I<USER>.
-For more information, see L<Git::Hooks|Git::Hooks>. Default: Off.
+Match commit author against the contents of the environment variable I<USER>.
+For more information, see
+L<Git::Hooks userenv variable|
+https://metacpan.org/pod/Git::Hooks#githooks.userenv-STRING>.
+Default: Off.
 
 =head1 EXPORTS
 
@@ -309,4 +328,12 @@ C<pre-receive> hooks. It needs a C<Git::More> object.
 This is the routine used to implement the C<patchset-created> Gerrit
 hook. It needs a C<Git::More> object and the hash containing the
 arguments passed to the hook by Gerrit.
+
+=head1 CONTRIBUTORS
+
+=over
+
+=item * Mikko Koivunalho <mikkoi@cpan.org>
+
+=back
 
