@@ -1,4 +1,5 @@
 ## no critic (RequireExplicitPackage)
+## no critic (ErrorHandling::RequireCarping)
 use 5.010;
 use strict;
 use warnings;
@@ -16,7 +17,11 @@ local $ENV{LC_ALL} = 'C';
 # otherwise the author runs the risk of messing with its local
 # Git::Hooks git repository.
 
-our $T = Path::Tiny->tempdir(TEMPLATE => 'githooks.XXXXX', TMPDIR => 1, CLEANUP => $ENV{REPO_CLEANUP} || 1);
+our $T = Path::Tiny->tempdir(
+    TEMPLATE => 'githooks.XXXXX',
+    TMPDIR   => 1,
+    CLEANUP  => exists $ENV{REPO_CLEANUP} ? $ENV{REPO_CLEANUP} : 1,
+);
 use Cwd; my $cwd = path(cwd);
 chdir $T or die "Can't chdir $T: $!";
 END { chdir '/' }
