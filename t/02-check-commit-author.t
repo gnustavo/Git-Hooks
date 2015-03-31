@@ -6,8 +6,6 @@ use Path::Tiny;
 use Test::Most;
 die_on_fail;
 
-use Log::Any::Adapter ('Stderr');    # Activate to get all log messages.
-
 BEGIN { require "test-functions.pl" }
 
 my ( $repo, $file, $clone, $T ) = new_repos();
@@ -202,6 +200,21 @@ check_cannot_commit(
     undef,
     'Dummy commit message',
     'Al Other <al.other@pomp.pom>'
+);
+
+# Server-side
+$repo->command( config => '--unset-all', 'githooks.checkcommitauthor.mailmap' );
+
+use Data::Dumper;
+diag("clone:" . Dumper($clone));
+diag("clone->opts->Repository:" . Dumper($clone->{'opts'}->{'Repository'}));
+my @config_rows = ("[githooks]\n", "    plugin = CheckCommitAuthor\n",
+    "[githoooks \"checkcommitauthor\"]\n", "    match = \"^Mallikas\$\"\n");
+$clone->{'opts'}->{'Repository'}->child('config')->append(@config_rows);
+
+
+check_can_push(
+    'This author\'s commit cannot push (1): match',
 );
 
 done_testing();
