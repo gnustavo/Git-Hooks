@@ -35,15 +35,33 @@ sub _setup_config {
 
 ##########
 
-sub check_author {
+sub check_commit_at_client {
     my ($git) = @_;
+
+    my $author_name  = $ENV{'GIT_AUTHOR_NAME'};
+    my $author_email = '<' . $ENV{'GIT_AUTHOR_EMAIL'} . '>';
+
+    return check_author($git, $author_name, $author_email);
+}
+
+sub check_commit_at_server {
+    my ($git, $commit) = @_;
+
+    my $commit_hash = $git->get_commit( $commit );
+    print Dumper($commit_hash);
+
+    my $author_name  = $commit_hash->{'author_name'};
+    my $author_email = $commit_hash->{'author_email'};
+
+    return check_author($git, $author_name, $author_email);
+}
+
+sub check_author {
+    my ($git, $author_name, $author_email) = @_;
 
     _setup_config($git);
 
     return 1 if im_admin($git);
-
-    my $author_name  = $ENV{'GIT_AUTHOR_NAME'};
-    my $author_email = '<' . $ENV{'GIT_AUTHOR_EMAIL'} . '>';
 
     my $errors = 0;
     check_patterns( $git, $author_name, $author_email ) or ++$errors;
@@ -148,7 +166,7 @@ sub check_ref {
     my $errors = 0;
 
     foreach my $commit ( $git->get_affected_ref_commits($ref) ) {
-        check_message( $git, $commit, $commit->{body} )
+        check_commit_at_server( $git, $commit )
           or ++$errors;
     }
 
@@ -173,8 +191,19 @@ sub check_affected_refs {
     return $errors == 0;
 }
 
+sub check_patchset {
+    my ($git, $opts) = @_;
+
+    _setup_config($git);
+
+    my $sha1   = $opts->{'--commit'};
+    my $commit = $git->get_commit($sha1);
+
+    return check_commit_at_server($git, $commit);
+}
+
 # Install hooks
-PRE_COMMIT \&check_author;
+PRE_COMMIT \&check_commit_at_client;
 UPDATE \&check_affected_refs;    # TODO server-side stuff!
 PRE_RECEIVE \&check_affected_refs;
 REF_UPDATE \&check_affected_refs;
