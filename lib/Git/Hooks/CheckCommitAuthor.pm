@@ -26,9 +26,10 @@ sub _setup_config {
     $config->{ lc $CFG } //= {};
 
     my $default = $config->{ lc $CFG };
-    $default->{'mailmap'} //= ['0'];
+    $default->{'mailmap'}               //= ['0'];
     $default->{'match-mailmap-name'}    //= ['1'];
     $default->{'allow-mailmap-aliases'} //= ['1'];
+    $default->{'match-with-git-user'}   //= ['0'];
 
     return;
 }
@@ -41,7 +42,7 @@ sub check_commit_at_client {
     my $author_name  = $ENV{'GIT_AUTHOR_NAME'};
     my $author_email = '<' . $ENV{'GIT_AUTHOR_EMAIL'} . '>';
 
-    return check_author($git, $author_name, $author_email);
+    return _check_author($git, $author_name, $author_email);
 }
 
 sub check_commit_at_server {
@@ -50,10 +51,10 @@ sub check_commit_at_server {
     my $author_name  = $commit->{'author_name'};
     my $author_email = '<' . $commit->{'author_email'} . '>';
 
-    return check_author($git, $author_name, $author_email);
+    return _check_author($git, $author_name, $author_email);
 }
 
-sub check_author {
+sub _check_author {
     my ($git, $author_name, $author_email) = @_;
 
     _setup_config($git);
@@ -61,14 +62,14 @@ sub check_author {
     return 1 if im_admin($git);
 
     my $errors = 0;
-    check_patterns( $git, $author_name, $author_email ) or ++$errors;
-    check_mailmap( $git, $author_name, $author_email ) or ++$errors;
-    check_git_user( $git, $author_name, $author_email ) or ++$errors;
+    _check_patterns( $git, $author_name, $author_email ) or ++$errors;
+    _check_mailmap( $git, $author_name, $author_email ) or ++$errors;
+    _check_git_user( $git, $author_name, $author_email ) or ++$errors;
 
     return $errors == 0;
 }
 
-sub check_patterns {
+sub _check_patterns {
     my ( $git, $author_name, $author_email ) = @_;
 
     my $errors = 0;
@@ -96,7 +97,7 @@ sub check_patterns {
     return $errors == 0;
 }
 
-sub check_mailmap {
+sub _check_mailmap {
     my ( $git, $author_name, $author_email ) = @_;
 
     my $errors = 0;
@@ -165,17 +166,21 @@ sub check_mailmap {
     return $errors == 0;
 }
 
-sub check_git_user {
+sub _check_git_user {
     my ( $git, $author_name, $author_email ) = @_;
 
-    my $errors = 0;
-
-    my $author = "$author_name $author_email";
-    if ( $git->get_config( $CFG => 'match-with-git-user' ) ) {
-        $git->error( $PKG,
-            'the parameter match-with-git-user' . ' is not yet implemented.' )
-          and ++$errors;
+    if( !$git->get_config( $CFG => 'match-with-git-user' ) ) {
+        return 1;
     }
+
+    my $errors = 0;
+    my $user = $git->authenticated_user();
+
+    $author_name eq $user
+        or $git->error( $PKG,
+            'commit author '
+            . "'\Q$author_name\Q' does NOT match user name '\Q$user\E'"
+        ) and ++$errors;
 
     return $errors == 0;
 }
@@ -233,7 +238,10 @@ DRAFT_PUBLISHED \&check_patchset;
 1;
 
 __END__
-=for Pod::Coverage check_spelling check_patterns check_title check_body check_message check_ref
+
+=for Pod::Coverage check_commit_at_client check_commit_at_server
+
+=for Pod::Coverage check_ref
 
 =head1 DESCRIPTION
 
