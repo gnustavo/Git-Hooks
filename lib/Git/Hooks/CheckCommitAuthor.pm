@@ -9,12 +9,11 @@ use utf8;
 use strict;
 use warnings;
 use Git::Hooks qw/:DEFAULT :utils/;
-use Carp;
-use File::Slurp::Tiny 'read_file';
+use Path::Tiny;
 require Git::Mailmap;
 
 my $PKG = __PACKAGE__;
-( my $CFG = __PACKAGE__ ) =~ s/.*::/githooks./msx;
+(my $CFG = __PACKAGE__) =~ s/.*::/githooks./msx;
 
 #############
 # Grok hook configuration, check it and set defaults.
@@ -27,6 +26,7 @@ sub _setup_config {
     $config->{ lc $CFG } //= {};
 
     my $default = $config->{ lc $CFG };
+    $default->{'mailmap'} //= ['0'];
     $default->{'match-mailmap-name'}    //= ['1'];
     $default->{'allow-mailmap-aliases'} //= ['1'];
 
@@ -47,11 +47,8 @@ sub check_commit_at_client {
 sub check_commit_at_server {
     my ($git, $commit) = @_;
 
-    my $commit_hash = $git->get_commit( $commit );
-    print Dumper($commit_hash);
-
-    my $author_name  = $commit_hash->{'author_name'};
-    my $author_email = $commit_hash->{'author_email'};
+    my $author_name  = $commit->{'author_name'};
+    my $author_email = '<' . $commit->{'author_email'} . '>';
 
     return check_author($git, $author_name, $author_email);
 }
@@ -104,19 +101,42 @@ sub check_mailmap {
 
     my $errors = 0;
 
-    my $author = "$author_name $author_email";
-    my ($mapfile_location) = $git->get_config( $CFG => 'mailmap' );
-    my $mailmap_as_string;
-    return 1 if ( !defined $mapfile_location );
+    if( $git->get_config( $CFG => 'mailmap' ) == 0) {
+        return 1;
+    }
 
-    if ( $mapfile_location eq '1' ) {
-        croak 'This option is not yet implemented.';
-    }
-    else {
-        $mailmap_as_string = read_file($mapfile_location);
-    }
+    my $author = $author_name . q{ } . $author_email;
+    my $bare_repo = $git->command( 'config' => 'core.bare' ) eq 'true' ? 1 : 0;
+
     my $mailmap = Git::Mailmap->new();
-    $mailmap->from_string( 'mailmap' => $mailmap_as_string );
+    my $mailmap_as_string = $git->command( 'show', 'HEAD:.mailmap' );
+    if(defined $mailmap_as_string) {
+        $mailmap->from_string( 'mailmap' => $mailmap_as_string );
+    }
+    # 2) Config variable mailmap.file
+    my $mapfile_location = $git->get_config( 'mailmap.' => 'file' );
+    if(defined $mapfile_location) {
+        if( -e $mapfile_location ) {
+            my $file_as_str = Path::Tiny->file($mapfile_location)->slurp_utf8;
+            $mailmap->from_string( 'mailmap' => $file_as_str );
+        }
+        else {
+            $git->error( $PKG, "Config variable 'mailmap.file'"
+                . " does not point to a file.");
+        }
+    }
+    # 3) Config variable mailmap.blob
+    my $mapfile_blob = $git->get_config( 'mailmap.' => 'blob' );
+    if(defined $mapfile_blob) {
+        if( my $blob_as_str = $git->command( 'show', $mapfile_blob ) ) {
+            $mailmap->from_string( 'mailmap' => $blob_as_str );
+        }
+        else {
+            $git->error( $PKG, "Config variable 'mailmap.blob'"
+                . " does not point to a file.");
+        }
+    }
+
     my $verified = 0;
 
     # Always search (first) among proper emails (and names if wanted).
@@ -124,7 +144,7 @@ sub check_mailmap {
     if ( $git->get_config( $CFG => 'match-mailmap-name' ) eq '1' ) {
         $search_params{'proper-name'} = $author_name;
     }
-    $verified = $mailmap->search(%search_params);
+    $verified = $mailmap->verify(%search_params);
 
     # If was not found among proper-*, and user wants, search aliases.
     if (  !$verified
@@ -134,7 +154,7 @@ sub check_mailmap {
         if ( $git->get_config( $CFG => 'match-mailmap-name' ) eq '1' ) {
             $c_search_params{'commit-name'} = $author_name;
         }
-        $verified = $mailmap->search(%c_search_params);
+        $verified = $mailmap->verify(%c_search_params);
     }
     if ( $verified == 0 ) {
         $git->error( $PKG,
@@ -204,7 +224,7 @@ sub check_patchset {
 
 # Install hooks
 PRE_COMMIT \&check_commit_at_client;
-UPDATE \&check_affected_refs;    # TODO server-side stuff!
+UPDATE \&check_affected_refs;
 PRE_RECEIVE \&check_affected_refs;
 REF_UPDATE \&check_affected_refs;
 PATCHSET_CREATED \&check_patchset;
@@ -294,29 +314,47 @@ regular expressions that will be matched against the commit log
 authors. If the '!' prefix is used, the author must not match the
 REGEXP.
 
-=head2 githooks.checkcommitauthor.mailmap TEXT
+=head2 githooks.checkcommitauthor.mailmap [01]
 
-The filename for the mailmap file to use, normally F<ROOT/.mailmap.>
-If this option is not specified, the author is not matched against the
-mailmap. If this option is "1" (i.e. true), mailmap file is searched for
-in the normal locations:
-
-This option is not yet implemented!
+Set this to 1, if you want to use the mailmap for matching the authors.
+The mailmap file is located according to Git's normal preferences:
 
 =over
 
-=item Possible .mailmap locations:
+=item 1 Default mailmap.
 
-=item 1) the location pointed to by the mailmap.file or
+If exists, use mailmap file in F<HEAD:.mailmap>, i.e. the root
+of a repository.
 
-=item 2) mailmap.blob configuration options
+=item 2 Configuration variable I<mailmap.file>.
 
-=item 3) toplevel of the repository
+The location of an augmenting mailmap file.
+The default mailmap, is loaded first,
+then the mailmap file pointed to by this variable. The contents of this
+mailmap will take precedence over the default one's contents.
+File must be in UTF-8 format.
+
+The location of the
+mailmap file may be in a repository subdirectory, or somewhere outside
+of the repository itself. If the repo is a bare repository, then this 
+phase will raise an error. Use variable I<mailmap.blob> if file is in
+the repository. If file cannot be found, this will raise an error.
+
+=item 3 Configuration variable I<mailmap.blob>.
+
+If the repo is a bare repository, then this config variable is used.
+It points to a Git blob in the bare repo. The contents of this
+mailmap will take precedence over the default one's contents and the
+augmenting mailmap file's contents (var I<mailmap.file>).
+
+This feature is not yet supported.
 
 =back
 
 In mailmap file the author can be matched against both
 the proper name and email or the alias (commit) name and email.
+The following parameters explain how mailmap file
+usage is controlled.
 
 =head2 githooks.checkcommitauthor.match-mailmap-name [01]
 
@@ -341,11 +379,15 @@ Default: Off.
 This module exports the following routines that can be used directly
 without using all of Git::Hooks infrastructure.
 
-=head2 check_message_file GIT, MSGFILE
+=head2 check_commit_at_client GIT
 
-This is the routine used to implement the C<commit-msg> hook. It needs
-a C<Git::More> object and the name of a file containing the commit
-message.
+This is the routine used to implement the C<pre-commit> hook. It needs
+a C<Git::More> object.
+
+=head2 check_commit_at_server GIT, COMMIT
+
+This is the routine used to implement the C<pre-commit> hook. It needs
+a C<Git::More> object and a commit hash from C<Git::More::get_commit()>.
 
 =head2 check_affected_refs GIT
 

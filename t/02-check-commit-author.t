@@ -122,7 +122,6 @@ check_cannot_commit(
 # Limit by mailmap
 
 $repo->command( config => '--unset-all', 'githooks.checkcommitauthor.match' );
-$repo->command( config => 'githooks.checkcommitauthor.mailmap', '.mailmap' );
 
 # Set normal defaults. Here just for reference.
 $repo->command(
@@ -142,6 +141,10 @@ Me Too <me.too@some.site> <me.too@wrong.site> # Am I really here (comment)?
 <i.alone@any.where> <me.alone@some.where>
 ';
 $mapfile->spew($map) or BAIL_OUT(": can't '$mapfile'->spew('$map')\n");
+$repo->command('add', '.mailmap');
+$repo->command('commit', '-m', 'Import .mailmap file for testing.');
+
+$repo->command( config => 'githooks.checkcommitauthor.mailmap', '1' );
 
 check_can_commit(
     'This author can commit (1): mailmap(name)',
@@ -205,16 +208,16 @@ check_cannot_commit(
 # Server-side
 $repo->command( config => '--unset-all', 'githooks.checkcommitauthor.mailmap' );
 
-use Data::Dumper;
-diag("clone:" . Dumper($clone));
-diag("clone->opts->Repository:" . Dumper($clone->{'opts'}->{'Repository'}));
+# use Data::Dumper;
+# diag("clone:" . Dumper($clone));
+# diag("clone->opts->Repository:" . Dumper($clone->{'opts'}->{'Repository'}));
 my @config_rows = ("[githooks]\n", "    plugin = CheckCommitAuthor\n",
     "[githoooks \"checkcommitauthor\"]\n", "    match = \"^Mallikas\$\"\n");
 $clone->{'opts'}->{'Repository'}->child('config')->append(@config_rows);
 
 
 check_can_push(
-    'This author\'s commit cannot push (1): match',
+    'This author\'s commit can push (1): match',
 );
 
 done_testing();
