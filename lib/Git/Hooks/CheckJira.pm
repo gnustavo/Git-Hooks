@@ -244,12 +244,17 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
                     and ++$errors
                         and next KEY;
 
-            my $assignee = $issue->{fields}{assignee}{name};
-
-            $user eq $assignee
-                or $git->error($PKG, "issue $key should be assigned to '$user', not '$assignee'")
-                    and ++$errors
-                        and next KEY;
+            if (my $assignee = $issue->{fields}{assignee}) {
+                my $name = $assignee->{name};
+                $user eq $name
+                    or $git->error($PKG, "issue $key should be assigned to '$user', not '$name'")
+                        and ++$errors
+                            and next KEY;
+            } else {
+                $git->error($PKG, "issue $key should be assigned to '$user', but it's unassigned");
+                ++$errors;
+                next KEY;
+            }
         }
 
         push @issues, $issue;
