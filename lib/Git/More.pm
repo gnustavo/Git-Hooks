@@ -125,6 +125,7 @@ sub get_commit {
 
     my $commit_hash;
     while (<$pipe>) {
+            chomp;
             my %commit;
             @commit{qw/header commit tree parent
                        author_name author_email author_date
