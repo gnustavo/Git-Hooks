@@ -119,7 +119,9 @@ sub get_commit {
         'rev-list',
         '--no-walk',
         # See 'git help rev-list' to understand the --pretty argument
+	# Nota bene! The byte code %x00 at the end.
         '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%s%n%n%b%x00',
+	'--encoding=UTF-8',
         $commit,
     );
 
@@ -130,6 +132,8 @@ sub get_commit {
                        author_name author_email author_date
                        commmitter_name committer_email committer_date
                        body/} = split "\cJ", $_, 11;
+	    # Remove the byte code signifying end (sanitize string).
+	    $commit{'body'} =~ s/[^[:print:]]//msxg;
             $commit_hash = \%commit;
     }
 
@@ -668,6 +672,8 @@ the C<git help rev-list> document):
         committer_date  => %ci: committer date in ISO8601 format
         body            => %B:  raw body (aka commit message)
     }
+
+All character data is UTF-8 encoded.
 
 =head2 get_commits OLDCOMMIT NEWCOMMIT
 
