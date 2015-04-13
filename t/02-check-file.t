@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 10;
+use Test::More tests => 14;
 
 BEGIN { require "test-functions.pl" };
 
@@ -18,7 +18,7 @@ sub setup_repos {
 }
 
 sub modify_file {
-    my ($testname, $file) = @_;
+    my ($testname, $file, $truncate, $data) = @_;
     my @path = split '/', $file;
     my $wcpath = path($repo->wc_path());
     my $filename = $wcpath->child(@path);
@@ -29,9 +29,16 @@ sub modify_file {
         $dirname->mkpath;
     }
 
-    unless ($filename->append('data')) {
-	fail($testname);
-	diag("[TEST FRAMEWORK INTERNAL ERROR] Cannot write to file: $filename; $!\n");
+    if ($truncate) {
+        unless ($filename->spew($data || 'data')) {
+            fail($testname);
+            diag("[TEST FRAMEWORK INTERNAL ERROR] Cannot write to file: $filename; $!\n");
+        }
+    } else {
+        unless ($filename->append($data || 'data')) {
+            fail($testname);
+            diag("[TEST FRAMEWORK INTERNAL ERROR] Cannot append to file: $filename; $!\n");
+        }
     }
 
     $repo->command(add => $filename);
@@ -39,14 +46,14 @@ sub modify_file {
 }
 
 sub check_can_commit {
-    my ($testname, $file) = @_;
-    modify_file($testname, $file);
+    my ($testname, $file, $truncate, $data) = @_;
+    modify_file($testname, $file, $truncate, $data);
     test_ok($testname, $repo, 'commit', '-m', $testname);
 }
 
 sub check_cannot_commit {
-    my ($testname, $regex, $file) = @_;
-    my $filename = modify_file($testname, $file);
+    my ($testname, $regex, $file, $truncate, $data) = @_;
+    my $filename = modify_file($testname, $file, $truncate, $data);
     if ($regex) {
 	test_nok_match($testname, $regex, $repo, 'commit', '-m', $testname);
     } else {
@@ -56,15 +63,15 @@ sub check_cannot_commit {
 }
 
 sub check_can_push {
-    my ($testname, $file) = @_;
-    modify_file($testname, $file);
+    my ($testname, $file, $truncate, $data) = @_;
+    modify_file($testname, $file, $truncate, $data);
     $repo->command(commit => '-m', $testname);
     test_ok($testname, $repo, 'push', $clone->repo_path(), 'master');
 }
 
 sub check_cannot_push {
-    my ($testname, $regex, $file) = @_;
-    modify_file($testname, $file);
+    my ($testname, $regex, $file, $truncate, $data) = @_;
+    modify_file($testname, $file, $truncate, $data);
     $repo->command(commit => '-m', $testname);
     test_nok_match($testname, $regex, $repo, 'push', $clone->repo_path(), 'master');
 }
@@ -100,6 +107,16 @@ $repo->command(config => '--replace-all', "githooks.checkfile.name", '*.txt test
 
 check_can_commit('commit hit {}', 'file.txt');
 
+$repo->command(config => '--unset-all', "githooks.checkfile.name");
+
+$repo->command(config => "githooks.checkfile.sizelimit", '4');
+
+check_can_commit('small file', 'file.txt', 'truncate', '12');
+
+check_cannot_commit('big file', qr/the current limit is just/, 'file.txt', 'truncate', '123456789');
+
+$repo->command(config => '--unset-all', "githooks.checkfile.sizelimit");
+
 # PRE-RECEIVE
 
 setup_repos();
@@ -115,3 +132,11 @@ check_can_push('commit hit/pass', 'file.txt');
 $clone->command(config => '--replace-all', "githooks.checkfile.name", '*.txt false');
 
 check_cannot_push('commit hit/fail', qr/failed with exit code/, 'file.txt');
+
+$clone->command(config => '--unset-all', "githooks.checkfile.name");
+
+$clone->command(config => "githooks.checkfile.sizelimit", '4');
+
+check_can_push('small file', 'file.txt', 'truncate', '12');
+
+check_cannot_push('big file', qr/the current limit is just/, 'file.txt', 'truncate', '123456789');

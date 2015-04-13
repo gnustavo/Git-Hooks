@@ -21,7 +21,7 @@ sub check_new_files {
 
     return 1 unless @files;     # No new file to check
 
-    # First we construct a list of checks from the
+    # Construct a list of command checks from the
     # githooks.checkfile.basename configuration. Each check in the list is a
     # pair containing a regex and a command specification.
     my @checks;
@@ -36,16 +36,28 @@ sub check_new_files {
         push @checks, [$pattern => $command];
     }
 
+    # See if we have to check a file size limit
+    my $sizelimit = $git->get_config($CFG => 'sizelimit');
+
     # Now we iterate through every new file and apply to them the matching
     # commands.
     my $errors = 0;
 
+  FILE:
     foreach my $file (@files) {
+        my $size = $git->file_size($commit, $file);
+        if ($sizelimit && $sizelimit < $size) {
+            $git->error($PKG, "File '$file' has $size bytes but the current limit is just $sizelimit bytes.");
+            ++$errors;
+            next FILE;    # Don't botter checking the contents of huge files
+        }
+
         my $basename = path($file)->basename;
+      COMMAND:
         foreach my $command (map {$_->[1]} grep {$basename =~ $_->[0]} @checks) {
             my $tmpfile = $git->blob($commit, $file)
                 or ++$errors
-                    and next;
+                    and next COMMAND;
 
             # interpolate filename in $command
             (my $cmd = $command) =~ s/\{\}/\'$tmpfile\'/g;
@@ -204,3 +216,10 @@ Some real examples:
     git config --add githooks.checkfile.name *.sh    bash -n
     git config --add githooks.checkfile.name *.sh    shellcheck --exclude=SC2046,SC2053,SC2086
     git config --add githooks.checkfile.name *.erb   erb -P -x -T - {} | ruby -c
+
+=head2 githooks.checkfile.sizelimit BYTES
+
+This directive specifies a size limit (in bytes) for any file in the
+repository. If set explicitly to 0 (zero), no limit is imposed, which is the
+same as not specifying it. But it can be useful to override a global
+specification in a particular repository.

@@ -482,6 +482,14 @@ sub blob {
     return $cache->{$blob}->stringify;
 }
 
+sub file_size {
+    my ($git, $rev, $file) = @_;
+
+    chomp(my $size = $git->command('cat-file', '-s', "$rev:$file"));
+
+    return $size;
+}
+
 sub error {
     my ($git, $prefix, $message, $details) = @_;
     $message =~ s/\n*$//s;    # strip trailing newlines
@@ -897,6 +905,11 @@ destroyed.
 
 Any remaining ARGS are passed as arguments to C<File::Temp::newdir> so that you
 can have more control over the temporary file creation.
+
+=head2 file_size REV FILE
+
+This method returns the size (in bytes) of FILE (a path relative to the
+repository root) in revision REV.
 
 =head2 error PREFIX MESSAGE [DETAILS]
 
