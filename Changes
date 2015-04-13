@@ -2,6 +2,19 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.6.12    2015-04-12 21:46:50-03:00 America/Sao_Paulo
+
+  [Fixes]
+
+  - CheckJira: The by-assignee test was failing for tickets with no
+    assignees.
+
+  - Git::More::get_commit was returning the commit's message with a trailing
+    "\c@\cJ" mark.
+
+  - Git::More::get_commit now guarantees that the commit message is UTF-8
+    encoded.
+
 1.6.11    2015-03-22 22:19:06-03:00 America/Sao_Paulo
 
   [Internal changes]
