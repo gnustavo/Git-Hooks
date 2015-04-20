@@ -114,92 +114,103 @@ sub clean_cache {
 sub get_commit {
     my ($git, $commit) = @_;
 
-    local $/ = "\c@\cJ";
-    my ($pipe, $ctx) = $git->command_output_pipe(
-        'rev-list',
-        '--no-walk',
-        # See 'git help rev-list' to understand the --pretty argument
-        '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%G? %GK%n%s%n%n%b%x00',
-        '--encoding=UTF-8',
-        $commit,
-    );
+    my $cache = $git->cache('commits');
 
-    my $commit_hash;
-    while (<$pipe>) {
+    unless (exists $cache->{$commit}) {
+        local $/ = "\c@\cJ";
+        my ($pipe, $ctx) = $git->command_output_pipe(
+            'rev-list',
+            '--no-walk',
+            # See 'git help rev-list' to understand the --pretty argument
+            '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%G? %GK%n%s%n%n%b%x00',
+            '--encoding=UTF-8',
+            $commit,
+        );
+
+        while (<$pipe>) {
             chomp;
             my %commit;
             @commit{qw/header commit tree parent
                        author_name author_email author_date
                        commmitter_name committer_email committer_date
                        signature body/} = split "\cJ", $_, 12;
-            $commit_hash = \%commit;
+            $cache->{$commit} = \%commit;
+        }
+
+        $git->command_close_pipe($pipe, $ctx);
     }
 
-    $git->command_close_pipe($pipe, $ctx);
-
-    return $commit_hash;
+    return $cache->{$commit};
 }
 
 sub get_commits {
     my ($git, $old_commit, $new_commit) = @_;
 
-    # We're interested in all commits reachable from $new_commit but
-    # not reachable from $old_commit. We're going to use the "git
-    # rev-list" command for that. As you can read on its
-    # documentation, the usual syntax to specify this set of commits
-    # is this: "$new_commit ^$old_commit".
+    my $cache = $git->cache('ranges');
 
-    # However, there are two special cases: when a new branch is
-    # created and when an old branch is deleted.
+    my $range = "$old_commit:$new_commit";
 
-    # When an old branch is deleted $new_commit is null (i.e.,
-    # '0'x40'). In this case previous commits are being forgotten and
-    # the hooks usually don't need to check them. So, in this
-    # situation we simply return an empty list of commits.
+    unless (exists $cache->{$range}) {
+        # We're interested in all commits reachable from $new_commit but not
+        # reachable from $old_commit. We're going to use the "git rev-list"
+        # command for that. As you can read on its documentation, the usual
+        # syntax to specify this set of commits is this: "$new_commit
+        # ^$old_commit".
 
-    return if $new_commit eq $UNDEF_COMMIT;
+        # However, there are two special cases: when a new branch is created
+        # and when an old branch is deleted.
 
-    # When a new branch is created $old_commit is null (i.e.,
-    # '0'x40). In this case we want all commits reachable from
-    # $new_commit but not reachable from any other branch. The syntax
-    # for this is "$new_commit ^$b1 ^$b2 ... ^$bn", i.e., $new_commit
-    # followed by every other branch name prefixed by carets. We can
-    # get at their names using the technique described in, e.g.,
-    # http://stackoverflow.com/questions/3511057/git-receive-update-hooks-and-new-branches.
+        # When an old branch is deleted $new_commit is null (i.e.,
+        # '0'x40'). In this case previous commits are being forgotten and
+        # the hooks usually don't need to check them. So, in this situation
+        # we simply return an empty list of commits.
 
-    # The @excludes variable will hold the list of commits that will
-    # be prefixed with carets in the git rev-list command invokation.
+        return if $new_commit eq $UNDEF_COMMIT;
 
-    my @excludes =
-        $old_commit eq $UNDEF_COMMIT
-        ? grep {$_ ne $new_commit} $git->command(qw:for-each-ref --format=%(objectname) refs/heads/:)
-        : $old_commit;
+        # When a new branch is created $old_commit is null (i.e.,
+        # '0'x40). In this case we want all commits reachable from
+        # $new_commit but not reachable from any other branch. The syntax
+        # for this is "$new_commit ^$b1 ^$b2 ... ^$bn", i.e., $new_commit
+        # followed by every other branch name prefixed by carets. We can get
+        # at their names using the technique described in, e.g.,
+        # http://stackoverflow.com/questions/3511057/git-receive-update-hooks-and-new-branches.
 
-    # The commit list to be returned
-    my @commits;
+        # The @excludes variable will hold the list of commits that will be
+        # prefixed with carets in the git rev-list command invokation.
 
-    local $/ = "\c@\cJ";
-    my ($pipe, $ctx) = $git->command_output_pipe(
-        'rev-list',
-        # See 'git help rev-list' to understand the --pretty argument
-        '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%G? %GK%n%s%n%n%b%x00',
-        '--encoding=UTF-8',
-        $new_commit,
-        map {"^$_"} @excludes,
-    );
+        my @excludes =
+            $old_commit eq $UNDEF_COMMIT
+                ? grep {$_ ne $new_commit} $git->command(qw:for-each-ref --format=%(objectname) refs/heads/:)
+                    : $old_commit;
 
-    while (<$pipe>) {
+        # The commit list to be returned
+        my @commits;
+
+        local $/ = "\c@\cJ";
+        my ($pipe, $ctx) = $git->command_output_pipe(
+            'rev-list',
+            # See 'git help rev-list' to understand the --pretty argument
+            '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%G? %GK%n%s%n%n%b%x00',
+            '--encoding=UTF-8',
+            $new_commit,
+            map {"^$_"} @excludes,
+        );
+
+        while (<$pipe>) {
             my %commit;
             @commit{qw/header commit tree parent
                        author_name author_email author_date
                        commmitter_name committer_email committer_date
                        signature body/} = split "\cJ", $_, 12;
             push @commits, \%commit;
+        }
+
+        $git->command_close_pipe($pipe, $ctx);
+
+        $cache->{$range} = \@commits;
     }
 
-    $git->command_close_pipe($pipe, $ctx);
-
-    return @commits;
+    return @{$cache->{$range}};
 }
 
 sub get_commit_msg {
