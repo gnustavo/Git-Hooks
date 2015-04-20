@@ -183,6 +183,7 @@ sub get_commits {
         'rev-list',
         # See 'git help rev-list' to understand the --pretty argument
         '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%s%n%n%b%x00',
+        '--encoding=UTF-8',
         $new_commit,
         map {"^$_"} @excludes,
     );
