@@ -8,7 +8,6 @@ use Carp;
 use Exporter qw/import/;
 use Data::Util qw(:all);
 use Path::Tiny;
-use List::MoreUtils qw/uniq/;
 
 our (@EXPORT, @EXPORT_OK, %EXPORT_TAGS); ## no critic (Modules::ProhibitAutomaticExportation)
 my (%Hooks, @PostHooks);
@@ -531,10 +530,11 @@ my %prepare_hook = (
 sub _load_plugins {
     my ($git) = @_;
 
-    my @enabled_plugins  = map {split} $git->get_config(githooks => 'plugin');
-    my %disabled_plugins = map {($_ => undef)} map {split} $git->get_config(githooks => 'disable');
+    my %enabled_plugins  = map {($_ => undef)} map {split} $git->get_config(githooks => 'plugin');
 
-    return unless @enabled_plugins; # no one configured
+    return unless %enabled_plugins; # no one configured
+
+    my %disabled_plugins = map {($_ => undef)} map {split} $git->get_config(githooks => 'disable');
 
     # Define the list of directories where we'll look for the hook
     # plugins. First the local directory 'githooks' under the
@@ -547,7 +547,7 @@ sub _load_plugins {
         path($INC{'Git/Hooks.pm'})->parent->child('Hooks'),
     );
 
-    foreach my $plugin (uniq @enabled_plugins) {
+    foreach my $plugin (keys %enabled_plugins) {
         next if exists $disabled_plugins{$plugin}; # disabled by full name
         my $prefix = '';
         if ($plugin =~ s/(.+::)//) {
