@@ -82,7 +82,7 @@ No
 Title
 EOF
 
-$repo->command(config => 'githooks.checklog.title-required', 1);
+$repo->command(qw/config --remove-section githooks.checklog/);
 
 # title-period
 
@@ -120,7 +120,7 @@ check_cannot_commit('deny due to invalid value', qr/invalid value for the/, <<'E
 Title
 EOF
 
-$repo->command(config => 'githooks.checklog.title-period', 'deny');
+$repo->command(qw/config --remove-section githooks.checklog/);
 
 # title-max-width
 
@@ -138,7 +138,7 @@ check_can_commit('allow large title', <<'EOF');
 The above title has 51 characters.
 EOF
 
-$repo->command(config => 'githooks.checklog.title-max-width', 50);
+$repo->command(qw/config --remove-section githooks.checklog/);
 
 # body-max-width
 
@@ -163,7 +163,7 @@ Body first line.
 The previous line has 73 characters.
 EOF
 
-$repo->command(config => 'githooks.checklog.body-max-width', 72);
+$repo->command(qw/config --remove-section githooks.checklog/);
 
 # match
 
