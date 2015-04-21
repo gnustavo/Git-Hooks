@@ -89,3 +89,11 @@ plugins. Something like Git::Hooks::Test.
 =head2 Emulate the uploadvalidator Gerrit plugin
 
 L<https://gerrit.googlesource.com/plugins/uploadvalidator/+/master/src/main/resources/Documentation/config.md>
+
+=head2 pre-commit or pre-push
+
+It would be nice to let the user decide in which of these two hooks he'd
+like to have his checks run. The idea would be to have a (default and
+per-plugin) configuration option called C<*.hook> accepting the options
+C<pre-commit> and C<pre-push> (defaulting for the former). This way the user
+would be able to make his checks run on any one of the hooks.
