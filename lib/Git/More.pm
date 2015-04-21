@@ -433,6 +433,12 @@ sub get_current_branch {
     return $branch;
 }
 
+sub get_sha1 {
+    my ($git, $rev) = @_;
+
+    return $git->command_oneline(['rev-parse', '--verify', $rev], {STDERR => 0});
+}
+
 sub get_head_or_empty_tree {
     my ($git) = @_;
 
@@ -892,6 +898,16 @@ by the C<git symbolic-ref HEAD> command.
 
 If the repository is in a dettached head state, i.e., if HEAD points
 to a commit instead of to a branch, the method returns undef.
+
+=head2 get_sha1 REV
+
+This method returns the SHA1 of the commit represented by REV, using the
+command
+
+  git rev-parse --verify REV
+
+It's useful, for instance, to grok the HEAD's SHA1 so that you can pass it
+to the get_commit method.
 
 =head2 get_head_or_empty_tree
 
