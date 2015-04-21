@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 21;
+use Test::More tests => 23;
 use Path::Tiny;
 
 BEGIN { require "test-functions.pl" };
@@ -190,6 +190,26 @@ must not have
 EOF
 
 $repo->command(config => '--unset-all', 'githooks.checklog.match');
+
+# signed-off-by
+
+$repo->command(config => 'githooks.checklog.signed-off-by', '1');
+
+check_cannot_commit('deny if no signed-off-by', qr/must have a Signed-off-by footer/, <<'EOF');
+Title
+
+Body
+EOF
+
+check_can_commit('allow if signed-off-by', <<'EOF');
+Title
+
+Body
+
+Signed-off-by: Some One <someone@example.net>
+EOF
+
+$repo->command(qw/config --remove-section githooks.checklog/);
 
 # encoding
 

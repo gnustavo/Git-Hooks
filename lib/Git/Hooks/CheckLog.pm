@@ -176,6 +176,20 @@ sub check_body {
     return 1;
 }
 
+sub check_footer {
+    my ($git, $id, $cmsg) = @_;
+
+    my $errors = 0;
+
+    if ($git->get_config($CFG => 'signed-off-by')) {
+        scalar($cmsg->get_footer_values('signed-off-by')) > 0
+            or $git->error($PKG, "commit $id must have a Signed-off-by footer")
+                and ++$errors;
+    }
+
+    return $errors == 0;
+}
+
 sub check_message {
     my ($git, $commit, $msg) = @_;
 
@@ -194,6 +208,8 @@ sub check_message {
     check_title($git, $id, $cmsg->title) or ++$errors;
 
     check_body($git, $id, $cmsg->body) or ++$errors;
+
+    check_footer($git, $id, $cmsg) or ++$errors;
 
     return $errors == 0;
 }
@@ -394,6 +410,11 @@ C<Text::Aspell>).
 The Text::SpellChecker module uses defaults to infer which language it
 must use to spell check the message. You can make it use a particular
 language passing its ISO code to this option.
+
+=head2 githooks.checklog.signed-off-by [01]
+
+This option requires the commit to have at least one C<Signed-off-by>
+footer.
 
 =head1 EXPORTS
 
