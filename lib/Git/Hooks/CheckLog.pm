@@ -119,12 +119,14 @@ sub pattern_errors {
 sub title_errors {
     my ($git, $id, $title) = @_;
 
-    $git->get_config($CFG => 'title-required')
-        or return 0;
-
-    defined $title
-        or $git->error($PKG, "commit $id log needs a title line")
-            and return 1;
+    unless (defined $title and length $title) {
+        if ($git->get_config($CFG => 'title-required')) {
+            $git->error($PKG, "commit $id log needs a title line");
+            return 1;
+        } else {
+            return 0;
+        }
+    }
 
     ($title =~ tr/\n/\n/) == 1
         or $git->error($PKG, "commit $id log title should have just one line")
