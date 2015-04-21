@@ -536,6 +536,20 @@ sub _load_plugins {
 
     my %disabled_plugins = map {($_ => undef)} map {split} $git->get_config(githooks => 'disable');
 
+    # Remove disabled plugins from the list of enabled ones
+    foreach my $plugin (keys %enabled_plugins) {
+        my ($prefix, $basename) = ($plugin =~ /^(.+::)?(.+)/);
+
+        if (   exists $disabled_plugins{$plugin}
+            || exists $disabled_plugins{$basename}
+            || exists $ENV{$basename} && ! $ENV{$basename}
+        ) {
+            delete $enabled_plugins{$plugin};
+        } else {
+            $enabled_plugins{$plugin} = [$prefix, $basename];
+        }
+    }
+
     # Define the list of directories where we'll look for the hook
     # plugins. First the local directory 'githooks' under the
     # repository path, then the optional list of directories
@@ -547,33 +561,27 @@ sub _load_plugins {
         path($INC{'Git/Hooks.pm'})->parent->child('Hooks'),
     );
 
-    foreach my $plugin (keys %enabled_plugins) {
-        next if exists $disabled_plugins{$plugin}; # disabled by full name
-        my $prefix = '';
-        if ($plugin =~ s/(.+::)//) {
-            next if exists $disabled_plugins{$plugin}; # disabled by basename
-            $prefix = $1;
-        }
-        next if exists $ENV{$plugin} && ! $ENV{$plugin}; # disabled by environment variable
+    # Load remaining enabled plugins
+    while (my ($key, $plugin) = each %enabled_plugins) {
+        my ($prefix, $basename) = @$plugin;
         my $exit = do {
             if ($prefix) {
                 # It must be a module name
-                eval "require $prefix$plugin"; ## no critic (ProhibitStringyEval, RequireCheckingReturnValueOfEval)
+                ## no critic (ProhibitStringyEval, RequireCheckingReturnValueOfEval)
+                eval "require $prefix$basename";
             } else {
-                # Otherwise, it's a basename that we must look for
-                # in @plugin_dirs
-                $plugin .= '.pm' unless $plugin =~ /\.p[lm]$/i;
-                my @scripts = grep {-f} map {path($_)->child($plugin)} @plugin_dirs;
-                my $script = shift @scripts
-                    or die __PACKAGE__, ": can't find enabled hook $plugin.\n";
-                $plugin = $script; # for the error messages below
-                do $script;
+                # Otherwise, it's a basename we must look for in @plugin_dirs
+                $basename .= '.pm' unless $basename =~ /\.p[lm]$/i;
+                my @scripts = grep {-f} map {path($_)->child($basename)} @plugin_dirs;
+                $basename = shift @scripts
+                    or die __PACKAGE__, ": can't find enabled hook $basename.\n";
+                do $basename;
             }
         };
         unless ($exit) {
-            die __PACKAGE__, ": couldn't parse $plugin: $@\n" if $@;
-            die __PACKAGE__, ": couldn't do $plugin: $!\n"    unless defined $exit;
-            die __PACKAGE__, ": couldn't run $plugin\n";
+            die __PACKAGE__, ": couldn't parse $basename: $@\n" if $@;
+            die __PACKAGE__, ": couldn't do $basename: $!\n"    unless defined $exit;
+            die __PACKAGE__, ": couldn't run $basename\n";
         }
     }
 
