@@ -132,7 +132,7 @@ sub get_commit {
             my %commit;
             @commit{qw/header commit tree parent
                        author_name author_email author_date
-                       commmitter_name committer_email committer_date
+                       committer_name committer_email committer_date
                        signature body/} = split "\cJ", $_, 12;
             $cache->{$commit} = \%commit;
         }
@@ -200,7 +200,7 @@ sub get_commits {
             my %commit;
             @commit{qw/header commit tree parent
                        author_name author_email author_date
-                       commmitter_name committer_email committer_date
+                       committer_name committer_email committer_date
                        signature body/} = split "\cJ", $_, 12;
             push @commits, \%commit;
         }
@@ -691,7 +691,7 @@ the C<git help rev-list> document):
         author_name     => %aN: author name
         author_email    => %aE: author email
         author_date     => %ai: author date in ISO8601 format
-        commmitter_name => %cN: committer name
+        committer_name  => %cN: committer name
         committer_email => %cE: committer email
         committer_date  => %ci: committer date in ISO8601 format
         signature       => %G? %GK: commit signature check status and key
