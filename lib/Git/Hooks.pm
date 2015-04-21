@@ -524,6 +524,7 @@ my %prepare_hook = (
 );
 
 ################
+
 # This routine loads every plugin configured in the githooks.plugin
 # option.
 
@@ -1102,7 +1103,7 @@ like this:
 
     $ git config --add githooks.plugin CheckLog
 
-This is usefull, for example, to enable some plugins globally and
+This is useful, for example, to enable some plugins globally and
 others locally, per repository.
 
 A plugin may hook itself to one or more hooks. C<CheckJira>, for
@@ -1131,7 +1132,7 @@ your hooks.
 
 =item 3.
 
-In Git::Hooks installation.
+In the Git::Hooks installation.
 
 =back
 

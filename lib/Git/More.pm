@@ -646,7 +646,7 @@ This call would return this hash:
         'b' => [2, 3],
     }
 
-If the section don't exist an empty hash is returned. Any key/value
+If the section doesn't exist an empty hash is returned. Any key/value
 added to the returned hash will be available in subsequent invokations
 of C<get_config>.
 
