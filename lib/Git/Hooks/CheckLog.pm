@@ -72,16 +72,16 @@ sub _spell_checker {
     return Text::SpellChecker->new(text => $msg, %extra_options);
 }
 
-sub check_spelling {
+sub spelling_errors {
     my ($git, $id, $msg) = @_;
 
-    return 1 unless $msg;
+    return 0 unless $msg;
 
-    return 1 unless $git->get_config($CFG => 'spelling');
+    return 0 unless $git->get_config($CFG => 'spelling');
 
     # Check all words comprised of at least three Unicode letters
     my $checker = _spell_checker($git, join("\n", uniq($msg =~ /\b(\p{Cased_Letter}{3,})\b/gi)))
-        or return 0;
+        or return 1;
 
     my $errors = 0;
 
@@ -90,12 +90,13 @@ sub check_spelling {
         $git->error($PKG, "commit $id log has a misspelled word: '$badword'",
                     defined $suggestions[0] ? "suggestions: " . join(', ', @suggestions) : undef,
                 );
+        ++$errors;
     }
 
-    return $errors == 0;
+    return $errors;
 }
 
-sub check_patterns {
+sub pattern_errors {
     my ($git, $id, $msg) = @_;
 
     my $errors = 0;
@@ -112,22 +113,22 @@ sub check_patterns {
         }
     }
 
-    return $errors == 0;
+    return $errors;
 }
 
-sub check_title {
+sub title_errors {
     my ($git, $id, $title) = @_;
 
     $git->get_config($CFG => 'title-required')
-        or return 1;
+        or return 0;
 
     defined $title
         or $git->error($PKG, "commit $id log needs a title line")
-            and return 0;
+            and return 1;
 
     ($title =~ tr/\n/\n/) == 1
         or $git->error($PKG, "commit $id log title should have just one line")
-            and return 0;
+            and return 1;
 
     my $errors = 0;
 
@@ -153,13 +154,13 @@ sub check_title {
         }
     }
 
-    return $errors == 0;
+    return $errors;
 }
 
-sub check_body {
+sub body_errors {
     my ($git, $id, $body) = @_;
 
-    return 1 unless defined $body && length $body;
+    return 0 unless defined $body && length $body;
 
     if (my $max_width = $git->get_config($CFG => 'body-max-width')) {
         my $toobig = $max_width + 1;
@@ -169,14 +170,14 @@ sub check_body {
                         "commit $id log body lines should be at most $max_width characters wide, but $theseare bigger",
                         join("\n", @biggies),
                     );
-            return 0;
+            return 1;
         }
     }
 
-    return 1;
+    return 0;
 }
 
-sub check_footer {
+sub footer_errors {
     my ($git, $id, $cmsg) = @_;
 
     my $errors = 0;
@@ -187,10 +188,10 @@ sub check_footer {
                 and ++$errors;
     }
 
-    return $errors == 0;
+    return $errors;
 }
 
-sub check_message {
+sub message_errors {
     my ($git, $commit, $msg) = @_;
 
     # assert(defined $msg)
@@ -199,30 +200,19 @@ sub check_message {
 
     my $errors = 0;
 
-    check_spelling($git, $id, $msg) or ++$errors;
+    $errors += spelling_errors($git, $id, $msg);
 
-    check_patterns($git, $id, $msg) or ++$errors;
+    $errors += pattern_errors($git, $id, $msg);
 
     my $cmsg = Git::More::Message->new($msg);
 
-    check_title($git, $id, $cmsg->title) or ++$errors;
+    $errors += title_errors($git, $id, $cmsg->title);
 
-    check_body($git, $id, $cmsg->body) or ++$errors;
+    $errors += body_errors($git, $id, $cmsg->body);
 
-    check_footer($git, $id, $cmsg) or ++$errors;
+    $errors += footer_errors($git, $id, $cmsg);
 
-    return $errors == 0;
-}
-
-sub check_patchset {
-    my ($git, $opts) = @_;
-
-    _setup_config($git);
-
-    my $sha1   = $opts->{'--commit'};
-    my $commit = $git->get_commit($sha1);
-
-    return check_message($git, $commit, $commit->{body});
+    return $errors;
 }
 
 sub check_message_file {
@@ -237,7 +227,7 @@ sub check_message_file {
         return 0;
     }
 
-    return check_message($git, undef, $msg);
+    return message_errors($git, undef, $msg) == 0;
 }
 
 sub check_ref {
@@ -246,8 +236,7 @@ sub check_ref {
     my $errors = 0;
 
     foreach my $commit ($git->get_affected_ref_commits($ref)) {
-        check_message($git, $commit, $commit->{body})
-            or ++$errors;
+        $errors += message_errors($git, $commit, $commit->{body});
     }
 
     return $errors == 0;
@@ -269,6 +258,17 @@ sub check_affected_refs {
     }
 
     return $errors == 0;
+}
+
+sub check_patchset {
+    my ($git, $opts) = @_;
+
+    _setup_config($git);
+
+    my $sha1   = $opts->{'--commit'};
+    my $commit = $git->get_commit($sha1);
+
+    return message_errors($git, $commit, $commit->{body}) == 0;
 }
 
 # Install hooks
