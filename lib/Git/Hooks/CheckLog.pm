@@ -195,7 +195,7 @@ sub check_message {
 
     # assert(defined $msg)
 
-    my $id = defined $commit ? substr($commit->{commit}, 0, 7) : '';
+    my $id = defined $commit ? $commit->{commit} : '';
 
     my $errors = 0;
 
