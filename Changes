@@ -2,6 +2,39 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.7.0     2015-04-22 22:39:32-03:00 America/Sao_Paulo
+
+  [New features]
+
+  - CheckFile: New githooks.checkfile.size option imposes a limit to the
+    maximum size of files added to the repository.
+
+  - New function Git::More::get_sha1 returns the SHA1 associated with a
+    revision expression.
+
+  - Git::More::get_commit(s) functions return information about commit
+    signatures.
+
+  [Changes]
+
+  - CheckLog plugin error messages now show the full SHA1 of commits instead
+    of a 7-letter prefix to avoid potential ambiguities.
+
+  [Fixes]
+
+  - CheckLog: The githooks.checklog.title-required option when false was
+    disabling all other title checks.
+
+  - Git::More::get_commit(s) functions now UTF-8 encode its results.
+
+  - Git::More::get_commit(s) functions were returning a hash with the wrong
+    key 'commmitter_name'.
+
+  [Internal changes]
+
+  - Git::More::get_commit(s) functions now cache results avoiding repeated
+    invocations of git-rev-list for different plugins.
+
 1.6.12    2015-04-12 21:46:50-03:00 America/Sao_Paulo
 
   [Fixes]
