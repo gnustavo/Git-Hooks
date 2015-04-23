@@ -573,7 +573,7 @@ sub _load_plugins {
             } else {
                 # Otherwise, it's a basename we must look for in @plugin_dirs
                 $basename .= '.pm' unless $basename =~ /\.p[lm]$/i;
-                my @scripts = grep {-f} map {path($_)->child($basename)} @plugin_dirs;
+                my @scripts = grep {!-d} map {path($_)->child($basename)} @plugin_dirs;
                 $basename = shift @scripts
                     or die __PACKAGE__, ": can't find enabled hook $basename.\n";
                 do $basename;
@@ -642,7 +642,7 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
             opendir my $dh, $dir
                 or $git->error(__PACKAGE__, ": cannot opendir '$dir'", $!)
                     and next;
-            foreach my $file (grep {-f && -x} map {path($dir)->child($_)} readdir $dh) {
+            foreach my $file (grep {!-d && -x} map {path($dir)->child($_)} readdir $dh) {
                 spawn_external_hook($git, $file, $hook_name, @args)
                     or $git->error(__PACKAGE__, ": error in external hook '$file'");
             }
