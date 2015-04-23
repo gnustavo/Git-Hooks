@@ -139,7 +139,7 @@ sub spawn_external_hook {
             }
         } else {
             # child
-            { exec {$file} ($hook, @args) };
+            { exec {$file} ($hook, @args) }
             restore_output($saved_output);
             die "$prefix: can't exec: $!\n";
         }

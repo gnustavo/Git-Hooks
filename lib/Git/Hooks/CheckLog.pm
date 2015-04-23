@@ -67,7 +67,7 @@ sub _spell_checker {
                 and return;
 
         $tried_to_check = 1;
-    };
+    }
 
     return Text::SpellChecker->new(text => $msg, %extra_options);
 }

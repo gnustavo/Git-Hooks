@@ -65,7 +65,7 @@ sub insert_change_id {
     $cmsg->add_footer_values('Change-Id' => gen_change_id($git, $cmsg->as_string));
 
     return $cmsg->as_string;
-};
+}
 
 sub rewrite_message {
     my ($git, $commit_msg_file) = @_;
