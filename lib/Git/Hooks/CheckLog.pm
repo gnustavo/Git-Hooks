@@ -165,8 +165,7 @@ sub body_errors {
     return 0 unless defined $body && length $body;
 
     if (my $max_width = $git->get_config($CFG => 'body-max-width')) {
-        my $toobig = $max_width + 1;
-        if (my @biggies = ($body =~ /^(.{$toobig,})/gm)) {
+        if (my @biggies = grep {/^\S/} grep {length > $max_width} split(/\n/, $body)) {
             my $theseare = @biggies == 1 ? "this is" : "these are";
             $git->error($PKG,
                         "commit $id log body lines should be at most $max_width characters wide, but $theseare bigger",
@@ -387,6 +386,11 @@ This means that the title SHOULD end in a period.
 This option specifies a limit to the width of the commit log message's
 body lines, in characters. It's 72 by default. If you set it to 0 the
 plugin imposes no limit on the body line's width.
+
+Only lines starting with a non-whitespace character are checked against the
+limit. It's a common style to quote things with indented lines and we like
+to make those lines free of any restriction in order to keep the quoted text
+authentic.
 
 =head2 githooks.checklog.match [!]REGEXP
 

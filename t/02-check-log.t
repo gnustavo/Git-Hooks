@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 23;
+use Test::More tests => 24;
 use Path::Tiny;
 
 BEGIN { require "test-functions.pl" };
@@ -150,6 +150,15 @@ Body first line.
 
 1234567890123456789012345678901234567890123456789012345678901234567890123
 The previous line has 73 characters.
+EOF
+
+check_can_commit('allow body with large quoted line', <<'EOF');
+Title
+
+Body first line.
+
+    123456789012345678901234567890123456789012345678900123456789001234567890123
+The previous line has 77 characters.
 EOF
 
 $repo->command(config => 'githooks.checklog.body-max-width', 0);
