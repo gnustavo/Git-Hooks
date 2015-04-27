@@ -146,6 +146,8 @@ sub new_repos {
         close $fh;
     }
 
+    my $stderr = $T->child('stderr');
+
     return try {
         my ($repo, $clone);
 
@@ -164,10 +166,12 @@ sub new_repos {
             $repo->command(config => 'user.name',  'My Self');
         }
 
+        open my $err_h, '>', $T->child('stderr');
         Git::command(
             [qw/clone -q --bare --no-hardlinks/, "--template=$tmpldir", $repodir, $clonedir],
-            { STDERR => 0 },    # do not complain about cloning an empty repo
+            { STDERR => $err_h },    # do not complain about cloning an empty repo
         );
+        close $err_h;
 
         $clone = Git::More->repository(Repository => $clonedir);
 
@@ -176,11 +180,20 @@ sub new_repos {
         return ($repo, $filename, $clone, $T);
     } otherwise {
         my $E = shift;
+        my $exception = "$E";   # stringify it
+        if (-s $stderr) {
+            open my $err_h, '<', $stderr;
+            local $/ = undef;   # slurp mode
+            $exception .= 'STDERR=';
+            $exception .= <$err_h>;
+            close $err_h;
+        }
+
         # The BAIL_OUT function can't show a message with newlines
         # inside. So, we have to make sure to get rid of any.
-        $E =~ s/\n//g;
+        $exception =~ s/\n/;/g;
         local $, = ':';
-        BAIL_OUT("Error setting up repos for test: Exception='$E'; CWD=$T; git-version=$git_version; \@INC=(@INC).\n");
+        BAIL_OUT("Error setting up repos for test: Exception='$exception'; CWD=$T; git-version=$git_version; \@INC=(@INC).\n");
     };
 }
 
