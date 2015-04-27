@@ -2,6 +2,17 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.7.1     2015-04-26 22:59:18-03:00 America/Sao_Paulo
+
+  [Fixes]
+
+  - CheckLog: the body-max-width configuration don't check the size of
+    indented lines in the commit messages since they're normally used for
+    quotation or by Git itself to list, for example, the files conflicted on
+    a merge.
+
+  - Show some Git errors during the test suite which were being suppressed.
+
 1.7.0     2015-04-22 22:39:32-03:00 America/Sao_Paulo
 
   [New features]
