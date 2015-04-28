@@ -122,7 +122,7 @@ sub get_commit {
             'rev-list',
             '--no-walk',
             # See 'git help rev-list' to understand the --pretty argument
-            '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%G? %GK%n%s%n%n%b%x00',
+            '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%s%n%n%b%x00',
             '--encoding=UTF-8',
             $commit,
         );
@@ -133,7 +133,7 @@ sub get_commit {
             @commit{qw/header commit tree parent
                        author_name author_email author_date
                        committer_name committer_email committer_date
-                       signature body/} = split "\cJ", $_, 12;
+                       body/} = split "\cJ", $_, 11;
             $cache->{$commit} = \%commit;
         }
 
@@ -190,7 +190,7 @@ sub get_commits {
         my ($pipe, $ctx) = $git->command_output_pipe(
             'rev-list',
             # See 'git help rev-list' to understand the --pretty argument
-            '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%G? %GK%n%s%n%n%b%x00',
+            '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%s%n%n%b%x00',
             '--encoding=UTF-8',
             $new_commit,
             map {"^$_"} @excludes,
@@ -201,7 +201,7 @@ sub get_commits {
             @commit{qw/header commit tree parent
                        author_name author_email author_date
                        committer_name committer_email committer_date
-                       signature body/} = split "\cJ", $_, 12;
+                       body/} = split "\cJ", $_, 11;
             push @commits, \%commit;
         }
 
@@ -694,7 +694,6 @@ the C<git help rev-list> document):
         committer_name  => %cN: committer name
         committer_email => %cE: committer email
         committer_date  => %ci: committer date in ISO8601 format
-        signature       => %G? %GK: commit signature check status and key
         body            => %B:  raw body (aka commit message)
     }
 
