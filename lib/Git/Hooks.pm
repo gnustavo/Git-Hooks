@@ -18,7 +18,7 @@ BEGIN {                ## no critic (Subroutines::RequireArgUnpacking)
             PRE_COMMIT PREPARE_COMMIT_MSG COMMIT_MSG
             POST_COMMIT PRE_REBASE POST_CHECKOUT POST_MERGE
             PRE_PUSH PRE_RECEIVE UPDATE POST_RECEIVE POST_UPDATE
-            PRE_AUTO_GC POST_REWRITE
+            PUSH_TO_CHECKOUT PRE_AUTO_GC POST_REWRITE
 
             REF_UPDATE PATCHSET_CREATED DRAFT_PUBLISHED
           /;
@@ -1473,6 +1473,10 @@ C<Git::More::get_affected_ref_rage> methods.
 =item * POST_RECEIVE(GIT)
 
 =item * POST_UPDATE(GIT, updated-ref-name, ...)
+
+=item * PUSH_TO_CHECKOUT(GIT, SHA1)
+
+The C<push-to-checkout> hook was introduced in Git 2.4.
 
 =item * PRE_AUTO_GC(GIT)
 
