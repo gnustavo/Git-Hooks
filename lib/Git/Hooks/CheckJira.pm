@@ -284,6 +284,8 @@ sub check_patchset {
 
     _setup_config($git);
 
+    return 1 if im_admin($git);
+
     my $sha1   = $opts->{'--commit'};
     my $commit = $git->get_commit($sha1);
 
