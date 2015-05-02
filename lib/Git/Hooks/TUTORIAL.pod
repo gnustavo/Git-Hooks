@@ -223,9 +223,12 @@ F<~/.gitconfig> file at the HOME of the user running Git. This is an
 example using some of the available plugins:
 
     [githooks]
+            plugin = CheckCommit
             plugin = CheckJira
             plugin = CheckLog
             admin = gustavo
+    [githooks "checkcommit"]
+            email-valid = 1
     [githooks "checkjira"]
             jiraurl  = https://jira.cpqd.com.br
             jirauser = gustavo
@@ -234,10 +237,13 @@ example using some of the available plugins:
     [githooks "checklog"]
             title-max-width = 62
 
-In the server the C<CheckJira> and C<CheckLog> plugins are enabled for every
-repository. The <githooks.checkjira> section specifies the URL and
-credentials of the JIRA server as well as where in the commit message the
-JIRA references are to be looked for.
+In the server the C<CheckCommit>, C<CheckJira>, and C<CheckLog> plugins are
+enabled for every repository. The <githooks.checkjira> section specifies the
+URL and credentials of the JIRA server as well as where in the commit
+message the JIRA references are to be looked for.
+
+The C<githooks.checkcommit> enables the C<email-valid> check to guarantee
+that authors and committers use sane email addresses in their commits.
 
 The C<githooks.checklog> section specifies a nonstandard value for the
 C<title-max-width> option.

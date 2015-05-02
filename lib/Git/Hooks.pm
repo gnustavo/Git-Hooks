@@ -941,6 +941,11 @@ Integrate Git with the L<JIRA|http://www.atlassian.com/software/jira/>
 ticketing system by requiring that every commit message cites valid
 JIRA issues.
 
+=item * Git::Hooks::CheckCommit
+
+Check various aspects of commits like author and committer names and emails,
+and signatures.
+
 =item * Git::Hooks::CheckLog
 
 Check commit log messages formatting.
