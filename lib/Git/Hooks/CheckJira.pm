@@ -361,18 +361,94 @@ sub check_affected_refs {
     return $errors == 0;
 }
 
+sub notify_commit_msg {
+    my ($git, $commit, $ref, $visibility) = @_;
+
+    my @keys = uniq(grok_msg_jiras($git, $commit->{body}));
+
+    return 0 unless @keys;
+
+    my $jira = _jira($git);
+
+    my %comment = (
+        body => "[$PKG] commit refers to this issue:\n\n"
+            . $git->command(show => '--stat', $commit->{commit}),
+    );
+    $comment{visibility} = $visibility if $visibility;
+
+    my $errors = 0;
+
+    foreach my $key (@keys) {
+        eval { $jira->POST("/issue/$key/comment", \%comment); 1; }
+            or $git->error($PKG, "Cannot add a comment to JIRA issue $key:", $@)
+            and ++$errors;
+    }
+
+    return $errors;
+}
+
+sub notify_ref {
+    my ($git, $ref, $visibility) = @_;
+
+    return 1 unless is_ref_enabled($ref, $git->get_config($CFG => 'ref'));
+
+    my $errors = 0;
+
+    foreach my $commit ($git->get_affected_ref_commits($ref)) {
+        $errors += notify_commit_msg($git, $commit, $ref, $visibility);
+    }
+
+    return $errors == 0;
+}
+
+# This routine can act as a post-receive hook.
+sub notify_affected_refs {
+    my ($git) = @_;
+
+    _setup_config($git);
+
+    my $comment = $git->get_config($PKG => 'comment');
+
+    return 1 unless defined $comment;
+
+    my $visibility;
+    if (length $comment) {
+        if ($comment =~ /^(role|group):(.+)/) {
+            $visibility = {
+                type  => $1,
+                value => $2,
+            };
+        } else {
+            $git->error($PKG, "Invalid argument to githooks.checkjira.comment: $comment");
+            return 0;
+        }
+    }
+
+    my $errors = 0;
+
+    foreach my $ref ($git->get_affected_refs()) {
+        $errors += notify_ref($git, $ref, $visibility);
+    }
+
+    # Disconnect from JIRA
+    $git->clean_cache($PKG);
+
+    return $errors == 0;
+}
+
 # Install hooks
 COMMIT_MSG       \&check_message_file;
 UPDATE           \&check_affected_refs;
 PRE_RECEIVE      \&check_affected_refs;
 REF_UPDATE       \&check_affected_refs;
+POST_RECEIVE     \&notify_affected_refs;
 PATCHSET_CREATED \&check_patchset;
 DRAFT_PUBLISHED  \&check_patchset;
 1;
 
 
 __END__
-=for Pod::Coverage check_codes check_commit_msg check_ref get_issue grok_msg_jiras
+=for Pod::Coverage check_codes check_commit_msg check_ref notify_commit_msg notify_ref get_issue grok_msg_jiras
 
 =head1 NAME
 
@@ -403,6 +479,11 @@ message cites valid JIRA issues.
 
 This hook is invoked once in the remote repository during C<git push>,
 to check if the commit message cites valid JIRA issues.
+
+=item * B<post-receive>
+
+This hook is invoked once in the remote repository after a successful C<git
+push>. It's used to notify JIRA of commits citing its issues via comments.
 
 =item * B<ref-update>
 
@@ -633,6 +714,34 @@ If the subroutine returns undef it's considered to have succeeded.
 If it raises an exception (e.g., by invoking B<die>) it's considered
 to have failed and a proper message is produced to the user.
 
+=head2 githooks.checkjira.comment [VISIBILITY]
+
+If this option is set and the C<post-receive> hook is enabled, for every
+pushed commit, every cited JIRA issue receives a comment showing the result
+of the C<git show --stat COMMIT> command. This is meant to notify the issue
+assignee of commits refering to the issue.
+
+Note that the user with which C<Git::Hooks> authenticates to JIRA must have
+permission to add comments to the issues or an error will be
+logged. However, since this happens after the push, the result of the
+operation isn't affected.
+
+You can restrict the visibility of comments with the optional argument,
+which must be in the form TYPE:VALUE, where TYPE may be one of:
+
+=over
+
+=item * B<role>
+
+In this case, VALUE must be the name of a JIRA role, such as
+C<Administrators>, C<Developers>, or C<Users>.
+
+=item * B<group>
+
+In this case, VALUE must be the name of a JIRA group.
+
+=back
+
 =head1 EXPORTS
 
 This module exports two routines that can be used directly without
@@ -654,6 +763,11 @@ message.
 This is the routine used to implement the C<patchset-created> Gerrit
 hook. It needs a C<Git::More> object and the hash containing the
 arguments passed to the hook by Gerrit.
+
+=head2 notify_affected_refs GIT
+
+This is the routine used to implement the C<post-receive> hook. It needs a
+C<Git::More> object.
 
 =head1 SEE ALSO
 
