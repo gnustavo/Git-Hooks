@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 24;
+use Test::More tests => 26;
 use Path::Tiny;
 
 BEGIN { require "test-functions.pl" };
@@ -59,6 +59,18 @@ $repo->command(config => "githooks.plugin", 'CheckLog');
 # title-required
 
 check_cannot_commit('deny an empty message', qr/log needs a title line/, '');
+
+$repo->command(config => 'githooks.checklog.ref', 'refs/heads/nobranch');
+check_can_commit( 'allow commit on disabled ref even when commit message is faulty', <<'EOF');
+No
+Title
+EOF
+
+$repo->command(qw/config --remove-section githooks.checklog/);
+$repo->command(config => 'githooks.checklog.ref', 'refs/heads/master');
+check_cannot_commit('deny commit on abled ref when commit message is faulty', qr/log needs a title line/, '');
+
+$repo->command(qw/config --remove-section githooks.checklog/);
 
 check_cannot_commit('deny without required title', qr/log needs a title line/, <<'EOF');
 No

@@ -197,6 +197,9 @@ sub message_errors {
 
     # assert(defined $msg)
 
+    my $current_branch = $git->get_current_branch();
+    return 0 unless is_ref_enabled($current_branch, $git->get_config($CFG => 'ref'));
+
     my $id = defined $commit ? $commit->{commit} : '';
 
     my $errors = 0;
@@ -346,6 +349,18 @@ option:
 =head1 CONFIGURATION
 
 The plugin is configured by the following git options.
+
+=head2 githooks.checklog.ref REFSPEC
+
+By default, the message of every commit is checked. If you want to
+have them checked only for some refs (usually some branch under
+refs/heads/), you may specify them with one or more instances of this
+option.
+
+The refs can be specified as a complete ref name
+(e.g. "refs/heads/master") or by a regular expression starting with a
+caret (C<^>), which is kept as part of the regexp
+(e.g. "^refs/heads/(master|fix)").
 
 =head2 githooks.checklog.title-required [01]
 
