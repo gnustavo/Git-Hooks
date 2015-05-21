@@ -221,6 +221,9 @@ sub check_message_file {
 
     _setup_config($git);
 
+    my $current_branch = $git->get_current_branch();
+    return 0 unless is_ref_enabled($current_branch, $git->get_config($CFG => 'ref'));
+
     my $msg = eval {$git->read_commit_msg_file($commit_msg_file)};
 
     unless (defined $msg) {
@@ -233,6 +236,8 @@ sub check_message_file {
 
 sub check_ref {
     my ($git, $ref) = @_;
+
+    return 1 unless is_ref_enabled($ref, $git->get_config($CFG => 'ref'));
 
     my $errors = 0;
 
@@ -270,6 +275,15 @@ sub check_patchset {
 
     my $sha1   = $opts->{'--commit'};
     my $commit = $git->get_commit($sha1);
+
+    # The --branch argument contains the branch short-name if it's in the
+    # refs/heads/ namespace. But we need to always use the branch long-name,
+    # so we change it here.
+    my $branch = $opts->{'--branch'};
+    $branch = "refs/heads/$branch"
+        unless $branch =~ m:^refs/:;
+
+    return 1 unless is_ref_enabled($branch, $git->get_config($CFG => 'ref'));
 
     return message_errors($git, $commit, $commit->{body}) == 0;
 }
@@ -346,6 +360,18 @@ option:
 =head1 CONFIGURATION
 
 The plugin is configured by the following git options.
+
+=head2 githooks.checklog.ref REFSPEC
+
+By default, the message of every commit is checked. If you want to
+have them checked only for some refs (usually some branch under
+refs/heads/), you may specify them with one or more instances of this
+option.
+
+The refs can be specified as a complete ref name
+(e.g. "refs/heads/master") or by a regular expression starting with a
+caret (C<^>), which is kept as part of the regexp
+(e.g. "^refs/heads/(master|fix)").
 
 =head2 githooks.checklog.title-required [01]
 
