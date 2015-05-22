@@ -197,6 +197,9 @@ sub message_errors {
 
     # assert(defined $msg)
 
+    my $current_branch = $git->get_current_branch();
+    return 0 unless is_ref_enabled($current_branch, $git->get_config($CFG => 'ref'));
+
     my $id = defined $commit ? $commit->{commit} : '';
 
     my $errors = 0;
