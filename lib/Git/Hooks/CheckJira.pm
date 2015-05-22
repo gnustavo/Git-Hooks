@@ -296,6 +296,8 @@ sub check_patchset {
     $branch = "refs/heads/$branch"
         unless $branch =~ m:^refs/:;
 
+    return 1 unless is_ref_enabled($branch, $git->get_config($CFG => 'ref'));
+
     return check_commit_msg($git, $commit, $branch);
 }
 
