@@ -2,6 +2,42 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.8.0     2015-05-21 21:23:17-03:00 America/Sao_Paulo
+
+  [New features]
+
+  - CheckCommit: Add new plugin Git::Hooks::CheckCommit which checks commit
+    information such as author and committer names and emails and commit
+    signatures.
+
+  - CheckJira: New functionality to insert a comment about the commit on the
+    JIRA issue during the post-rewrite hook.
+
+  - CheckLog: Add option checklog.ref to restrict the references on which
+    the checks must be performed, making it equivalent to the checkjira.ref
+    option.
+
+  - Add support for the push-to-checkout hook, new as of Git 2.4.0.
+
+  [Changes]
+
+  - The changes implemented on version 1.7.0 in the function
+    Git::More::get_commit were reverted because they imposed a performance
+    penalty on every call, even though most of them wouldn't use the new
+    information about commit signatures.
+
+  - Skip checks for users configured as githooks.admin on Gerrit's
+    patchset-created hook.
+
+  [Fixes]
+
+  - CheckJira: Use checkjira.ref option in the patchset-created hook too.
+
+  [Thanks]
+
+  Kudos to Mikko Koivunalho who provided code and ideas for most of the new
+  features in this release.
+
 1.7.1     2015-04-26 22:59:18-03:00 America/Sao_Paulo
 
   [Fixes]
