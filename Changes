@@ -2,6 +2,15 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.8.1     2015-05-22 20:22:09-03:00 America/Sao_Paulo
+
+  [Fixes]
+
+  - CheckCommit: The checkcommit.canonical option requires the
+    git-check-mailmap command which is available since Git 1.8.4. Older Gits
+    don't have it and Git::Hooks now detects this and explains the problem
+    to the user instead of simply die.
+
 1.8.0     2015-05-21 21:23:17-03:00 America/Sao_Paulo
 
   [New features]
