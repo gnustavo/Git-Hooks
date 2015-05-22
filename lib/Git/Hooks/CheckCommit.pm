@@ -7,6 +7,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
+use Error ':try';
 use Git::Hooks qw/:DEFAULT :utils/;
 use Git::More::Message;
 use List::MoreUtils qw/any none/;
@@ -115,13 +116,22 @@ sub _canonical_identity {
     my $cache = $git->cache($PKG);
 
     unless (exists $cache->{canonical}{$identity}) {
-        my $canonical = $git->command(
-            '-c', "mailmap.file=$mailmap",
-            'check-mailmap',
-            $identity,
-        );
+        try {
+            my $canonical = $git->command(
+                '-c', "mailmap.file=$mailmap",
+                'check-mailmap',
+                $identity,
+            );
 
-        chomp($cache->{canonical}{$identity} = $canonical);
+            chomp($cache->{canonical}{$identity} = $canonical);
+        } otherwise {
+            $cache->{canonical}{$identity} = $identity;
+            $git->error($PKG, <<EOS);
+The githooks.checkcommit.canonical option requires the git-check-mailmap
+command which isn't found. It's available since Git 1.8.4. You should either
+upgrade your Git or disable this option.
+EOS
+        };
     }
 
     return $cache->{canonical}{$identity};
@@ -440,6 +450,9 @@ This check is only able to detect known non-canonical names and emails that
 are converted to their canonical forms by the C<git-check-mailmap>
 command. This means that if an unknown email is used it won't be considered
 an error.
+
+Note that the C<git-check-mailmap> command is available since Git
+1.8.4. Older Gits don't have it and Git::Hooks will complain accordingly.
 
 Note that you should not have Git configured to use a default mailmap file,
 either by placing one named F<.mailmap> at the top level of the repository

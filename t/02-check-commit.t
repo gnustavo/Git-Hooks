@@ -109,45 +109,54 @@ $repo->command(qw/reset --hard HEAD/);
 $repo->command(qw/config --remove-section githooks.checkcommit/);
 
 # canonical
+SKIP: {
+    use Error ':try';
 
-my $mailmap = path($T)->child('mailmap');
+    try {
+        $repo->command(['check-mailmap' => '<joe@example.net>'], {STDERR => 0});
+    } otherwise {
+        skip "test because the command git-check-mailmap wasn't found", 4;
+    };
 
-$mailmap->spew(<<'EOS');
+    my $mailmap = path($T)->child('mailmap');
+
+    $mailmap->spew(<<'EOS');
 Good Name <good@example.net> <bad@example.net>
 Proper Name <proper@example.net>
 EOS
 
-$repo->command(qw/config githooks.checkcommit.canonical/, $mailmap);
+    $repo->command(qw/config githooks.checkcommit.canonical/, $mailmap);
 
-check_can_commit(
-    'allow canonical name and email',
-    'Good Name',
-    'good@example.net',
-);
+    check_can_commit(
+        'allow canonical name and email',
+        'Good Name',
+        'good@example.net',
+    );
 
-check_cannot_commit(
-    'deny non-canonical email',
-    qr/identity .*? isn't canonical/,
-    'Good Name',
-    'bad@example.net',
-);
-$repo->command(qw/reset --hard HEAD/);
+    check_cannot_commit(
+        'deny non-canonical email',
+        qr/identity .*? isn't canonical/,
+        'Good Name',
+        'bad@example.net',
+    );
+    $repo->command(qw/reset --hard HEAD/);
 
-check_cannot_commit(
-    'deny non-canonical name',
-    qr/identity .*? isn't canonical/,
-    'Improper Name',
-    'proper@example.net',
-);
-$repo->command(qw/reset --hard HEAD/);
+    check_cannot_commit(
+        'deny non-canonical name',
+        qr/identity .*? isn't canonical/,
+        'Improper Name',
+        'proper@example.net',
+    );
+    $repo->command(qw/reset --hard HEAD/);
 
-check_can_commit(
-    'allow non-specified email and name',
-    'none',
-    'none@example.net',
-);
+    check_can_commit(
+        'allow non-specified email and name',
+        'none',
+        'none@example.net',
+    );
 
-$repo->command(qw/config --remove-section githooks.checkcommit/);
+    $repo->command(qw/config --remove-section githooks.checkcommit/);
+}
 
 # email-valid
 SKIP: {
