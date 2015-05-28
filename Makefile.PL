@@ -23,9 +23,9 @@ sub git {
 
 # Check if we have a proper git
 chomp(my $git_version = git('version'));
-if (my ($major, $minor) = ($git_version =~ /(\d+)\.(\d+)/)) {
-    if ($major < 1 || $major == 1 && $minor < 6) {
-	warn "Don't support gits older than 1.6. Your version is $git_version.\n";
+if (my ($major, $minor, $patch) = ($git_version =~ /(\d+)\.(\d+)\.(\d+)/)) {
+    if ($major < 1 || $major == 1 && ($minor < 7 || $minor == 7 && $patch < 2)) {
+	warn "Don't support gits older than 1.7.2. Your version is $git_version.\n";
 	exit 0;
     }
 } else {
