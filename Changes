@@ -2,6 +2,20 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.9.0     2015-05-27 21:28:52-03:00 America/Sao_Paulo
+
+  [Changes]
+
+  - DROP SUPPORT FOR GITS OLDER THAN VERSION 1.7.2 !!!
+    Previously Git::Hooks supported Gits since version 1.6.0.
+
+  [Fixes]
+
+  - Git::More: the methods filter_files_in_* no longer return submodule
+    paths when they change, since most plugins assume they can apply
+    git-cat-file and other Git commands on the paths returned, but they fail
+    on submodule paths.
+
 1.8.1     2015-05-22 20:22:09-03:00 America/Sao_Paulo
 
   [Fixes]
