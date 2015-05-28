@@ -287,7 +287,7 @@ sub write_commit_msg_file {
 sub filter_files_in_index {
     my ($git, $filter) = @_;
     my $output = $git->command(
-        qw/diff-index --name-only --no-commit-id --cached -r -z/,
+        qw/diff-index --name-only --ignore-submodules --no-commit-id --cached -r -z/,
         "--diff-filter=$filter", $git->get_head_or_empty_tree(),
     );
     return split /\0/, $output;
@@ -297,7 +297,7 @@ sub filter_files_in_range {
     my ($git, $filter, $from, $to) = @_;
     $from = $EMPTY_COMMIT if $from eq $UNDEF_COMMIT;
     my $output = $git->command(
-        qw/diff-tree --name-only --no-commit-id -r -z/,
+        qw/diff-tree --name-only --ignore-submodules --no-commit-id -r -z/,
         "--diff-filter=$filter", $from, $to,
     );
     return split /\0/, $output;
@@ -306,7 +306,7 @@ sub filter_files_in_range {
 sub filter_files_in_commit {
     my ($git, $filter, $commit) = @_;
     my $output = $git->command(
-        qw/diff-tree --name-only -m -r -z/,
+        qw/diff-tree --name-only --ignore-submodules -m -r -z/,
         "--diff-filter=$filter", $commit,
     );
     my $num_parents = 0;
