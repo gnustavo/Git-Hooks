@@ -109,3 +109,4 @@ exist an option to choose to postpone the check to after the rebase.
 The pre-commit and post-commit hooks would be replaced by the post-rewrite
 though.
 
+=head2 Use Test::Requires::Git in the test suite
