@@ -51,10 +51,6 @@ thinking that UpdateConfFile is too much specific. Perhaps something along
 the lines of this post-update hook would be more interesting:
 L<http://stackoverflow.com/questions/279169/deploy-a-project-using-git-push>.
 
-=head2 Implement the Scott Chacon example hooks
-
-In L<https://github.com/schacon/githooks>.
-
 =head2 In CheckLog allow for stop words
 
 C<CheckLog.spelling> should have a way to register stop words. I'd
@@ -75,20 +71,10 @@ used here. Some other things to check:
 
 =back
 
-=head2 CheckJira post-receive hook
-
-Mikko Koivunalho suggested that Git::Hooks::CheckJira could be modified so
-that it would not just check that the ticket exists, but actually copy the
-commit message to the ticket.
-
 =head2 Turn t/test-functions.pl into a module
 
 Idea provided by Skye Shaw to make its functions usable by third-party
 plugins. Something like Git::Hooks::Test.
-
-=head2 Emulate the uploadvalidator Gerrit plugin
-
-L<https://gerrit.googlesource.com/plugins/uploadvalidator/+/master/src/main/resources/Documentation/config.md>
 
 =head2 pre-commit or pre-push
 
@@ -110,3 +96,9 @@ The pre-commit and post-commit hooks would be replaced by the post-rewrite
 though.
 
 =head2 Use Test::Requires::Git in the test suite
+
+=head2 Think (again) about substituting Git::Repository for the Git module
+
+The Git::Repository module seems to be better maintained than the standard
+Git module. In the past I chose the latter mainly because it was
+faster. However, I'd like to review them again.
