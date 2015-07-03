@@ -11,6 +11,7 @@ use Git::Hooks qw/:DEFAULT :utils/;
 use Data::Util qw(:check);
 use Text::Glob qw/glob_to_regex/;
 use Path::Tiny;
+use List::MoreUtils qw/any none/;
 use Error qw(:try);
 
 my $PKG = __PACKAGE__;
@@ -22,9 +23,9 @@ sub check_new_files {
     return 1 unless @files;     # No new file to check
 
     # Construct a list of command checks from the
-    # githooks.checkfile.basename configuration. Each check in the list is a
+    # githooks.checkfile.name configuration. Each check in the list is a
     # pair containing a regex and a command specification.
-    my @checks;
+    my @name_checks;
     foreach my $check ($git->get_config($CFG => 'name')) {
         my ($pattern, $command) = split / /, $check, 2;
         if ($pattern =~ m/^qr(.)(.*)\g{1}/) {
@@ -33,11 +34,19 @@ sub check_new_files {
             $pattern = glob_to_regex($pattern);
         }
         $command .= ' {}' unless $command =~ /\{\}/;
-        push @checks, [$pattern => $command];
+        push @name_checks, [$pattern => $command];
     }
 
     # See if we have to check a file size limit
     my $sizelimit = $git->get_config($CFG => 'sizelimit');
+
+    # Grok all REGEXP checks
+    my %re_checks;
+    foreach my $name (qw/basename path/) {
+        foreach my $check (qw/deny allow/) {
+            $re_checks{$name}{$check} = [map {qr/$_/} $git->get_config("$CFG.$name" => $check)];
+        }
+    }
 
     # Now we iterate through every new file and apply to them the matching
     # commands.
@@ -45,6 +54,22 @@ sub check_new_files {
 
   FILE:
     foreach my $file (@files) {
+        my $basename = path($file)->basename;
+
+        if (any  {$basename =~ $_} @{$re_checks{basename}{deny}} and
+            none {$basename =~ $_} @{$re_checks{basename}{allow}}) {
+            $git->error($PKG, "File '$file' basename was denied.");
+            ++$errors;
+            next FILE;          # Don't botter checking the contents of invalid files
+        }
+
+        if (any  {$file =~ $_} @{$re_checks{path}{deny}} and
+            none {$file =~ $_} @{$re_checks{path}{allow}}) {
+            $git->error($PKG, "File '$file' path was denied.");
+            ++$errors;
+            next FILE;          # Don't botter checking the contents of invalid files
+        }
+
         my $size = $git->file_size($commit, $file);
         if ($sizelimit && $sizelimit < $size) {
             $git->error($PKG, "File '$file' has $size bytes but the current limit is just $sizelimit bytes.");
@@ -52,9 +77,8 @@ sub check_new_files {
             next FILE;    # Don't botter checking the contents of huge files
         }
 
-        my $basename = path($file)->basename;
       COMMAND:
-        foreach my $command (map {$_->[1]} grep {$basename =~ $_->[0]} @checks) {
+        foreach my $command (map {$_->[1]} grep {$basename =~ $_->[0]} @name_checks) {
             my $tmpfile = $git->blob($commit, $file)
                 or ++$errors
                     and next COMMAND;
@@ -223,3 +247,32 @@ This directive specifies a size limit (in bytes) for any file in the
 repository. If set explicitly to 0 (zero), no limit is imposed, which is the
 same as not specifying it. But it can be useful to override a global
 specification in a particular repository.
+
+=head2 githooks.checkfile.basename.deny REGEXP
+
+This directive denies files which basenames match REGEXP.
+
+=head2 githooks.checkfile.basename.allow REGEXP
+
+This directive allows files which basenames match REGEXP. Since by default
+all basenames are allowed this directive is useful only to prevent a
+B<githooks.checkfile.basename.deny> directive to deny the same basename.
+
+The basename checks are evaluated so that a file is denied only if it's
+basename matches any B<basename.deny> directive and none of the
+B<basename.allow> directives.  So, for instance, you would apply it like
+this to allow the versioning of F<.gitignore> file while denying any other
+file with a name beginning with a dot.
+
+    [githooks "checkfile"]
+        basename.allow ^\\.gitignore
+        basename.deny  ^\\.
+
+=head2 githooks.checkfile.path.deny REGEXP
+
+This directive denies files which full paths match REGEXP.
+
+=head2 githooks.checkfile.path.allow REGEXP
+
+This directive allows files which full paths match REGEXP. It's useful in
+the same way that B<githooks.checkfile.basename.deny> is.

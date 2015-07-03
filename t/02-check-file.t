@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 14;
+use Test::More tests => 18;
 
 BEGIN { require "test-functions.pl" };
 
@@ -116,6 +116,30 @@ check_can_commit('small file', 'file.txt', 'truncate', '12');
 check_cannot_commit('big file', qr/the current limit is just/, 'file.txt', 'truncate', '123456789');
 
 $repo->command(config => '--unset-all', "githooks.checkfile.sizelimit");
+
+
+$repo->command(config => "githooks.checkfile.basename.deny", 'txt');
+
+check_cannot_commit('deny basename', qr/basename was denied/, 'file.txt');
+
+$repo->command(config => "githooks.checkfile.basename.allow", 'txt');
+
+check_can_commit('allow basename', 'file.txt');
+
+$repo->command(config => '--unset-all', "githooks.checkfile.basename.deny");
+$repo->command(config => '--unset-all', "githooks.checkfile.basename.allow");
+
+
+$repo->command(config => "githooks.checkfile.path.deny", 'txt');
+
+check_cannot_commit('deny path', qr/path was denied/, 'file.txt');
+
+$repo->command(config => "githooks.checkfile.path.allow", 'txt');
+
+check_can_commit('allow path', 'file.txt');
+
+$repo->command(config => '--unset-all', "githooks.checkfile.path.deny");
+$repo->command(config => '--unset-all', "githooks.checkfile.path.allow");
 
 # PRE-RECEIVE
 

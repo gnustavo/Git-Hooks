@@ -46,9 +46,9 @@ prefixing the what component with a '!'.
 
 =head2 Implement equivalents for the L<SVN::Hooks> plugins
 
-Currently we're missing DenyFilenames and UpdateConfFile. Actually, I'm
-thinking that UpdateConfFile is too much specific. Perhaps something along
-the lines of this post-update hook would be more interesting:
+Currently we're missing UpdateConfFile. Actually, I'm thinking that
+UpdateConfFile is too much specific. Perhaps something along the lines of
+this post-update hook would be more interesting:
 L<http://stackoverflow.com/questions/279169/deploy-a-project-using-git-push>.
 
 =head2 In CheckLog allow for stop words
