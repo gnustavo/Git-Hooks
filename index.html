@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-dark.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <title>Git::Hooks by gnustavo</title>
+  </head>
+
+  <body>
+    <div id="container">
+      <div class="inner">
+
+        <header>
+          <h1>Git::Hooks</h1>
+          <h2>Framework for implementing Git (and Gerrit) hooks</h2>
+        </header>
+
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/gnustavo/Git-Hooks/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/gnustavo/Git-Hooks/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/gnustavo/Git-Hooks" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
+
+        <hr>
+
+        <section id="main_content">
+          <h3>
+<a id="whats-this-about" class="anchor" href="#whats-this-about" aria-hidden="true"><span class="octicon octicon-link"></span></a>What's this about?</h3>
+
+<p><a href="http://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks">Git hooks</a> are programs you install in Git repositories in order to augment Git's functionality.</p>
+
+<p>The Git::Hooks Perl module is a framework that makes it easier to implement and use Git hooks. It comes with a set of plugins already implementing useful functionality for you to make sure your commits comply with your project policies. As a Git user or a Git server administrator you probably don't need to implement any hooks for most of your needs, just to enable and configure some of the existing plugins.</p>
+
+<h3>
+<a id="documentation" class="anchor" href="#documentation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Documentation</h3>
+
+<p>The main module documents its <a href="https://metacpan.org/pod/Git::Hooks#USAGE">usage</a> indetail. Each plugin is implemented as a separate module under the <code>Git::Hooks::</code> namespace. The <a href="https://metacpan.org/release/Git-Hooks">Git::Hooks distribution</a> comes with a set of plugins and you can find more on <a href="https://metacpan.org/search?q=module%3AGit%3A%3AHooks">CPAN</a>.</p>
+
+<p>For a gentler introduction you can try our <a href="https://metacpan.org/pod/distribution/Git-Hooks/lib/Git/Hooks/TUTORIAL.pod">tutorial</a> which has sections for <a href="https://metacpan.org/pod/distribution/Git-Hooks/lib/Git/Hooks/TUTORIAL.pod#USER-TUTORIAL">Git users</a>, <a href="https://metacpan.org/pod/distribution/Git-Hooks/lib/Git/Hooks/TUTORIAL.pod#ADMIN-TUTORIAL">Git administrators</a>, and <a href="https://metacpan.org/pod/distribution/Git-Hooks/lib/Git/Hooks/TUTORIAL.pod#GERRIT-TUTORIAL">Gerrit administrators</a>.</p>
+
+<h3>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>
+<a id="installation" href="#installation"></a>Installation</h3>
+
+<p>Git::Hooks is installed like any other Perl module. It's easier to use a CPAN client, such as <code>cpanm</code> or <code>cpan</code>, so that dependencies are installed automatically:</p>
+
+<pre><code>$ cpanm Git::Hooks
+$ cpan Git::Hooks
+</code></pre>
+
+<p>You can even use it directly from a clone of its Git repository. All you have to do is to tell Perl where to find it by using this in your scripts:</p>
+
+<pre><code>use lib '/path/to/clone/of/git-hooks/lib';
+use Git::Hooks;
+</code></pre>
+
+<h3>
+<a id="getting-help" class="anchor" href="#getting-help" aria-hidden="true"><span class="octicon octicon-link"></span></a>Getting Help</h3>
+
+<p>The best way to ask questions or to report problems is to file an issue at <a href="https://github.com/gnustavo/Git-Hooks/issues">GitHub</a>.</p>
+
+<h3>
+<a id="copyright--license" class="anchor" href="#copyright--license" aria-hidden="true"><span class="octicon octicon-link"></span></a>Copyright &amp; License</h3>
+
+<p>Git::Hooks is copyright (c) of <a href="http://www.cpqd.com.br">CPqD</a>.</p>
+
+<p>This is free software; you can redistribute it and/or modify it under the same terms as the Perl 5 programming language system itself. About the only thing you can't do is pretend that you wrote code that you didn't.</p>
+
+<h3>
+<a id="enjoy" class="anchor" href="#enjoy" aria-hidden="true"><span class="octicon octicon-link"></span></a>Enjoy!</h3>
+
+<p>Gustavo Chaves <a href="mailto:gnustavo@cpan.org">gnustavo@cpan.org</a></p>
+        </section>
+
+        <footer>
+          Git::Hooks is maintained by <a href="https://github.com/gnustavo">gnustavo</a><br>
+          This page was generated by <a href="https://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+
+        
+      </div>
+    </div>
+  </body>
+</html>
