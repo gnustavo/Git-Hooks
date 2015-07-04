@@ -2,6 +2,18 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.10.0    2015-07-04 15:13:40-03:00 America/Sao_Paulo
+
+  [New features]
+
+  - CheckFile: Implement new directives to check files by comparing their
+    names with regular expressions.
+
+  [Changes]
+
+  - Git::Hooks's homepage now is the GitHub Page
+    http://gnustavo.github.io/Git-Hooks/.
+
 1.9.0     2015-05-27 21:28:52-03:00 America/Sao_Paulo
 
   [Changes]
