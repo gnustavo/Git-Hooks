@@ -17,6 +17,45 @@ use Error qw(:try);
 my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
+sub check_command {
+    my ($git, $commit, $file, $command) = @_;
+
+    my $tmpfile = $git->blob($commit, $file);
+    $tmpfile or return;
+
+    # interpolate filename in $command
+    (my $cmd = $command) =~ s/\{\}/\'$tmpfile\'/g;
+
+    # execute command and update $errors
+    my $saved_output = redirect_output();
+    my $exit = system $cmd;
+    my $output = restore_output($saved_output);
+    if ($exit != 0) {
+        $command =~ s/\{\}/\'$file\'/g;
+        my $message = do {
+            if ($exit == -1) {
+                "command '$command' could not be executed: $!";
+            } elsif ($exit & 127) {
+                sprintf("command '%s' was killed by signal %d, %s coredump",
+                        $command, ($exit & 127), ($exit & 128) ? 'with' : 'without');
+            } else {
+                sprintf("command '%s' failed with exit code %d", $command, $exit >> 8);
+            }
+        };
+
+        # Replace any instance of the $tmpfile name in the output by
+        # $file to avoid confounding the user.
+        $output =~ s/\Q$tmpfile\E/$file/g;
+
+        $git->error($PKG, $message, $output);
+        return;
+    } else {
+        # FIXME: What we should do with eventual output from a
+        # successful command?
+    }
+    return 1;
+}
+
 sub check_new_files {
     my ($git, $commit, @files) = @_;
 
@@ -77,42 +116,9 @@ sub check_new_files {
             next FILE;    # Don't botter checking the contents of huge files
         }
 
-      COMMAND:
         foreach my $command (map {$_->[1]} grep {$basename =~ $_->[0]} @name_checks) {
-            my $tmpfile = $git->blob($commit, $file)
-                or ++$errors
-                    and next COMMAND;
-
-            # interpolate filename in $command
-            (my $cmd = $command) =~ s/\{\}/\'$tmpfile\'/g;
-
-            # execute command and update $errors
-            my $saved_output = redirect_output();
-            my $exit = system $cmd;
-            my $output = restore_output($saved_output);
-            if ($exit != 0) {
-                $command =~ s/\{\}/\'$file\'/g;
-                my $message = do {
-                    if ($exit == -1) {
-                        "command '$command' could not be executed: $!";
-                    } elsif ($exit & 127) {
-                        sprintf("command '%s' was killed by signal %d, %s coredump",
-                                $command, ($exit & 127), ($exit & 128) ? 'with' : 'without');
-                    } else {
-                        sprintf("command '%s' failed with exit code %d", $command, $exit >> 8);
-                    }
-                };
-
-                # Replace any instance of the $tmpfile name in the output by
-                # $file to avoid confounding the user.
-                $output =~ s/\Q$tmpfile\E/$file/g;
-
-                $git->error($PKG, $message, $output);
-                ++$errors;
-            } else {
-                # FIXME: What we should do with eventual output from a
-                # successful command?
-            }
+            check_command($git, $commit, $file, $command)
+                or ++$errors;
         }
     }
 
@@ -161,7 +167,7 @@ DRAFT_PUBLISHED  \&check_patchset;
 1;
 
 __END__
-=for Pod::Coverage check_new_files check_affected_refs check_commit check_patchset
+=for Pod::Coverage check_command check_new_files check_affected_refs check_commit check_patchset
 
 =head1 NAME
 
