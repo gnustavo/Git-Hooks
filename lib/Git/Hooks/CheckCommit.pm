@@ -126,7 +126,7 @@ sub _canonical_identity {
             chomp($cache->{canonical}{$identity} = $canonical);
         } otherwise {
             $cache->{canonical}{$identity} = $identity;
-            $git->error($PKG, <<EOS);
+            $git->error($PKG, <<'EOS');
 The githooks.checkcommit.canonical option requires the git-check-mailmap
 command which isn't found. It's available since Git 1.8.4. You should either
 upgrade your Git or disable this option.
