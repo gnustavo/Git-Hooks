@@ -26,20 +26,20 @@ local repositories:
     use Git::Hooks;
     run_hook($0, @ARGV);
 
-As a user, I save this script as F<~/bin/githooks.pl> under my $HOME
-directory. Just do not forget to make it executable!
+As a user, I save this script as F<$HOME/bin/githooks.pl> and make it
+executable.
 
 If you invoke the driver script directly from the inside of a Git repository
 it should do nothing but exit normally:
 
     $ cd /my/git/repo
-    $ ~/bin/githooks.pl
+    $ $HOME/bin/githooks.pl
     $ echo $?
 
 If you invoke it from the outside though, it should die:
 
     $ cd ..
-    $ ~/bin/githooks.pl
+    $ $HOME/bin/githooks.pl
     fatal: Not a git repository: . at /usr/share/perl5/Git.pm line 210.
 
 =head2 User Hook Links
@@ -49,10 +49,10 @@ directory of your repositories pointing to the common script. So, for
 example, if you want to enable some C<pre-commit> and some
 C<commit-msg> hooks, you would do this:
 
-    $ cd .../.git/hooks
-    $ ln -s ~/bin/githooks.pl pre-commit
-    $ ln -s ~/bin/githooks.pl commit-msg
-    $ ln -s ~/bin/githooks.pl pre-rebase
+    $ cd /my/git/repo/.git/hooks
+    $ ln -s $HOME/bin/githooks.pl pre-commit
+    $ ln -s $HOME/bin/githooks.pl commit-msg
+    $ ln -s $HOME/bin/githooks.pl pre-rebase
 
 =head3 Automating the creation of links
 
@@ -62,49 +62,48 @@ order to make it easy to setup your hooks, it's useful to create a
 repository template for Git to use when you perform a C<git init> or a
 C<git clone>.
 
-In Ubuntu, Git's standard repository template resides in
+In Ubuntu Linux, Git's standard repository template resides in
 F</usr/share/git-core/templates>. If you can't find it there, read the
-C<TEMPLATE DIRECTORY> section of the C<git help init> manual to see
-where is your Git's default template directory.
+C<TEMPLATE DIRECTORY> section of the C<git help init> manual to see where is
+your Git's default template directory.
 
 You may customize one for you like this:
 
-    $ cp -a /usr/share/git-core/templates ~/.git-templates
-    $ cd ~/.git-templates/hooks
+    $ cp -a /usr/share/git-core/templates $HOME/.git-templates
+    $ cd $HOME/.git-templates/hooks
     $ rm *
     $ for i in commit-msg post-commit pre-commit pre-rebase
-    > do ln -s ~/bin/githooks.pl $i
+    > do ln -s $HOME/bin/githooks.pl $i
     > done
 
-These commands copy the default template directory to
-F<~/.git-template> (you may choose another directory), removes all
-sample hooks and creates symbolic links to the Git::Hooks driver
-script which we created above for four hooks: C<commit-msg>,
-C<post-commit>, C<pre-commit>, and C<pre-rebase>. These are all the
-hooks I'm interested in locally. If you're setting this up for a Git server
-you'll want to create links for other hooks, such as C<pre-receive> or
-C<update>.
+These commands copy the default template directory to F<$HOME/.git-template>
+(you may choose another directory), removes all sample hooks and creates
+symbolic links to the Git::Hooks driver script which we created above for
+four hooks: C<commit-msg>, C<post-commit>, C<pre-commit>, and
+C<pre-rebase>. These are all the hooks I'm interested in locally. If you're
+setting this up for a Git server you'll want to create links for other
+hooks, such as C<pre-receive> or C<update>.
 
 You must tell Git to use your repository template instead of its
 default. The best way to do it is to configure it globally like this:
 
-    $ git config --global init.templatedir ~/.git-templates
+    $ git config --global init.templatedir $HOME/.git-templates
 
 Now, whenever you C<git init> or C<git clone> a new repository, it
 will automatically be configured to use Git::Hooks.
 
 =head2 User Configuration
 
-By default Git::Hooks does nothing. At the very least, it must be
-configured to enable some plugins and configure them to your
-taste. You should read the plugins's documentation to understand them
-and decide which ones you would like to enable globally and which ones
-you would like to enable locally for particular repositories.
+By default Git::Hooks does nothing. At the very least, it must be configured
+to enable some plugins and configure them to your taste. You should read the
+plugins's documentation to understand them and decide which ones you would
+like to enable globally and which ones you would like to enable locally for
+particular repositories.
 
 Here I show my personal preferences. You are encouraged to make your
 own variations.
 
-This is what I have in my global Git configuration (F<~/.gitconfig>):
+This is what I have in my global Git configuration (F<$HOME/.gitconfig>):
 
     [githooks]
             plugin = CheckLog
@@ -219,7 +218,7 @@ a repository.
 =head2 Server Configuration
 
 In your Git server you should insert global configuration in the
-F<~/.gitconfig> file at the HOME of the user running Git. This is an
+F<$HOME/.gitconfig> file at the HOME of the user running Git. This is an
 example using some of the available plugins:
 
     [githooks]
@@ -319,7 +318,7 @@ First, you have to create the same driver script as L<described for the
 server|/Server Driver Script>. There is a catch though. Gerrit undefines the
 C<HOME> environment variable when it runs, so that when we invoke the C<git>
 command inside one of our hooks it won't be able to read the global
-configuration file F<~/.gitconfig>. So, you should define HOME in the script
+configuration file F<$HOME/.gitconfig>. So, you should define HOME in the script
 like this (obviously, using the correct value in the assignment):
 
     #!/usr/bin/env perl
