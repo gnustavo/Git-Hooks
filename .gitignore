@@ -1,0 +1,11 @@
+/_*/
+/Gemfile.lock
+/Git-Hooks-*
+/.build
+*.bak
+*.tar.gz
+*~
+/.tidyall.d/
+
+# For Plenv users
+.perl-version
