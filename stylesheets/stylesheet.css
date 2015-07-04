@@ -164,6 +164,12 @@ a.button span {
 #view-on-github {
   margin-right: 0;
 }
+#view-on-cpan span {
+  background: transparent url(../images/metacpan-icon.png) 12px 50% no-repeat;
+}
+#view-on-cpan {
+  margin-right: 0;
+}
 
 code, pre {
   margin-bottom: 30px;
