@@ -168,16 +168,16 @@ separated by spaces:
 
     who what refs
 
-By default, nobody has access to anything, except the above-specified
-admins. During an update, all the ACLs are processed in the order
-defined by the C<git config --list> command. The first ACL matching
-the authenticated username and the affected reference name (usually a
-branch) defines what operations are allowed. If no ACL matches
-username and reference name, then the operation is denied.
+By default, nobody has access to anything, except the users specified by the
+C<githooks.admin> configuration option. During an update, all the ACLs are
+processed in the order defined by the C<git config --list> command. The
+first ACL matching the authenticated username and the affected reference
+name (usually a branch) defines what operations are allowed. If no ACL
+matches username and reference name, then the operation is denied.
 
-The 'who' component specifies to which users this ACL gives access. It
-can be specified in the same three ways as was explained to the
-CheckAcls.admin option above.
+The 'who' component specifies to which users this ACL gives access. It can
+be specified as a username, a groupname, or a regex, like the
+C<githooks.admin> configuration option.
 
 The 'what' component specifies what kind of access to allow. It's
 specified as a string of one or more of the following opcodes:
