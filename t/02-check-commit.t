@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 20;
+use Test::More tests => 24;
 use Path::Tiny;
 
 BEGIN { require "test-functions.pl" };
@@ -46,19 +46,19 @@ sub check_cannot_commit {
 }
 
 sub check_can_push {
-    my ($testname, @envs) = @_;
+    my ($testname, $branch, @envs) = @_;
     setenvs(@envs);
 
     new_commit($repo, $file, $testname);
-    test_ok($testname, $repo, 'push', $clone->repo_path(), 'master');
+    test_ok($testname, $repo, 'push', $clone->repo_path(), "HEAD:$branch");
 }
 
 sub check_cannot_push {
-    my ($testname, $regex, @envs) = @_;
+    my ($testname, $regex, $branch, @envs) = @_;
     setenvs(@envs);
 
     new_commit($repo, $file, $testname);
-    test_nok_match($testname, $regex, $repo, 'push', $clone->repo_path(), 'master');
+    test_nok_match($testname, $regex, $repo, 'push', $clone->repo_path(), "HEAD:$branch");
 }
 
 
@@ -194,10 +194,12 @@ $clone->command(config => "githooks.plugin", 'CheckCommit');
 
 $clone->command(qw/config githooks.checkcommit.name valid1/);
 
-check_can_push('allow positive author name (push)', 'valid1');
+check_can_push('allow positive author name (push)', 'master', 'valid1');
 
-check_cannot_push('deny positive author name (push)', qr/does not match any positive/, 'none');
+check_cannot_push('deny positive author name (push)', qr/does not match any positive/, 'master', 'none');
 $repo->command(qw/reset --hard HEAD^/);
+
+$clone->command(qw/config --remove-section githooks.checkcommit/);
 
 # signature
 SKIP: {
@@ -205,7 +207,7 @@ SKIP: {
 
     $clone->command(qw/config githooks.checkcommit.signature trusted/);
 
-    check_cannot_push('deny no signature', qr/has NO signature/, 'name');
+    check_cannot_push('deny no signature', qr/has NO signature/, 'master', 'name');
     $repo->command(qw/reset --hard HEAD^/);
 
     $file->append('new commit');
@@ -214,3 +216,35 @@ SKIP: {
 
     $clone->command(qw/config --remove-section githooks.checkcommit/);
 }
+
+# check-ref
+
+$clone->command(qw/config githooks.checkcommit.check-ref/,
+                'sub { my ($git, $ref) = @_; $ref =~ s:.*/::; return $ref eq "valid"; };');
+
+check_can_push('check-ref ok', 'valid', 'name');
+
+check_cannot_push('check-ref nok', qr/error while evaluating check-ref/, 'invalid', 'name');
+
+$clone->command(qw/config --remove-section githooks.checkcommit/);
+
+my $script  = $T->child('check-ref.pl');
+{
+    open my $fh, '>', $script or die BAIL_OUT("can't open $script to write: $!");
+    print $fh <<'EOT' or die  BAIL_OUT("can't write to $script: $!");
+sub {
+    my ($git, $ref) = @_;
+    $ref =~ s:.*/::;
+    return $ref eq "valid";
+};
+EOT
+    close $fh;
+}
+
+$clone->command(qw/config githooks.checkcommit.check-ref/, "file:$script");
+
+check_can_push('check-ref file ok', 'valid', 'name');
+
+check_cannot_push('check-ref file nok', qr/error while evaluating check-ref/, 'invalid', 'name');
+
+$clone->command(qw/config --remove-section githooks.checkcommit/);
