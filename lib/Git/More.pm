@@ -473,8 +473,7 @@ sub blob {
 
         # Create temporary file and copy contents to it
         open my $tmp, '>:', $filepath ## no critic (RequireBriefOpen)
-            or git->error(__PACKAGE__, "Internal error: can't create file '$filepath': $!")
-                and return;
+            or throw Error::Simple("Internal error: can't create file '$filepath': $!");
         my ($pipe, $ctx) = $git->command_output_pipe(qw/cat-file blob/, $blob);
         my $read;
         while ($read = sysread $pipe, my $buffer, 64 * 1024) {
@@ -483,15 +482,13 @@ sub blob {
             while ($length) {
                 my $written = syswrite $tmp, $buffer, $length, $offset;
                 defined $written
-                    or $git->error(__PACKAGE__, "Internal error: can't write to '$filepath': $!")
-                        and return;
+                    or throw Error::Simple("Internal error: can't write to '$filepath': $!");
                 $length -= $written;
                 $offset += $written;
             }
         }
         defined $read
-            or $git->error(__PACKAGE__, "Internal error: can't read from git cat-file pipe: $!")
-                and return;
+            or throw Error::Simple("Internal error: can't read from git cat-file pipe: $!");
         $git->command_close_pipe($pipe, $ctx);
         $tmp->close();
         $cache->{$blob} = $filepath;
@@ -933,6 +930,10 @@ destroyed.
 
 Any remaining ARGS are passed as arguments to C<File::Temp::newdir> so that you
 can have more control over the temporary file creation.
+
+If REV:FILE does not exist or if there is any other error while trying to
+fetch its contents the method throws a Git::Simple or a Git::Error::Command
+exception.
 
 =head2 file_size REV FILE
 
