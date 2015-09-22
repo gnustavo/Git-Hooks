@@ -2,6 +2,13 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.11.0    2015-09-22 09:45:26-03:00 America/Sao_Paulo
+
+  [New features]
+
+  - CheckCommit: Add option checkcommit.check-ref to allow one to specify
+    Perl code to check commits during a git push.
+
 1.10.0    2015-07-04 15:13:40-03:00 America/Sao_Paulo
 
   [New features]
