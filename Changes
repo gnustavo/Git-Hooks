@@ -2,6 +2,14 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.11.1    2015-09-22 10:19:40-03:00 America/Sao_Paulo
+
+  [Changes]
+
+  - Git::More::blob now throws exceptions on errors instead of injecting the
+    messages with Git::More::error. This makes it suitable for use by user
+    hooks.
+
 1.11.0    2015-09-22 09:45:26-03:00 America/Sao_Paulo
 
   [New features]
