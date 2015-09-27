@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 use lib 't';
-use Test::More tests => 24;
+use Test::More tests => 26;
 use Path::Tiny;
 
 BEGIN { require "test-functions.pl" };
@@ -155,6 +155,17 @@ EOS
     $repo->command(qw/config --remove-section githooks.checkcommit/);
 }
 
+# check-code repo
+
+$repo->command(qw/config githooks.checkcommit.check-code/,
+                'sub { my ($git, $commit) = @_; return $commit->{author_name} =~ /valid/; };');
+
+check_can_commit('check-code commit ok', 'valid');
+
+check_cannot_commit('check-code commit nok', qr/error while evaluating check-code/, 'other');
+
+$repo->command(qw/config --remove-section githooks.checkcommit/);
+
 # email-valid
 SKIP: {
     unless (eval { require Email::Valid; }) {
@@ -211,23 +222,23 @@ SKIP: {
     $clone->command(qw/config --remove-section githooks.checkcommit/);
 }
 
-# check-ref
+# check-code clone
 
-$clone->command(qw/config githooks.checkcommit.check-ref/,
-                'sub { my ($git, $ref) = @_; $ref =~ s:.*/::; return $ref eq "valid"; };');
+$clone->command(qw/config githooks.checkcommit.check-code/,
+                'sub { my ($git, $commit, $ref) = @_; $ref =~ s:.*/::; return $ref eq "valid"; };');
 
-check_can_push('check-ref ok', 'valid', 'name');
+check_can_push('check-code push ok', 'valid', 'name');
 
-check_cannot_push('check-ref nok', qr/error while evaluating check-ref/, 'invalid', 'name');
+check_cannot_push('check-code push nok', qr/error while evaluating check-code/, 'invalid', 'name');
 
 $clone->command(qw/config --remove-section githooks.checkcommit/);
 
-my $script  = $T->child('check-ref.pl');
+my $script  = $T->child('check-code.pl');
 {
     open my $fh, '>', $script or die BAIL_OUT("can't open $script to write: $!");
     print $fh <<'EOT' or die  BAIL_OUT("can't write to $script: $!");
 sub {
-    my ($git, $ref) = @_;
+    my ($git, $commit, $ref) = @_;
     $ref =~ s:.*/::;
     return $ref eq "valid";
 };
@@ -235,10 +246,10 @@ EOT
     close $fh;
 }
 
-$clone->command(qw/config githooks.checkcommit.check-ref/, "file:$script");
+$clone->command(qw/config githooks.checkcommit.check-code/, "file:$script");
 
-check_can_push('check-ref file ok', 'valid', 'name');
+check_can_push('check-code push file ok', 'valid', 'name');
 
-check_cannot_push('check-ref file nok', qr/error while evaluating check-ref/, 'invalid', 'name');
+check_cannot_push('check-code push file nok', qr/error while evaluating check-code/, 'invalid', 'name');
 
 $clone->command(qw/config --remove-section githooks.checkcommit/);

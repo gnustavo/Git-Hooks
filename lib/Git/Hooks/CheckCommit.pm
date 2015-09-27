@@ -202,18 +202,8 @@ sub signature_errors {
     return $errors;
 }
 
-sub commit_errors {
-    my ($git, $commit) = @_;
-
-    return
-        match_errors($git, $commit) +
-        email_valid_errors($git, $commit) +
-        canonical_errors($git, $commit) +
-        signature_errors($git, $commit);
-}
-
-sub ref_errors {
-    my ($git, $ref) = @_;
+sub code_errors {
+    my ($git, $commit, $ref) = @_;
 
     my $errors = 0;
 
@@ -222,17 +212,17 @@ sub ref_errors {
     unless (ref $codes) {
         $codes = [];
       CODE:
-        foreach my $check ($git->get_config($CFG => 'check-ref')) {
+        foreach my $check ($git->get_config($CFG => 'check-code')) {
             my $code;
             if ($check =~ s/^file://) {
                 $code = do $check;
                 unless ($code) {
                     if (length $@) {
-                        $git->error($PKG, "couldn't parse check-ref file ($check): ", $@);
+                        $git->error($PKG, "couldn't parse check-code file ($check): ", $@);
                     } elsif (! defined $code) {
-                        $git->error($PKG, "couldn't read check-ref file ($check): ", $!);
+                        $git->error($PKG, "couldn't read check-code file ($check): ", $!);
                     } else {
-                        $git->error($PKG, "check-ref file ($check) returned FALSE");
+                        $git->error($PKG, "check-code file ($check) returned FALSE");
                     }
                     ++$errors;
                     next CODE;
@@ -240,7 +230,7 @@ sub ref_errors {
             } else {
                 $code = eval $check; ## no critic (BuiltinFunctions::ProhibitStringyEval)
                 if (length $@) {
-                    $git->error($PKG, "couldn't parse check-ref value: ", $@);
+                    $git->error($PKG, "couldn't parse check-code value: ", $@);
                     ++$errors;
                     next CODE;
                 }
@@ -248,26 +238,37 @@ sub ref_errors {
             if (is_code_ref($code)) {
                 push @$codes, $code;
             } else {
-                $git->error($PKG, "option check-ref must end with a code ref");
+                $git->error($PKG, "option check-code must end with a code ref");
                 ++$errors;
             }
         }
     }
 
     foreach my $code (@$codes) {
-        my $ok = eval { $code->($git, $ref) };
+        my $ok = eval { $code->($git, $commit, $ref) };
         if (defined $ok) {
             unless ($ok) {
-                $git->error($PKG, "error while evaluating check-ref");
+                $git->error($PKG, "error while evaluating check-code");
                 ++$errors;
             }
         } elsif (length $@) {
-            $git->error($PKG, 'error while evaluating check-ref', $@);
+            $git->error($PKG, 'error while evaluating check-code', $@);
             ++$errors;
         }
     }
 
     return $errors;
+}
+
+sub commit_errors {
+    my ($git, $commit, $ref) = @_;
+
+    return
+        match_errors($git, $commit) +
+        email_valid_errors($git, $commit) +
+        canonical_errors($git, $commit) +
+        signature_errors($git, $commit) +
+        code_errors($git, $commit, $ref);
 }
 
 sub check_ref {
@@ -276,10 +277,8 @@ sub check_ref {
     my $errors = 0;
 
     foreach my $commit ($git->get_affected_ref_commits($ref)) {
-        $errors += commit_errors($git, $commit);
+        $errors += commit_errors($git, $commit, $ref);
     }
-
-    $errors += ref_errors($git, $ref);
 
     return $errors;
 }
@@ -297,15 +296,11 @@ sub check_pre_commit {
         committer_email => $ENV{GIT_COMMITTER_EMAIL},
     };
 
-    my $errors = 0;
-
-    $errors += match_errors($git, $commit);
-
-    $errors += email_valid_errors($git, $commit);
-
-    $errors += canonical_errors($git, $commit);
-
-    return $errors == 0;
+    return 0 ==
+        (match_errors($git, $commit) +
+         email_valid_errors($git, $commit) +
+         canonical_errors($git, $commit) +
+         code_errors($git, $commit));
 }
 
 sub check_post_commit {
@@ -372,7 +367,7 @@ DRAFT_PUBLISHED  \&check_patchset;
 
 
 __END__
-=for Pod::Coverage match_errors email_valid_errors canonical_errors identity_errors signature_errors spelling_errors pattern_errors subject_errors body_errors footer_errors commit_errors ref_errors check_pre_commit check_post_commit check_ref check_affected_refs check_patchset
+=for Pod::Coverage match_errors email_valid_errors canonical_errors identity_errors signature_errors spelling_errors pattern_errors subject_errors body_errors footer_errors commit_errors code_errors check_pre_commit check_post_commit check_ref check_affected_refs check_patchset
 
 =head1 NAME
 
@@ -546,17 +541,16 @@ signatures.
 
 This check is performed by the C<post-commit> local hook.
 
-=head2 githooks.checkcommit.check-ref CODESPEC
+=head2 githooks.checkcommit.check-code CODESPEC
 
 If the above checks aren't enough you can use this option to define a custom
-code to check your commits during a B<git push>. The code may be specified
-directly as the option's value or you may specify it indirectly via the
-filename of a script. If the option's value starts with "file:", the
-remaining is treated as the script filename, which is executed by a B<do>
-command. Otherwise, the option's value is executed directly by an
-eval. Either way, the code must end with the definition of a routine, which
-will be called once for each reference being affected by the push with the
-following arguments:
+code to check your commits. The code may be specified directly as the
+option's value or you may specify it indirectly via the filename of a
+script. If the option's value starts with "file:", the remaining is treated
+as the script filename, which is executed by a B<do> command. Otherwise, the
+option's value is executed directly by an eval. Either way, the code must
+end with the definition of a routine, which will be called once for each
+commit with the following arguments:
 
 =over
 
@@ -564,9 +558,15 @@ following arguments:
 
 The Git repository object used to grok information about the commit.
 
+=item * B<COMMIT>
+
+This is a hash representing a commit, as returned by the
+L<Git::More::get_commits> method.
+
 =item * B<REF>
 
-The name of the reference being changed.
+The name of the reference being changed, for the B<update> and the
+B<pre-receive> hooks. For the B<pre-commit> hook this argument is B<undef>.
 
 =back
 
