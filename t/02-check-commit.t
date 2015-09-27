@@ -57,8 +57,10 @@ sub check_cannot_push {
     my ($testname, $regex, $branch, @envs) = @_;
     setenvs(@envs);
 
+    $repo->command(qw/branch -f mark/);
     new_commit($repo, $file, $testname);
     test_nok_match($testname, $regex, $repo, 'push', $clone->repo_path(), "HEAD:$branch");
+    $repo->command(qw/reset --hard mark/);
 }
 
 
@@ -77,14 +79,12 @@ $repo->command(qw/config --add githooks.checkcommit.name valid2/);
 check_can_commit('allow positive author name', 'valid2');
 
 check_cannot_commit('deny positive author name', qr/does not match any positive/, 'none');
-$repo->command(qw/reset --hard HEAD/);
 
 $repo->command(qw/config --add githooks.checkcommit.name !invalid/);
 
 check_can_commit('allow negative author name', 'valid1');
 
 check_cannot_commit('deny negative author name', qr/matches some negative/, 'invalid');
-$repo->command(qw/reset --hard HEAD/);
 
 $repo->command(qw/config --remove-section githooks.checkcommit/);
 
@@ -97,14 +97,12 @@ $repo->command(qw/config --add githooks.checkcommit.email valid2/);
 check_can_commit('allow positive author email', 'valid2');
 
 check_cannot_commit('deny positive author email', qr/does not match any positive/, 'none');
-$repo->command(qw/reset --hard HEAD/);
 
 $repo->command(qw/config --add githooks.checkcommit.email !invalid/);
 
 check_can_commit('allow negative author email', 'valid1');
 
 check_cannot_commit('deny negative author email', qr/matches some negative/, 'invalid');
-$repo->command(qw/reset --hard HEAD/);
 
 $repo->command(qw/config --remove-section githooks.checkcommit/);
 
@@ -139,7 +137,7 @@ EOS
         'Good Name',
         'bad@example.net',
     );
-    $repo->command(qw/reset --hard HEAD/);
+
 
     check_cannot_commit(
         'deny non-canonical name',
@@ -147,7 +145,6 @@ EOS
         'Improper Name',
         'proper@example.net',
     );
-    $repo->command(qw/reset --hard HEAD/);
 
     check_can_commit(
         'allow non-specified email and name',
@@ -178,7 +175,6 @@ SKIP: {
         'Good Name',
         'bad@example@net',
     );
-    $repo->command(qw/reset --hard HEAD/);
 
     $repo->command(qw/config --remove-section githooks.checkcommit/);
 }
@@ -197,7 +193,6 @@ $clone->command(qw/config githooks.checkcommit.name valid1/);
 check_can_push('allow positive author name (push)', 'master', 'valid1');
 
 check_cannot_push('deny positive author name (push)', qr/does not match any positive/, 'master', 'none');
-$repo->command(qw/reset --hard HEAD^/);
 
 $clone->command(qw/config --remove-section githooks.checkcommit/);
 
@@ -208,7 +203,6 @@ SKIP: {
     $clone->command(qw/config githooks.checkcommit.signature trusted/);
 
     check_cannot_push('deny no signature', qr/has NO signature/, 'master', 'name');
-    $repo->command(qw/reset --hard HEAD^/);
 
     $file->append('new commit');
     $repo->command(qw/commit -SFIXME -q -a -mcommit/);
