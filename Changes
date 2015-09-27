@@ -2,6 +2,30 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.12.0    2015-09-27 10:18:35-03:00 America/Sao_Paulo
+
+  [Incompatible changes]
+
+  - CheckCommit: The recently implemented githooks.checkcommit.check-ref
+    option is being replaced by another one called
+    githooks.checkcommit.check-code, which performs the checks for every
+    commit in an update or pre-receive hook, not for every affected
+    reference. Now it applies also to the local pre-commit hook.
+    
+    The githooks.checkcommit.check-ref option was ill-conceived. The
+    CheckCommit plugin is meant to check "commits", not "references". As
+    such, all checks should apply to the local commit being constructed in a
+    pre-commit hook and to all commits being pushed in an update or
+    pre-receive hook.
+    
+    The callback routines associated with the option now get three
+    arguments ($git, $commit, $ref) instead of two ($git, $ref).
+
+    Since the ...check-ref option was implemented just five days ago,
+    hopefully no one is yet depending on it so that this change won't affect
+    anybody. Hence, I'm not bumping the package major version as the
+    Semantic Versioning scheme would advise.
+
 1.11.1    2015-09-22 10:19:40-03:00 America/Sao_Paulo
 
   [Changes]
