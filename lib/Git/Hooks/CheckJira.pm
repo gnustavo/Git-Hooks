@@ -265,7 +265,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
         if (defined $ok) {
             ++$errors unless $ok;
         } elsif (length $@) {
-            $git->error($PKG, "error while evaluating check-code: $@");
+            $git->error($PKG, 'error while evaluating check-code', $@);
             ++$errors;
         }
     }
