@@ -9,7 +9,6 @@ use strict;
 use warnings;
 use Git::Hooks qw/:DEFAULT :utils/;
 use Git::More;
-use Data::Util qw(:check);
 use Text::Glob qw/glob_to_regex/;
 use Error qw(:try);
 

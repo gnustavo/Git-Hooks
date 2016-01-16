@@ -8,11 +8,26 @@ use utf8;
 use strict;
 use warnings;
 use Git::Hooks qw/:DEFAULT :utils/;
-use Data::Util qw(:check);
 use Error qw(:try);
 
 my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
+
+##########
+# Data validation utilities
+
+sub is_string {                 ## no critic (RequireArgUnpacking)
+    return defined $_[0] && ! ref $_[0] && length($_[0]);
+}
+
+sub is_integer {                ## no critic (RequireArgUnpacking)
+    return is_string(@_) && $_[0] !~ /\D/;
+}
+
+sub is_ref {
+    my ($name, $object) = @_;
+    return defined $object && ref $object && ref $object eq $name;
+}
 
 ##########
 
@@ -60,7 +75,7 @@ sub check_array_structure {
                 }
             }
             # next
-        } elsif (is_rx($lhs)) {
+        } elsif (is_ref(Regexp => $lhs)) {
             if ($path->[0] =~ $lhs) {
                 return check_structure($rhs, $path);
             }
@@ -96,7 +111,7 @@ sub check_structure {
 
     @$path > 0 or die "$PKG(check_structure): Internal error!\n";
 
-    if (is_array_ref($structure)) {
+    if (is_ref(ARRAY => $structure)) {
         return check_array_structure($structure, $path);
     } elsif (is_string($structure)) {
         return check_string_structure($structure, $path);
@@ -191,7 +206,7 @@ DRAFT_PUBLISHED  \&check_patchset;
 1;
 
 __END__
-=for Pod::Coverage check_added_files check_ref get_structure check_array_structure check_string_structure
+=for Pod::Coverage is_integer is_ref is_string check_added_files check_ref get_structure check_array_structure check_string_structure
 
 =head1 NAME
 

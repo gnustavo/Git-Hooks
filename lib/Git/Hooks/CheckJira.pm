@@ -9,7 +9,6 @@ use strict;
 use warnings;
 use Git::Hooks qw/:DEFAULT :utils/;
 use Path::Tiny;
-use Data::Util qw(:check);
 use List::MoreUtils qw/uniq/;
 
 my $PKG = __PACKAGE__;
@@ -134,7 +133,7 @@ sub check_codes {
                 and $git->error($PKG, "couldn't parse option check-code value", $@)
                     and next CODE;
         }
-        is_code_ref($code)
+        defined $code and ref $code and ref $code eq 'CODE'
             or $git->error($PKG, "option check-code must end with a code ref")
                 and next CODE;
         push @codes, $code;

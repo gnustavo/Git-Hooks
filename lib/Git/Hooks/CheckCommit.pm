@@ -10,7 +10,6 @@ use warnings;
 use Error ':try';
 use Git::Hooks qw/:DEFAULT :utils/;
 use Git::More::Message;
-use Data::Util qw(:check);
 use List::MoreUtils qw/any none/;
 
 my $PKG = __PACKAGE__;
@@ -235,7 +234,7 @@ sub code_errors {
                     next CODE;
                 }
             }
-            if (is_code_ref($code)) {
+            if (defined $code && ref $code && ref $code eq 'CODE') {
                 push @$codes, $code;
             } else {
                 $git->error($PKG, "option check-code must end with a code ref");

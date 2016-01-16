@@ -6,13 +6,13 @@ use strict;
 use warnings;
 use Carp;
 use Exporter qw/import/;
-use Data::Util qw(:all);
+use Sub::Util qw/subname/;
 use Path::Tiny;
 
 our (@EXPORT, @EXPORT_OK, %EXPORT_TAGS); ## no critic (Modules::ProhibitAutomaticExportation)
 my (%Hooks, @PostHooks);
 
-BEGIN {                ## no critic (Subroutines::RequireArgUnpacking)
+BEGIN {                         ## no critic (RequireArgUnpacking)
     my @installers =
         qw/ APPLYPATCH_MSG PRE_APPLYPATCH POST_APPLYPATCH
             PRE_COMMIT PREPARE_COMMIT_MSG COMMIT_MSG
@@ -26,14 +26,12 @@ BEGIN {                ## no critic (Subroutines::RequireArgUnpacking)
     for my $installer (@installers) {
         my $hook = lc $installer;
         $hook =~ tr/_/-/;
-        install_subroutine(
-            __PACKAGE__,
-            $installer => sub (&) {
-                my ($foo) = @_;
-                my ($package) = get_code_info($foo);
-                $Hooks{$hook}{$foo} ||= [ $package, sub { $foo->(@_); } ];
-            }
-        );
+        no strict 'refs';       ## no critic (ProhibitNoStrict)
+        *{__PACKAGE__ . '::' . $installer} = sub (&) {
+            my ($foo) = @_;
+            my $subname = subname($foo);
+            $Hooks{$hook}{$subname} ||= sub { $foo->(@_); };
+        }
     }
 
     @EXPORT      = (@installers, 'run_hook');
@@ -611,8 +609,8 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
     _load_plugins($git);
 
     # Call every hook function installed by the hook scripts before.
-    foreach my $hook_def (values %{$Hooks{$hook_name}}) {
-        my ($package, $hook) = @$hook_def;
+    while (my ($subname, $hook) = each %{$Hooks{$hook_name}}) {
+        my ($package) = $subname =~ m/^(.+)::/;
         my $ok = eval { $hook->($git, @args) };
         if (defined $ok) {
             # Modern hooks return a boolean value indicating their success.

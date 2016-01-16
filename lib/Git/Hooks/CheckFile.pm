@@ -8,7 +8,6 @@ use utf8;
 use strict;
 use warnings;
 use Git::Hooks qw/:DEFAULT :utils/;
-use Data::Util qw(:check);
 use Text::Glob qw/glob_to_regex/;
 use Path::Tiny;
 use List::MoreUtils qw/any none/;
