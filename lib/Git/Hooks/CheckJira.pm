@@ -329,10 +329,24 @@ sub check_ref {
     return 1 unless is_ref_enabled($ref, $git->get_config($CFG => 'ref'));
 
     my $errors = 0;
+    my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
 
-    foreach my $commit ($git->get_affected_ref_commits($ref)) {
-        check_commit_msg($git, $commit, $ref)
-            or ++$errors;
+    if ($old_commit eq "0000000000000000000000000000000000000000") {
+      # do not check all since epoch for new branch
+      my ($fh, $ctx) = $git->command_output_pipe('rev-list', $new_commit, '--not', '--all');
+      while (<$fh>) {
+        my $sha1 = $_;
+        $sha1 =~ s/\s+$//;
+        my $commit = $git->get_commit($sha1);
+        check_commit_msg($git,$commit ,$ref) or ++$errors;
+      }
+      $git->command_close_pipe($fh, $ctx);
+    } else {
+      # do the normal stuff
+      foreach my $commit ($git->get_affected_ref_commits($ref)) {
+          check_commit_msg($git, $commit, $ref)
+              or ++$errors;
+      }
     }
 
     # Disconnect from JIRA
