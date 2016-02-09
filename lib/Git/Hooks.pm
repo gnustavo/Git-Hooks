@@ -1406,7 +1406,7 @@ know how to use them.)
 
 Note that the hook directives resemble function definitions but they
 aren't. They are function calls, and as such must end with a
-semi-colon.
+semicolon.
 
 Some hooks are invoked before an action (e.g., C<pre-commit>) so that
 one can check some condition. If the condition holds, they must simply
@@ -1469,7 +1469,7 @@ with lines of the form:
 The information from these lines is read and can be fetched by the
 hooks using the C<Git::Hooks::get_input_data> method or, perhaps more
 easily, by using the C<Git::More::get_affected_refs> and the
-C<Git::More::get_affected_ref_rage> methods.
+C<Git::More::get_affected_ref_range> methods.
 
 =item * UPDATE(GIT, updated-ref-name, old-object-name, new-object-name)
 
