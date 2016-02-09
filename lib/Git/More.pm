@@ -167,21 +167,19 @@ sub get_commits {
 
         return if $new_commit eq $UNDEF_COMMIT;
 
-        # When a new branch is created $old_commit is null (i.e.,
-        # '0'x40). In this case we want all commits reachable from
-        # $new_commit but not reachable from any other branch. The syntax
-        # for this is "$new_commit ^$b1 ^$b2 ... ^$bn", i.e., $new_commit
-        # followed by every other branch name prefixed by carets. We can get
-        # at their names using the technique described in, e.g.,
-        # http://stackoverflow.com/questions/3511057/git-receive-update-hooks-and-new-branches.
-
-        # The @excludes variable will hold the list of commits that will be
-        # prefixed with carets in the git rev-list command invokation.
+        # The @excludes variable holds the list of arguments to git-rev-list
+        # necessary to exclude already reachable commits. When an existing
+        # branch receives new commits we just exclude $old_commit.  When a
+        # new branch is created $old_commit is null (i.e., '0'x40). In this
+        # case we want all commits reachable from $new_commit but not
+        # reachable from any other branch. To get them we specify '--not
+        # --all', using the technique explained in
+        # http://stackoverflow.com/a/22547375/114983
 
         my @excludes =
             $old_commit eq $UNDEF_COMMIT
-                ? grep {$_ ne $new_commit} $git->command(qw:for-each-ref --format=%(objectname) refs/heads/:)
-                    : $old_commit;
+            ? qw/--not --all/
+            : ("^$old_commit");
 
         # The commit list to be returned
         my @commits;
@@ -193,7 +191,7 @@ sub get_commits {
             '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%s%n%n%b%x00',
             '--encoding=UTF-8',
             $new_commit,
-            map {"^$_"} @excludes,
+            @excludes,
         );
 
         while (<$pipe>) {
