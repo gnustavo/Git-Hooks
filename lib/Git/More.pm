@@ -168,18 +168,18 @@ sub get_commits {
         return if $new_commit eq $UNDEF_COMMIT;
 
         # The @excludes variable holds the list of arguments to git-rev-list
-        # necessary to exclude already reachable commits. When an existing
-        # branch receives new commits we just exclude $old_commit.  When a
-        # new branch is created $old_commit is null (i.e., '0'x40). In this
-        # case we want all commits reachable from $new_commit but not
-        # reachable from any other branch. To get them we specify '--not
-        # --all', using the technique explained in
-        # http://stackoverflow.com/a/22547375/114983
+        # necessary to exclude already reachable commits. We always exclude
+        # all previously reachable commits with the options '--not
+        # --all'. Even though we get $old_commit we can't exclude only it
+        # because there may be merge commits along the path leading from
+        # $old_commit to $new_commit and in this case git-rev-list would
+        # list the commits of the merged branch too, which we don't want to
+        # see. (For more information, see
+        # http://stackoverflow.com/a/22547375/114983.)
 
-        my @excludes =
-            $old_commit eq $UNDEF_COMMIT
-            ? qw/--not --all/
-            : ("^$old_commit");
+        my @excludes = qw/--not --all/;
+
+        push @excludes, $old_commit unless $old_commit eq $UNDEF_COMMIT;
 
         # The commit list to be returned
         my @commits;
