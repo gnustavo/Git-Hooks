@@ -2,6 +2,17 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.12.3    2016-02-15 13:50:36-02:00 America/Sao_Paulo
+
+  [Fix]
+
+  - Fix Git::More::get_commits for all branches.
+
+  [Thanks]
+
+  - Thanks to @boudekerk for referring me to this problem in
+    https://github.com/gnustavo/Git-Hooks/issues/26.
+
 1.12.2    2016-02-09 11:07:58-02:00 America/Sao_Paulo
 
   [Fix]
