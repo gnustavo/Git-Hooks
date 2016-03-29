@@ -2,6 +2,13 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.12.4    2016-03-29 17:00:03-03:00 America/Sao_Paulo
+
+  [New features]
+
+  - CheckFile: Pass the GIT_COMMIT environment variable to the external
+    commands.
+
 1.12.3    2016-02-15 13:50:36-02:00 America/Sao_Paulo
 
   [Fix]
