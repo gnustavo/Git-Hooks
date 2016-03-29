@@ -27,7 +27,12 @@ sub check_command {
 
     # execute command and update $errors
     my $saved_output = redirect_output();
-    my $exit = system $cmd;
+    my $exit = do {
+        # Let the external command know the commit that's being checked in
+        # case it needs to grok something from Git.
+        local $ENV{GIT_COMMIT} = $commit;
+        system $cmd;
+    };
     my $output = restore_output($saved_output);
     if ($exit != 0) {
         $command =~ s/\{\}/\'$file\'/g;
@@ -245,6 +250,49 @@ Some real examples:
     git config --add githooks.checkfile.name *.sh    bash -n
     git config --add githooks.checkfile.name *.sh    shellcheck --exclude=SC2046,SC2053,SC2086
     git config --add githooks.checkfile.name *.erb   erb -P -x -T - {} | ruby -c
+
+COMMAND may rely on the B<GIT_COMMIT> environment variable to identify the
+commit being checked according to the hook being used, as follows.
+
+=over
+
+=item * B<pre-commit>
+
+This hook does not check a complete commit, but the index tree. So, in this
+case the variable is set to F<:0>. (See C<git help revisions>.)
+
+=item * B<update, pre-receive, ref-updated>
+
+In these hooks the variable is set to the SHA1 of the new commit to which
+the reference has been updated.
+
+=item * B<patchset-created, draft-published>
+
+In these hooks the variable is set to the argument of the F<--commit> option
+(a SHA1) passed to them by Gerrit.
+
+=back
+
+The reason that led to the introduction of the GIT_COMMIT variable was to
+enable one to invoke an external command to check files which needed to grok
+some configuration from another file in the repository. Specifically, we
+wanted to check Python scripts with the C<pylint> command passing to its
+C<--rcfile> option the configuration file F<pylint.rc> sitting on the
+repository root. So, we configured CheckFile like this:
+
+    git config --add githooks.checkfile.name *.py mypylint.sh
+
+And the F<mypylint.sh> script was something like this:
+
+    #!/bin/bash
+
+    # Create a temporary file do save the pylint.rc
+    RC=$(tempfile)
+    trap 'rm $RC' EXIT
+
+    git cat-file $GIT_COMMIT:pylint.rc >$RC
+
+    pylint --rcfile=$RC "$@"
 
 =head2 githooks.checkfile.sizelimit BYTES
 
