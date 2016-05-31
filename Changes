@@ -2,6 +2,12 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.12.5    2016-05-31 07:45:06-03:00 America/Sao_Paulo
+
+  [Fix]
+
+  - Fix typo that was preventing githooks.checkjira.comment to work.
+
 1.12.4    2016-03-29 17:00:03-03:00 America/Sao_Paulo
 
   [New features]
