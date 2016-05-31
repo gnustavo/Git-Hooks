@@ -408,7 +408,7 @@ sub notify_affected_refs {
 
     _setup_config($git);
 
-    my $comment = $git->get_config($PKG => 'comment');
+    my $comment = $git->get_config($CFG => 'comment');
 
     return 1 unless defined $comment;
 
