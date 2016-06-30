@@ -8,6 +8,7 @@ use Carp;
 use Exporter qw/import/;
 use Sub::Util qw/subname/;
 use Path::Tiny;
+use List::MoreUtils qw/any/;
 
 our (@EXPORT, @EXPORT_OK, %EXPORT_TAGS); ## no critic (Modules::ProhibitAutomaticExportation)
 my (%Hooks, @PostHooks);
@@ -447,25 +448,41 @@ sub _gerrit_patchset_post_hook {
 
         my $patchset = $args->{'--patchset'};
 
-        "/changes/$id/revisions/$patchset/review";
+        "/changes/$id/revisions/$patchset";
     };
 
-    my $review_label = $git->get_config('githooks.gerrit' => 'review-label') || 'Code-Review';
+    # Grok all configuration options at once to make it easier to deal with them below.
+    my %cfg = map {$_ => $git->get_config('githooks.gerrit' => $_)}
+        qw/review-label vote-nok vote-ok votes-to-approve votes-to-reject comment-ok/;
+
+    # Convert DEPRECATED configuration options to new ones.
+    if (any {defined $cfg{$_}} qw/review-label vote-nok vote-ok/) {
+        if (any {defined $cfg{$_}} qw/votes-to-approve votes-to-reject/) {
+            die __PACKAGE__ . ": Mixing deprecated githooks.gerrit configuration options (review-label vote-nok vote-ok) with new ones (votes-to-approve votes-to-reject) is not permited. Please, convert the deprecated ones.\n"
+        }
+        $cfg{'votes-to-approve'} = $cfg{'votes-to-reject'} = $cfg{'review-label'} || 'Code-Review';
+        $cfg{'votes-to-reject'} .= $cfg{'vote-nok'} || '-1';
+        $cfg{'votes-to-approve'} .= $cfg{'vote-ok'}  || '+1';
+    }
 
     my %params;
 
     if (my @errors = $git->get_errors()) {
-        $params{labels}  = { $review_label => $git->get_config('githooks.gerrit' => 'vote-nok') || -1 };
+        $params{labels}  = $cfg{'votes-to-reject'} || 'Code-Review-1';
         $params{message} = join("\n\n", @errors);
     } else {
-        $params{labels}  = { $review_label => $git->get_config('githooks.gerrit' => 'vote-ok')  || +1 };
-        if (my $comment = $git->get_config('githooks.gerrit' => 'comment-ok')) {
-            $params{message} = "[Git::Hooks] $comment";
-        }
+        $params{labels}  = $cfg{'votes-to-approve'} || 'Code-Review+1';
+        $params{message} = "[Git::Hooks] $cfg{'comment-ok'}"
+            if $cfg{'comment-ok'};
     }
 
-    eval { $args->{gerrit}->POST($resource, \%params) }
-        or die __PACKAGE__ . ": error in Gerrit::REST::POST($resource): $@\n";
+    # Convert, e.g., 'LabelA-1,LabelB+2' into { LabelA => '-1', LabelB => '+2' }
+    $params{labels} = { map {/^([-\w]+)([-+]\d+)$/i} split(',', $params{labels}) };
+
+    # Cast review
+    eval { $args->{gerrit}->POST("$resource/review", \%params) }
+        or die __PACKAGE__ . ": error in Gerrit::REST::POST($resource/review): $@\n";
+
 
     return;
 }
@@ -1339,22 +1356,37 @@ These three options are required if you enable Gerrit hooks. They are
 used to construct the C<Gerrit::REST> object that is used to interact
 with Gerrit.
 
-=head2 githooks.gerrit.review-label LABEL
+=head2 githooks.gerrit.votes-to-approve VOTES
 
-This option defines the
-L<label|https://gerrit-review.googlesource.com/Documentation/config-labels.html>
-that must be used in Gerrit's review process. If not specified, the standard
-C<Code-Review> label is used.
+This option defines which votes should be cast in which
+L<labels|https://gerrit-review.googlesource.com/Documentation/config-labels.html>
+to B<approve> a review in the Gerrit change when all verification hooks
+pass.
 
-=head2 githooks.gerrit.vote-ok +N
+VOTES is a comma-separated list of LABEL and VOTE mappings, such as:
 
-This option defines the vote that must be used to approve a review. If
-not specified, +1 is used.
+  Code-Review+2,Verification+1
 
-=head2 githooks.gerrit.vote-nok -N
+Which means that the C<Code-Review> label should receive a +2 and the label
+C<Verification> should receive a +1.
 
-This option defines the vote that must be used to reject a review. If
-not specified, -1 is used.
+If not specified, the default VOTES is:
+
+  Code-Review+1
+
+=head2 githooks.gerrit.votes-to-reject VOTES
+
+This option defines which votes should be cast in which
+L<labels|https://gerrit-review.googlesource.com/Documentation/config-labels.html>
+to B<reject> a review in the Gerrit change when some verification hooks
+fail.
+
+VOTES has the same syntax as described for the
+C<githooks.gerrit.votes-to-approve> option above.
+
+If not specified, the default VOTES is:
+
+  Code-Review-1
 
 =head2 githooks.gerrit.comment-ok COMMENT
 
@@ -1365,6 +1397,32 @@ a comment like this in addition to casting the vote:
   [Git::Hooks] COMMENT
 
 You may want to use a simple comment like 'OK'.
+
+=head2 githooks.gerrit.review-label LABEL
+
+This option is DEPRECATED. Please, use C<githooks.gerrit.votes-to-approve> and
+C<githooks.gerrit.votes-to-reject> instead.
+
+This option defines the
+L<label|https://gerrit-review.googlesource.com/Documentation/config-labels.html>
+that must be used in Gerrit's review process. If not specified, the standard
+C<Code-Review> label is used.
+
+=head2 githooks.gerrit.vote-ok +N
+
+This option is DEPRECATED. Please, use C<githooks.gerrit.votes-to-approve> and
+C<githooks.gerrit.votes-to-reject> instead.
+
+This option defines the vote that must be used to approve a review. If
+not specified, +1 is used.
+
+=head2 githooks.gerrit.vote-nok -N
+
+This option is DEPRECATED. Please, use C<githooks.gerrit.votes-to-approve> and
+C<githooks.gerrit.votes-to-reject> instead.
+
+This option defines the vote that must be used to reject a review. If
+not specified, -1 is used.
 
 =head2 githooks.help-on-error MESSAGE
 
