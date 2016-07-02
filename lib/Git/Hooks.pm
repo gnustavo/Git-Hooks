@@ -447,7 +447,7 @@ sub _gerrit_patchset_post_hook {
 
     # Grok all configuration options at once to make it easier to deal with them below.
     my %cfg = map {$_ => $git->get_config('githooks.gerrit' => $_) || undef}
-        qw/review-label vote-nok vote-ok votes-to-approve votes-to-reject comment-ok/;
+        qw/review-label vote-nok vote-ok votes-to-approve votes-to-reject comment-ok auto-submit/;
 
     # Convert DEPRECATED configuration options to new ones.
     if (any {defined $cfg{$_}} qw/review-label vote-nok vote-ok/) {
@@ -460,6 +460,7 @@ sub _gerrit_patchset_post_hook {
     }
 
     my %params;
+    my $auto_submit = 0;
 
     if (my @errors = $git->get_errors()) {
         $params{labels}  = $cfg{'votes-to-reject'} || 'Code-Review-1';
@@ -468,6 +469,7 @@ sub _gerrit_patchset_post_hook {
         $params{labels}  = $cfg{'votes-to-approve'} || 'Code-Review+1';
         $params{message} = "[Git::Hooks] $cfg{'comment-ok'}"
             if $cfg{'comment-ok'};
+        $auto_submit = 1 if $cfg{'auto-submit'};
     }
 
     # Convert, e.g., 'LabelA-1,LabelB+2' into { LabelA => '-1', LabelB => '+2' }
@@ -477,6 +479,11 @@ sub _gerrit_patchset_post_hook {
     eval { $args->{gerrit}->POST("/changes/$id/revisions/$patchset/review", \%params) }
         or die __PACKAGE__ . ": error in Gerrit::REST::POST(/changes/$id/revisions/$patchset/review): $@\n";
 
+    # Auto submit if requested and passed verification
+    if ($auto_submit) {
+        eval { $args->{gerrit}->POST("/changes/$id/submit", {wait_for_merge => 'true'}) }
+            or die __PACKAGE__ . ": I couldn't submit the change. Perhaps you have to rebase it manually to resolve a conflict. Please go to its web page to check it out. The error message follows: $@\n";
+    }
 
     return;
 }
@@ -1391,6 +1398,21 @@ a comment like this in addition to casting the vote:
   [Git::Hooks] COMMENT
 
 You may want to use a simple comment like 'OK'.
+
+=head2 githooks.gerrit.auto-submit [01]
+
+If this option is enabled, Git::Hooks will try to automatically submit a
+change if all verification hooks pass.
+
+Note that for the submission to succeed you must vote with
+C<githooks.gerrit.votes-to-approve> so that the change has the necessary
+votes to be submitted. Moreover, the C<username> and C<password> you
+configured above must have the necessary rights to submit the change in
+Gerrit.
+
+This may be useful to provide a gentle introduction to Gerrit for people who
+don't want to start doing code reviews but want to use Gerrit simply as a
+Git server.
 
 =head2 githooks.gerrit.review-label LABEL
 
