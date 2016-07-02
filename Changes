@@ -2,6 +2,26 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.13.0    2016-07-02 16:36:38-03:00 America/Sao_Paulo
+
+  [New features]
+
+  - Add new boolean option githooks.gerrit.auto-submit to submit the change
+    in Gerrit automatically if all hooks succeed.
+
+  - Add new options for specifying Gerrit votes:
+    githooks.gerrit.votes-to-approve and
+    githooks.gerrit.votes-to-reject. They allow for voting in multiple
+    labels depending on the outcome of the hooks.
+
+  [Deprecations]
+
+  - The options githooks.gerrit.review-label, githooks.gerrit.vote-nok, and
+    githooks.gerrit.vote-ok are deprecated and should be replaced by the new
+    options mentioned above. These old options will continue to work for a
+    few more versions and cannot be used together with the new ones. They
+    must be completely replaced.
+
 1.12.5    2016-05-31 07:45:06-03:00 America/Sao_Paulo
 
   [Fix]
