@@ -359,22 +359,19 @@ section:
             url  = https://gerrit.cpqd.com.br
             username = gerrit
             password = a-very-large-and-difficult-to-crack-password
-            review-label = Verification
-            vote-ok  = +1
-            vote-nok = -1
+            votes-to-approve = Verification+1
+            votes-to-reject = Verification-1
 
-The three options C<url>, C<username>, and C<password> tells where to
-connect to Gerrit and with which user's credentials. This is the user that
-will appear to be making comments and reviewing the patchsets.
+The three options C<url>, C<username>, and C<password> tell where to connect
+to Gerrit and with which user's credentials. This is the user that will
+appear to be making comments and reviewing the patchsets.
 
-Then you have to tell Git::Hooks how it should vote. First, you tell which
-C<label> it should vote in. By default it votes in the C<Code-Review>
-label. In the example above I've changed it to vote in the C<Verification>
-label instead.
-
-The last two options, C<vote-ok> and C<vote-nok>, tells which number it
-should use to vote positively and negatively. +1 and -1 are the defaults,
-but you may tell it to use different numbers if you like.
+Then you have to tell Git::Hooks how it should vote to approve and to reject
+a change using the options C<votes-to-approve> and C<votes-to-reject>. In
+the example above you tell Git::Hooks to cast a +1 in the C<Verification>
+label to approve the change and to cast a -1 in the same label to reject
+it. You may cast multiple votes in multiple labels by separating the vote
+specifications with commas.
 
 Gerrit has a notion of a hierarchy of repositories (called 'projects' in
 Gerrit). Gerrit's own configuration uses this hierarchy so that child
