@@ -177,9 +177,18 @@ sub get_commits {
         # see. (For more information, see
         # http://stackoverflow.com/a/22547375/114983.)
 
-        my @excludes = qw/--not --all/;
+        # But we must be careful to remove @new_commit from the exclude
+        # list. It can appear if we're being called in a post-receive or
+        # post-update hook. (For more information, see
+        # https://github.com/gitster/git/blob/master/contrib/hooks/post-receive-email.)
 
-        push @excludes, $old_commit unless $old_commit eq $UNDEF_COMMIT;
+        my @excludes = grep {$_ ne "^$new_commit"} $git->command(qw/rev-parse --not --all/);
+
+        # And we have to make sure $old_commit is on the list, as --all
+        # wouldn't bring it when we're being called in a post-receive or
+        # post-update hook.
+
+        push @excludes, "^$old_commit" unless $old_commit eq $UNDEF_COMMIT;
 
         # The commit list to be returned
         my @commits;
