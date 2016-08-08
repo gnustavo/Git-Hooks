@@ -420,16 +420,14 @@ sub notify_affected_refs {
     return 1 unless defined $comment;
 
     my $visibility;
-    if (length $comment) {
-        if ($comment =~ /^(role|group):(.+)/) {
-            $visibility = {
-                type  => $1,
-                value => $2,
-            };
-        } else {
-            $git->error($PKG, "Invalid argument to githooks.checkjira.comment: $comment");
-            return 0;
-        }
+    if ($comment =~ /^(role|group):(.+)/) {
+        $visibility = {
+            type  => $1,
+            value => $2,
+        };
+    } elsif ($comment ne 'all') {
+        $git->error($PKG, "Invalid argument to githooks.checkjira.comment: $comment");
+        return 0;
     }
 
     my $errors = 0;
@@ -722,7 +720,7 @@ If the subroutine returns undef it's considered to have succeeded.
 If it raises an exception (e.g., by invoking B<die>) it's considered
 to have failed and a proper message is produced to the user.
 
-=head2 githooks.checkjira.comment [VISIBILITY]
+=head2 githooks.checkjira.comment VISIBILITY
 
 If this option is set and the C<post-receive> hook is enabled, for every
 pushed commit, every cited JIRA issue receives a comment showing the result
@@ -734,19 +732,22 @@ permission to add comments to the issues or an error will be
 logged. However, since this happens after the push, the result of the
 operation isn't affected.
 
-You can restrict the visibility of comments with the optional argument,
-which must be in the form TYPE:VALUE, where TYPE may be one of:
+You must specify the VISIBILITY of the comments in one of these ways.
 
 =over
 
-=item * B<role>
+=item * B<role:NAME>
 
-In this case, VALUE must be the name of a JIRA role, such as
+In this case, NAME must be the name of a JIRA role, such as
 C<Administrators>, C<Developers>, or C<Users>.
 
-=item * B<group>
+=item * B<group:NAME>
 
-In this case, VALUE must be the name of a JIRA group.
+In this case, NAME must be the name of a JIRA group.
+
+=item * B<all>
+
+In this case, the visibility isn't restricted at all.
 
 =back
 
