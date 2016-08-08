@@ -371,9 +371,16 @@ sub notify_commit_msg {
 
     my $jira = _jira($git);
 
+    my $show = $git->command(show => '--stat', $commit->{commit});
+
     my %comment = (
-        body => "[$PKG] commit refers to this issue:\n\n"
-            . $git->command(show => '--stat', $commit->{commit}),
+        body => <<EOF,
+[$PKG] commit refers to this issue:
+
+{noformat}
+$show
+{noformat}
+EOF
     );
     $comment{visibility} = $visibility if $visibility;
 
