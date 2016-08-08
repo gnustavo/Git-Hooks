@@ -2,6 +2,24 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.13.1    2016-08-07 21:16:40-03:00 America/Sao_Paulo
+
+  [Fixes]
+
+  - Git::More::get_commits always returned an empty list when invoked in a
+    post-receive and post-update hook so that these hooks really didn't work
+    before.
+
+  - CheckJira: Fix call to JIRA's method to insert a comment.
+
+  [Changes]
+
+  - CheckJira: The githooks.checkjira.comment option must be set to 'all' if
+    you do not want to restrict its visibility. Previously it was documented
+    that you should leave it without value. This is not really an
+    incompatible change, since the comment insertion was performed in the
+    post-receive/post-update hooks which weren't working anyway.
+
 1.13.0    2016-07-02 16:36:38-03:00 America/Sao_Paulo
 
   [New features]
