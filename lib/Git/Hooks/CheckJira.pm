@@ -387,7 +387,7 @@ EOF
     my $errors = 0;
 
     foreach my $key (@keys) {
-        eval { $jira->POST("/issue/$key/comment", \%comment); 1; }
+        eval { $jira->POST("/issue/$key/comment", undef, \%comment); 1; }
             or $git->error($PKG, "Cannot add a comment to JIRA issue $key:", $@)
             and ++$errors;
     }
