@@ -459,28 +459,29 @@ sub _gerrit_patchset_post_hook {
         $cfg{'votes-to-approve'} .= $cfg{'vote-ok'}  || '+1';
     }
 
-    my %params;
+    # https://gerrit-documentation.storage.googleapis.com/Documentation/2.13.1/rest-api-changes.html#set-review
+    my %review_input;
     my $auto_submit = 0;
 
     if (my @errors = $git->get_errors()) {
-        $params{labels}  = $cfg{'votes-to-reject'} || 'Code-Review-1';
-        $params{message} = join("\n\n", @errors);
+        $review_input{labels}  = $cfg{'votes-to-reject'} || 'Code-Review-1';
+        $review_input{message} = join("\n\n", @errors);
     } else {
-        $params{labels}  = $cfg{'votes-to-approve'} || 'Code-Review+1';
-        $params{message} = "[Git::Hooks] $cfg{'comment-ok'}"
+        $review_input{labels}  = $cfg{'votes-to-approve'} || 'Code-Review+1';
+        $review_input{message} = "[Git::Hooks] $cfg{'comment-ok'}"
             if $cfg{'comment-ok'};
         $auto_submit = 1 if $cfg{'auto-submit'};
     }
 
     # Convert, e.g., 'LabelA-1,LabelB+2' into { LabelA => '-1', LabelB => '+2' }
-    $params{labels} = { map {/^([-\w]+)([-+]\d+)$/i} split(',', $params{labels}) };
+    $review_input{labels} = { map {/^([-\w]+)([-+]\d+)$/i} split(',', $review_input{labels}) };
 
     if (my $notify = $git->get_config('githooks.gerrit' => 'notify')) {
-        $params{notify} = $notify;
+        $review_input{notify} = $notify;
     }
 
     # Cast review
-    eval { $args->{gerrit}->POST("/changes/$id/revisions/$patchset/review", \%params) }
+    eval { $args->{gerrit}->POST("/changes/$id/revisions/$patchset/review", \%review_input) }
         or die __PACKAGE__ . ": error in Gerrit::REST::POST(/changes/$id/revisions/$patchset/review): $@\n";
 
     # Auto submit if requested and passed verification
