@@ -475,6 +475,10 @@ sub _gerrit_patchset_post_hook {
     # Convert, e.g., 'LabelA-1,LabelB+2' into { LabelA => '-1', LabelB => '+2' }
     $params{labels} = { map {/^([-\w]+)([-+]\d+)$/i} split(',', $params{labels}) };
 
+    if (my $notify = $git->get_config('githooks.gerrit' => 'notify')) {
+        $params{notify} = $notify;
+    }
+
     # Cast review
     eval { $args->{gerrit}->POST("/changes/$id/revisions/$patchset/review", \%params) }
         or die __PACKAGE__ . ": error in Gerrit::REST::POST(/changes/$id/revisions/$patchset/review): $@\n";
@@ -1413,6 +1417,15 @@ Gerrit.
 This may be useful to provide a gentle introduction to Gerrit for people who
 don't want to start doing code reviews but want to use Gerrit simply as a
 Git server.
+
+=head2 githooks.gerrit.notify WHO
+
+Notify handling that defines to whom email notifications should be sent
+after the review is stored.
+
+Allowed values are NONE, OWNER, OWNER_REVIEWERS, and ALL.
+
+If not set, the default is ALL.
 
 =head2 githooks.gerrit.review-label LABEL
 
