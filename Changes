@@ -2,6 +2,13 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.14.0    2016-10-15 09:47:47-03:00 America/Sao_Paulo
+
+  [New features]
+
+  - Add new option githooks.gerrit.notify to specify who should be notified
+    when a review is cast into Gerrit.
+
 1.13.1    2016-08-07 21:16:40-03:00 America/Sao_Paulo
 
   [Fixes]
