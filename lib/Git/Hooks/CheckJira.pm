@@ -92,7 +92,7 @@ sub _jira {
 sub get_issue {
     my ($git, $key) = @_;
 
-    my $jira = _jira($git);
+    my $jira = _jira($git) or return;
 
     my $cache = $git->cache($PKG);
 
@@ -260,11 +260,15 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
     }
 
     foreach my $code (check_codes($git)) {
-        my $ok = eval { $code->($git, $commit, _jira($git), @issues) };
-        if (defined $ok) {
-            ++$errors unless $ok;
-        } elsif (length $@) {
-            $git->error($PKG, 'error while evaluating check-code', $@);
+        if (my $jira = _jira($git)) {
+            my $ok = eval { $code->($git, $commit, $jira, @issues) };
+            if (defined $ok) {
+                ++$errors unless $ok;
+            } elsif (length $@) {
+                $git->error($PKG, 'error while evaluating check-code', $@);
+                ++$errors;
+            }
+        } else {
             ++$errors;
         }
     }
@@ -369,7 +373,7 @@ sub notify_commit_msg {
 
     return 0 unless @keys;
 
-    my $jira = _jira($git);
+    my $jira = _jira($git) or return 1;
 
     my $show = $git->command(show => '--stat', $commit->{commit});
 

@@ -631,6 +631,8 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
 
     _load_plugins($git);
 
+    my $errors = 0;             # Count number of errors found
+
     # Call every hook function installed by the hook scripts before.
     while (my ($subname, $hook) = each %{$Hooks{$hook_name}}) {
         my ($package) = $subname =~ m/^(.+)::/;
@@ -639,6 +641,7 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
             # Modern hooks return a boolean value indicating their success.
             # If they fail they invoke Git::More::error.
             unless ($ok) {
+                $errors += 1;
                 # Let's see if there is a help-on-error message configured
                 # specifically for this plugin.
                 (my $CFG = $package) =~ s/.*::/githooks./;
@@ -647,6 +650,7 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
                 }
             }
         } elsif (length $@) {
+            $errors += 1;
             # Old hooks die when they fail...
             $git->error(__PACKAGE__ . "($hook_name)", "Hook failed", $@);
         } else {
@@ -675,7 +679,7 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
         $post_hook->($hook_name, $git, @args);
     }
 
-    if (scalar($git->get_errors())) {
+    if ($errors || scalar($git->get_errors())) {
         # Let's see if there is a help-on-error message configured globally.
         if (my $help = $git->get_config(githooks => 'help-on-error')) {
             $git->error(__PACKAGE__, $help);
@@ -873,7 +877,8 @@ string (B<$@>) is showed to the user.
 
 The best way to produce an error message is to invoke the
 B<Git::More::error> method passing a prefix and a message for uniform
-formating.
+formating. Note that any hook invokes this method it counts as a failure,
+even if it ultimately returns true!
 
 For example:
 

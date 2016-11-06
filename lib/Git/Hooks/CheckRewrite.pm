@@ -70,7 +70,7 @@ sub check_commit_amend {
 
     # For a brand new repository the commit information is empty and we
     # don't have to check anything.
-    return unless $old_commit;
+    return 1 unless $old_commit;
 
     chomp $old_commit;
     $old_commit =~ s/^commit\s+//;

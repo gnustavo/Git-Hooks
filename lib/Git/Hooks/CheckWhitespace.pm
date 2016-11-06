@@ -56,10 +56,11 @@ sub check_commit {
             [qw/diff-index --check --cached/, $git->get_head_or_empty_tree()],
             {STDERR => 0},
         );
+        return 1;
     } otherwise {
         my $error = shift;
         $git->error($PKG, 'whitespace errors in the changed files', $error->cmd_output());
-        return;
+        return 0;
     };
 }
 
@@ -74,10 +75,11 @@ sub check_patchset {
             [qw/diff-tree -r -m --check/, $opts->{'--commit'}],
             {STDERR => 0},
         );
+        return 1;
     } otherwise {
         my $error = shift;
         $git->error($PKG, 'whitespace errors in the changed files', $error->cmd_output());
-        return;
+        return 0;
     };
 }
 
