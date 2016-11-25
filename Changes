@@ -2,6 +2,13 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.14.2    2016-11-25 10:44:51-02:00 America/Sao_Paulo
+
+  [Fixes]
+
+  - Gerrit 2.13 slightly changed how it passes information to the hooks and
+    we had to make some changes to accomodate it.
+
 1.14.1    2016-11-06 17:02:19-02:00 America/Sao_Paulo
 
   [Fixes]
