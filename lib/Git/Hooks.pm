@@ -436,12 +436,21 @@ sub _gerrit_patchset_post_hook {
     # it's the only unanbiguous one. Vide:
     # https://gerrit.cpqd.com.br/Documentation/rest-api-changes.html#change-id.
 
-    # Also, we have to escape it because the project name may contain
-    # slashes (and perhaps other reserved characters). This is possibly not
-    # a complete solution. Vide:
+    # Up to Gerrit 2.12 the argument --change passed the change's Change-Id
+    # code. So, we had to build the complete change id using the information
+    # passed on the arguments --project and --branch. From Gerrit 2.13 on
+    # the --change argument already contains the complete change id. So we
+    # have to figure out if we need to build it or not.
+
+    # Also, for the old Gerrit we have to url-escape the change-id because
+    # the project name may contain slashes (and perhaps other reserved
+    # characters). This is possibly not a complete solution. Vide:
     # http://mark.stosberg.com/blog/2010/12/percent-encoding-uris-in-perl.html.
+
     require URI::Escape;
-    my $id = URI::Escape::uri_escape(join('~', @{$args}{qw/--project --branch --change/}));
+    my $id = $args->{'--change'} =~ /~/
+        ? $args->{'--change'}
+        : URI::Escape::uri_escape(join('~', @{$args}{qw/--project --branch --change/}));
 
     my $patchset = $args->{'--patchset'};
 
