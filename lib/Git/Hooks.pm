@@ -630,6 +630,8 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
 
     my $git = Git::More->repository();
 
+    $git->hookname($hook_name);
+
     # Don't show context in error messages if requested
     $git->nocarp if $git->get_config(githooks => 'nocarp');
 

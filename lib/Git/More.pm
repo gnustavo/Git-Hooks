@@ -24,6 +24,14 @@ our $UNDEF_COMMIT = '0000000000000000000000000000000000000000';
 # The EMPTY_COMMIT represents a commit with an empty tree.
 our $EMPTY_COMMIT = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
+sub hookname {
+    my ($git, $name) = @_;
+
+    $git->{more}{hookname} = $name if $name;
+
+    return $git->{more}{hookname};
+}
+
 sub get_config {
     my ($git, $section, $var) = @_;
 
@@ -151,42 +159,54 @@ sub get_commits {
     my $range = "$old_commit:$new_commit";
 
     unless (exists $cache->{$range}) {
-        # We're interested in all commits reachable from $new_commit but not
-        # reachable from $old_commit. We're going to use the "git rev-list"
-        # command for that. As you can read on its documentation, the usual
-        # syntax to specify this set of commits is this: "$new_commit
-        # ^$old_commit".
+        # We're interested in all commits reachable from $new_commit but
+        # neither reachable from $old_commit nor from any other existing
+        # reference.
 
-        # However, there are two special cases: when a new branch is created
-        # and when an old branch is deleted.
+        # We're going to use the "git rev-list" command for that. As you can
+        # read on its documentation, the syntax to specify this set of
+        # commits is this: "--not --all $new_commit ^$old_commit".
+
+        # However, there are some special cases...
 
         # When an old branch is deleted $new_commit is null (i.e.,
-        # '0'x40'). In this case previous commits are being forgotten and
-        # the hooks usually don't need to check them. So, in this situation
-        # we simply return an empty list of commits.
+        # '0'x40). In this case previous commits are being forgotten and the
+        # hooks usually don't need to check them. So, in this situation we
+        # simply return an empty list of commits.
 
         return if $new_commit eq $UNDEF_COMMIT;
 
-        # The @excludes variable holds the list of arguments to git-rev-list
-        # necessary to exclude already reachable commits. We always exclude
-        # all previously reachable commits with the options '--not
-        # --all'. Even though we get $old_commit we can't exclude only it
-        # because there may be merge commits along the path leading from
-        # $old_commit to $new_commit and in this case git-rev-list would
-        # list the commits of the merged branch too, which we don't want to
-        # see. (For more information, see
-        # http://stackoverflow.com/a/22547375/114983.)
+        # When we're called in a post-receive or post-update hook, the
+        # pushed references already point to $new_commit. So, in these cases
+        # the "--not --all" options to git-rev-list would exclude from the
+        # results all commits reachable from $new_commit, which is exactly
+        # what we don't want... In order to avoid that we can't use these
+        # options directly with git-rev-list. Instead, we use the
+        # git-rev-parse command to get a list of all commits directly
+        # reachable by existing references. Then we'll see if we have to
+        # remove any commit from that list.
 
-        # But we must be careful to remove @new_commit from the exclude
-        # list. It can appear if we're being called in a post-receive or
-        # post-update hook. (For more information, see
-        # https://github.com/gitster/git/blob/master/contrib/hooks/post-receive-email.)
+        my @excludes = $git->command(qw/rev-parse --not --all/);
 
-        my @excludes = grep {$_ ne "^$new_commit"} $git->command(qw/rev-parse --not --all/);
+        if ($git->hookname =~ /^post-(?:receive|update)$/) {
+            # We can't simply remove $new_commit from @excludes because it
+            # can be reachable by other references. This can happen, for
+            # instance, when one creates a new branch and pushes it before
+            # making any commits to it. So, we only remove it if it's
+            # reachable by a single reference, which must be the reference
+            # being pushed.
 
-        # And we have to make sure $old_commit is on the list, as --all
-        # wouldn't bring it when we're being called in a post-receive or
-        # post-update hook.
+            my @new_commit_refs = $git->command(
+                qw/for-each-ref --format %(refname) --count 2 --points-at/, $new_commit,
+            );
+            if (@new_commit_refs == 1) {
+                @excludes = grep {$_ ne "^$new_commit"} @excludes;
+            }
+        }
+
+        # And we have to make sure $old_commit is on the list, as --not
+        # --all wouldn't bring it when we're being called in a post-receive
+        # or post-update hook.
 
         push @excludes, "^$old_commit" unless $old_commit eq $UNDEF_COMMIT;
 
@@ -593,6 +613,12 @@ The acceptable values for this variable are all the encodings supported by
 the C<Encode> module.
 
 =head1 METHODS
+
+=head2 hookname [NAME]
+
+This method is used to remember the name of the hook which is being
+processed. If passed an argument it sets the name. It always returns the
+last name set.
 
 =head2 get_config [SECTION [VARIABLE]]
 
