@@ -2,6 +2,16 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.15.0    2017-01-04 21:45:26-02:00 America/Sao_Paulo
+
+  [New features]
+
+  - New method Git::More::hookname returns the name of the current hook.
+
+  [Fixes]
+
+  - Fix regression on Git::More::get_commits
+
 1.14.2    2016-11-25 10:44:51-02:00 America/Sao_Paulo
 
   [Fixes]
