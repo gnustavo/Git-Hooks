@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use lib 't';
 use Test::More tests => 26;
+use Test::Requires::Git;
 use Path::Tiny;
 
 BEGIN { require "test-functions.pl" };
@@ -108,13 +109,7 @@ $repo->command(qw/config --remove-section githooks.checkcommit/);
 
 # canonical
 SKIP: {
-    use Error ':try';
-
-    try {
-        $repo->command(['check-mailmap' => '<joe@example.net>'], {STDERR => 0});
-    } otherwise {
-        skip "test because the command git-check-mailmap wasn't found", 4;
-    };
+    test_requires_git skip => 4, version_ge => '1.8.5.3';
 
     my $mailmap = path($T)->child('mailmap');
 
