@@ -1,0 +1,17 @@
+sudo: required
+language: "perl"
+perl:
+  - '5.24'
+  - '5.22'
+  - '5.10'
+os:
+  - "linux"
+before_install:
+  - sudo apt-get install libaspell-dev
+  - cpanm Text::Aspell
+  - cpanm --quiet --notest --skip-satisfied Dist::Zilla
+install:
+  - "dzil authordeps          --missing | grep -vP '[^\\w:]' | xargs -n 5 -P 10 cpanm --quiet --notest"
+  - "dzil listdeps   --author --missing | grep -vP '[^\\w:]' | cpanm --verbose"
+script:
+  - dzil smoke --release --author
