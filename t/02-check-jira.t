@@ -3,11 +3,10 @@
 use 5.010;
 use strict;
 use warnings;
-use lib 't';
+use lib qw/t lib/;
+use Git::Hooks::Test ':all';
 use Test::More tests => 36;
 use Path::Tiny;
-
-BEGIN { require "test-functions.pl" };
 
 my ($repo, $file, $clone, $T);
 

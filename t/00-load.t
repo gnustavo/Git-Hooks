@@ -3,7 +3,7 @@
 use 5.010;
 use strict;
 use warnings;
-use lib 't';
+use lib qw/t lib/;
 use Test::More tests => 1;
 
-require_ok "test-functions.pl";
+use_ok "Git::Hooks::Test";

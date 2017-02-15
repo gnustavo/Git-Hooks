@@ -1,14 +1,34 @@
+package Git::Hooks::Test;
+
 ## no critic (RequireExplicitPackage)
 ## no critic (ErrorHandling::RequireCarping)
 use 5.010;
 use strict;
 use warnings;
 use Config;
+use Exporter qw/import/;
 use Path::Tiny;
 use File::pushd;
 use URI::file;
 use Git::More;
 use Error ':try';
+use Test::More;
+
+our @EXPORT_OK = qw/
+	install_hooks
+	new_commit
+	newdir
+	new_repos
+	test_command
+	test_nok
+	test_nok_match
+	test_ok
+	test_ok_match
+/;
+
+our %EXPORT_TAGS = (
+    all => \@EXPORT_OK
+);
 
 # Make sure the git messages come in English.
 local $ENV{LC_ALL} = 'C';
@@ -305,3 +325,4 @@ sub test_nok_match {
 }
 
 1;
+

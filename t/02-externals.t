@@ -3,17 +3,17 @@
 use 5.010;
 use strict;
 use warnings;
-use lib 't';
+use lib qw/t lib/;
 use Config;
 use Path::Tiny;
 use Test::More;
+use Git::Hooks::Test qw/:all/;
+
 if ($^O eq 'MSWin32') {
     plan skip_all => 'External hooks are not implemented for Windows yet.';
 } else {
     plan tests => 5;
 }
-
-BEGIN { require "test-functions.pl" };
 
 my ($repo, $file, $clone) = new_repos();
 install_hooks($repo, undef, qw/pre-commit/);
