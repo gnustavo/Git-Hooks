@@ -3,12 +3,11 @@
 use 5.010;
 use strict;
 use warnings;
-use lib 't';
+use lib qw/t lib/;
+use Git::Hooks::Test ':all';
 use Test::More tests => 44;
 use File::pushd;
 use Path::Tiny;
-
-BEGIN { require "test-functions.pl" };
 
 use Git::Hooks::GerritChangeId;
 

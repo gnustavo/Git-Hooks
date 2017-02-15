@@ -3,10 +3,9 @@
 use 5.010;
 use strict;
 use warnings;
-use lib 't';
+use lib qw/t lib/;
+use Git::Hooks::Test ':all';
 use Test::More tests => 27;
-
-BEGIN { require "test-functions.pl" };
 
 my ($repo, $file, $clone) = new_repos();
 foreach my $git ($repo, $clone) {
