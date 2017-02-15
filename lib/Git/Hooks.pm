@@ -1731,7 +1731,8 @@ every output since the previous call to redirect_output.
 
 =head2 file_temp REV, FILE, ARGS...
 
-This routine is DEPRECATED and has been replaced by the L<Git::More::blob> method.
+This routine is DEPRECATED and has been replaced by the L<Git::More> C<blob>
+method.
 
 This routine returns the name of a temporary file into which the contents of
 the file FILE in revision REV has been copied.
@@ -1746,6 +1747,10 @@ By default, all temporary files are removed when the hook exits.
 
 Any remaining ARGS are passed as arguments to C<Path::Tiny::tempfile> so
 that you can have more control over the temporary file creation.
+
+=head1 TO DO
+
+There is a to-do list for this module at L<Git::Hooks::TODO>.
 
 =head1 SEE ALSO
 
