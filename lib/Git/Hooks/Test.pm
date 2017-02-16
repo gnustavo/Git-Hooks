@@ -328,4 +328,5 @@ sub test_nok_match {
 }
 
 1;
-
+
+=for Pod::Coverage install_hooks new_commit new_repos newdir test_command test_nok test_nok_match test_ok test_ok_match
