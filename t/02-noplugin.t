@@ -3,10 +3,9 @@
 use 5.010;
 use strict;
 use warnings;
-use lib 't';
+use lib qw/t lib/;
+use Git::Hooks::Test qw/:all/;
 use Test::More tests => 1;
-
-BEGIN { require "test-functions.pl" };
 
 my ($repo, $file, $clone) = new_repos();
 install_hooks($repo, <<'EOF');

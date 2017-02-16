@@ -1,28 +1,51 @@
+package Git::Hooks::Test;
+
 ## no critic (RequireExplicitPackage)
 ## no critic (ErrorHandling::RequireCarping)
 use 5.010;
 use strict;
 use warnings;
 use Config;
+use Exporter qw/import/;
 use Path::Tiny;
 use File::pushd;
 use URI::file;
 use Git::More;
 use Error ':try';
+use Test::More;
+use Cwd;
+
+our @EXPORT_OK = qw/
+	install_hooks
+	new_commit
+	newdir
+	new_repos
+	test_command
+	test_nok
+	test_nok_match
+	test_ok
+	test_ok_match
+/;
+
+our %EXPORT_TAGS = (
+    all => \@EXPORT_OK
+);
 
 # Make sure the git messages come in English.
 local $ENV{LC_ALL} = 'C';
+
+my $cwd = path(cwd);
 
 # It's better to perform all tests in a temporary directory because
 # otherwise the author runs the risk of messing with its local
 # Git::Hooks git repository.
 
-our $T = Path::Tiny->tempdir(
+my $T = Path::Tiny->tempdir(
     TEMPLATE => 'githooks.XXXXX',
     TMPDIR   => 1,
     CLEANUP  => exists $ENV{REPO_CLEANUP} ? $ENV{REPO_CLEANUP} : 1,
 );
-use Cwd; my $cwd = path(cwd);
+
 chdir $T or die "Can't chdir $T: $!";
 END { chdir '/' }
 
@@ -305,3 +328,4 @@ sub test_nok_match {
 }
 
 1;
+
