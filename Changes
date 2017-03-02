@@ -2,6 +2,23 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.15.1    2017-03-02 14:26:16-03:00 America/Sao_Paulo
+
+  [Changes]
+
+  - The old t/test-functions.pl file was turned into a proper module as
+    Git::Hooks::Test, which made the tests simpler.
+
+  - Add Travis CI support in GitHub.
+
+  - Use Test::Requires::Git to check the Git version during testing.
+
+  [Thanks]
+
+  - Thanks for the good folks at CV-Library for a bunch of pull requests
+    that made most of this new version.
+    http://tech-blog.cv-library.co.uk/2017/02/16/february-pull-request-challenge/
+
 1.15.0    2017-01-04 21:45:26-02:00 America/Sao_Paulo
 
   [New features]
