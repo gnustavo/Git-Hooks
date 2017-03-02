@@ -1,5 +1,8 @@
+use 5.010;
 use strict;
 use warnings;
+
+# See http://wiki.cpantesters.org/wiki/CPANAuthorNotes
 
 ##{ $perl_prereq ? qq[use $perl_prereq;] : ''; ##}
 
