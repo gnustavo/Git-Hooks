@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
-use Test::More tests => 26;
+use Test::More tests => 31;
 use Path::Tiny;
 
 my ($repo, $file, $clone, $T) = new_repos();
@@ -227,6 +227,43 @@ Title
 Body
 
 Signed-off-by: Some One <someone@example.net>
+EOF
+
+$repo->command(qw/config --remove-section githooks.checklog/);
+
+# title-match
+
+$repo->command(config => 'githooks.checklog.title-match', '].*\S');
+$repo->command(config => '--add', 'githooks.checklog.title-match', '!#$');
+
+check_can_commit('allow if title matches', <<'EOF');
+[JIRA-100] Title
+
+Body
+EOF
+
+check_cannot_commit('deny if title does not match', qr/SHOULD match/, <<'EOF');
+[JIRA-100]
+
+Body
+EOF
+
+check_cannot_commit('deny if body matches but title does not', qr/SHOULD match/, <<'EOF');
+Title
+
+[1] Body
+EOF
+
+check_cannot_commit('deny if title matches negative regex', qr/SHOULD NOT match/, <<'EOF');
+[JIRA-100] Title #
+
+Body
+EOF
+
+check_can_commit('allow if only body matches negative title regex', <<'EOF');
+[JIRA-100] Title
+
+Body #
 EOF
 
 $repo->command(qw/config --remove-section githooks.checklog/);
