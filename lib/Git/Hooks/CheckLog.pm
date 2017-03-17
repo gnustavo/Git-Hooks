@@ -96,21 +96,33 @@ sub spelling_errors {
     return $errors;
 }
 
+##########
+# Perform a single pattern check and return the number of errors.
+
+sub _pattern_error {
+    my ($git, $text, $match, $what) = @_;
+
+    if ($match =~ s/^!\s*//) {
+        $text !~ /$match/m
+            or $git->error($PKG, "$what SHOULD NOT match '\Q$match\E'")
+            and return 1;
+    }
+    else {
+        $text =~ /$match/m
+            or $git->error($PKG, "$what SHOULD match '\Q$match\E'")
+            and return 1;
+    }
+
+    return 0;
+}
+
 sub pattern_errors {
     my ($git, $id, $msg) = @_;
 
     my $errors = 0;
 
     foreach my $match ($git->get_config($CFG => 'match')) {
-        if ($match =~ s/^!\s*//) {
-            $msg !~ /$match/m
-                or $git->error($PKG, "commit $id log SHOULD NOT match '\Q$match\E'")
-                    and ++$errors;
-        } else {
-            $msg =~ /$match/m
-                or $git->error($PKG, "commit $id log SHOULD match '\Q$match\E'")
-                    and ++$errors;
-        }
+        $errors += _pattern_error($git, $msg, $match, "commit $id log");
     }
 
     return $errors;
@@ -154,6 +166,10 @@ sub title_errors {
             $git->error($PKG, "invalid value for the $CFG.title-period option: '$period'")
                 and ++$errors;
         }
+    }
+
+    foreach my $match ($git->get_config($CFG => 'title-match')) {
+        $errors += _pattern_error($git, $title, $match, "commit $id log title");
     }
 
     return $errors;
@@ -408,6 +424,12 @@ matter.
 This means that the title SHOULD end in a period.
 
 =back
+
+=head2 githooks.checklog.title-match [!]REGEXP
+
+This option may be specified more than once. It defines a list of
+regular expressions that will be matched against the title.
+If the '!' prefix is used, the title must not match the REGEXP.
 
 =head2 githooks.checklog.body-max-width N
 
