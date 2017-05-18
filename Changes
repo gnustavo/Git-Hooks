@@ -2,6 +2,12 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+  [Fixes]
+
+  - (PR#37) Specifying multiple anonymous subs for the same hooks did not
+    work. Only the first sub that was defined would actually be called. Fixed
+    by Dave Rolsky.
+
 1.15.1    2017-03-02 14:26:16-03:00 America/Sao_Paulo
 
   [Changes]

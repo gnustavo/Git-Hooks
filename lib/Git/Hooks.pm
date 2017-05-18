@@ -29,9 +29,8 @@ BEGIN {                         ## no critic (RequireArgUnpacking)
         $hook =~ tr/_/-/;
         no strict 'refs';       ## no critic (ProhibitNoStrict)
         *{__PACKAGE__ . '::' . $installer} = sub (&) {
-            my ($foo) = @_;
-            my $subname = subname($foo);
-            $Hooks{$hook}{$subname} ||= sub { $foo->(@_); };
+            my ($sub) = @_;
+            push @{$Hooks{$hook}}, sub { $sub->(@_); };
         }
     }
 
@@ -645,8 +644,8 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
     my $errors = 0;             # Count number of errors found
 
     # Call every hook function installed by the hook scripts before.
-    while (my ($subname, $hook) = each %{$Hooks{$hook_name}}) {
-        my ($package) = $subname =~ m/^(.+)::/;
+    for my $hook (@{$Hooks{$hook_name}}) {
+        my ($package) = subname($hook) =~ m/^(.+)::/;
         my $ok = eval { $hook->($git, @args) };
         if (defined $ok) {
             # Modern hooks return a boolean value indicating their success.
