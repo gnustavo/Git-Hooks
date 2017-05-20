@@ -2,11 +2,19 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+1.16.0    2017-05-20 18:48:38-03:00 America/Sao_Paulo
+
+  [New features]
+
+  - CheckLog: New option title-match to check the commit message title.
+
   [Fixes]
 
   - (PR#37) Specifying multiple anonymous subs for the same hooks did not
     work. Only the first sub that was defined would actually be called. Fixed
     by Dave Rolsky.
+
+  - Test suite bug triggered by Git 2.13.0.
 
 1.15.1    2017-03-02 14:26:16-03:00 America/Sao_Paulo
 
