@@ -120,8 +120,6 @@ sub expected {
     $msgfile->spew($msg)
         or BAIL_OUT("check_can_commit: can't '$msgfile'->spew('$msg')\n");
 
-    my $dir = pushd($repo->repo_path());
-
     system('sh', $gerrit_script, $msgfile);
 
     return $msgfile->slurp;
@@ -134,7 +132,7 @@ sub produced {
     $msgfile->spew($msg)
         or BAIL_OUT("check_can_commit: can't '$msgfile'->spew('$msg')\n");
     Git::Hooks::GerritChangeId::rewrite_message($repo, $msgfile);
-    $msgfile->slurp;
+    return $msgfile->slurp;
 }
 
 sub compare {
@@ -178,6 +176,7 @@ foreach my $test (
     [ 'with-false-tags',     "\n\nFakeLine:\n  foo\n  bar\n\n$CID\nRealTag: abc\n" ],
 ) {
     my $msg = join('', @$test);
+    my $dir = pushd($repo->repo_path());
     my $expected = expected($msg);
     my $produced = produced($msg);
     compare("compare: $test->[0]", $expected, $produced);
