@@ -8,8 +8,7 @@ use utf8;
 use strict;
 use warnings;
 use Error ':try';
-use Git::Hooks qw/:DEFAULT :utils/;
-use Git::More::Message;
+use Git::Hooks;
 use List::MoreUtils qw/any none/;
 
 my $PKG = __PACKAGE__;
@@ -117,7 +116,7 @@ sub _canonical_identity {
 
     unless (exists $cache->{canonical}{$identity}) {
         try {
-            my $canonical = $git->command(
+            my $canonical = $git->run(
                 '-c', "mailmap.file=$mailmap",
                 'check-mailmap',
                 $identity,
@@ -329,7 +328,7 @@ sub check_affected_refs {
 
     _setup_config($git);
 
-    return 1 if im_admin($git);
+    return 1 if $git->im_admin();
 
     my $errors = 0;
 
@@ -345,7 +344,7 @@ sub check_patchset {
 
     _setup_config($git);
 
-    return 1 if im_admin($git);
+    return 1 if $git->im_admin();
 
     my $sha1   = $opts->{'--commit'};
     my $commit = $git->get_commit($sha1);
@@ -560,7 +559,7 @@ The Git repository object used to grok information about the commit.
 =item * B<COMMIT>
 
 This is a hash representing a commit, as returned by the
-L<Git::More::get_commits> method.
+L<Git::Repository::Plugin::GitHooks::get_commits> method.
 
 =item * B<REF>
 
@@ -569,8 +568,9 @@ B<pre-receive> hooks. For the B<pre-commit> hook this argument is B<undef>.
 
 =back
 
-The subroutine should return a boolean value indicating success. Any
-errors should be produced by invoking the B<Git::More::error> method.
+The subroutine should return a boolean value indicating success. Any errors
+should be produced by invoking the
+B<Git::Repository::Plugin::GitHooks::error> method.
 
 If the subroutine returns undef it's considered to have succeeded.
 

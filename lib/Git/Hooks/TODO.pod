@@ -89,9 +89,3 @@ exist an option to choose to postpone the check to after the rebase.
 
 The pre-commit and post-commit hooks would be replaced by the post-rewrite
 though.
-
-=head2 Think (again) about substituting Git::Repository for the Git module
-
-The Git::Repository module seems to be better maintained than the standard
-Git module. In the past I chose the latter mainly because it was
-faster. However, I'd like to review them again.

@@ -7,8 +7,8 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
-use Git::Hooks qw/:DEFAULT :utils/;
-use Git::More::Message;
+use Git::Hooks;
+use Git::Message;
 use Path::Tiny;
 use Carp;
 use Error qw(:try);
@@ -32,7 +32,7 @@ sub gen_change_id {
         [ committer => [qw/var GIT_COMMITTER_IDENT/] ],
     ) {
         try {
-            $fh->print($info->[0], ' ', scalar($git->command($info->[1], {STDERR => 0})));
+            $fh->print($info->[0], ' ', scalar($git->run(@{$info->[1]})));
         } otherwise {
             # Can't find info. That's ok.
         };
@@ -41,7 +41,7 @@ sub gen_change_id {
     $fh->print("\n", $msg);
     $fh->close();
 
-    return 'I' . $git->hash_object(commit => $filename);
+    return 'I' . $git->run(qw/hash-object -t blob/, $filename);
 }
 
 sub insert_change_id {
@@ -50,7 +50,7 @@ sub insert_change_id {
     # Does Change-Id: already exist? if so, exit (no change).
     return if $msg =~ /^Change-Id:/im;
 
-    my $cmsg = Git::More::Message->new($msg);
+    my $cmsg = Git::Message->new($msg);
 
     # Don't mess with the message if it's empty.
     if (   (! defined $cmsg->title || $cmsg->title !~ /\S/)
@@ -160,8 +160,8 @@ using all of Git::Hooks infrastructure.
 
 =head2 rewrite_message GIT, MSGFILE
 
-This is the routine used to implement the C<commit-msg> hook. It needs
-a C<Git::More> object and the name of a file containing the commit
+This is the routine used to implement the C<commit-msg> hook. It needs a
+C<Git::Repository> object and the name of a file containing the commit
 message.
 
 =head1 REFERENCES

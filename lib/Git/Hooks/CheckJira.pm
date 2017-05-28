@@ -7,7 +7,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
-use Git::Hooks qw/:DEFAULT :utils/;
+use Git::Hooks;
 use Path::Tiny;
 use List::MoreUtils qw/uniq/;
 
@@ -287,7 +287,7 @@ sub check_patchset {
 
     _setup_config($git);
 
-    return 1 if im_admin($git);
+    return 1 if $git->im_admin();
 
     my $sha1   = $opts->{'--commit'};
     my $commit = $git->get_commit($sha1);
@@ -299,7 +299,7 @@ sub check_patchset {
     $branch = "refs/heads/$branch"
         unless $branch =~ m:^refs/:;
 
-    return 1 unless is_ref_enabled($branch, $git->get_config($CFG => 'ref'));
+    return 1 unless $git->is_ref_enabled($branch, $git->get_config($CFG => 'ref'));
 
     return check_commit_msg($git, $commit, $branch);
 }
@@ -310,7 +310,7 @@ sub check_message_file {
     _setup_config($git);
 
     my $current_branch = $git->get_current_branch();
-    return 1 unless is_ref_enabled($current_branch, $git->get_config($CFG => 'ref'));
+    return 1 unless $git->is_ref_enabled($current_branch, $git->get_config($CFG => 'ref'));
 
     my $msg = eval { path($commit_msg_file)->slurp };
     defined $msg
@@ -330,7 +330,7 @@ sub check_message_file {
 sub check_ref {
     my ($git, $ref) = @_;
 
-    return 1 unless is_ref_enabled($ref, $git->get_config($CFG => 'ref'));
+    return 1 unless $git->is_ref_enabled($ref, $git->get_config($CFG => 'ref'));
 
     my $errors = 0;
 
@@ -351,7 +351,7 @@ sub check_affected_refs {
 
     _setup_config($git);
 
-    return 1 if im_admin($git);
+    return 1 if $git->im_admin();
 
     my $errors = 0;
 
@@ -375,7 +375,7 @@ sub notify_commit_msg {
 
     my $jira = _jira($git) or return 1;
 
-    my $show = $git->command(show => '--stat', $commit->{commit});
+    my $show = $git->run(show => '--stat', $commit->{commit});
 
     my %comment = (
         body => <<EOF,
@@ -402,7 +402,7 @@ EOF
 sub notify_ref {
     my ($git, $ref, $visibility) = @_;
 
-    return 1 unless is_ref_enabled($ref, $git->get_config($CFG => 'ref'));
+    return 1 unless $git->is_ref_enabled($ref, $git->get_config($CFG => 'ref'));
 
     my $errors = 0;
 
@@ -716,8 +716,9 @@ issues being cited by the commit's message.
 
 =back
 
-The subroutine should return a boolean value indicating success. Any
-errors should be produced by invoking the B<Git::More::error> method.
+The subroutine should return a boolean value indicating success. Any errors
+should be produced by invoking the
+B<Git::Repository::Plugin::GitHooks::error> method.
 
 If the subroutine returns undef it's considered to have succeeded.
 
@@ -763,30 +764,30 @@ using all of Git::Hooks infrastructure.
 =head2 check_affected_refs GIT
 
 This is the routine used to implement the C<update> and the
-C<pre-receive> hooks. It needs a C<Git::More> object.
+C<pre-receive> hooks. It needs a C<Git::Repository> object.
 
 =head2 check_message_file GIT, MSGFILE
 
 This is the routine used to implement the C<commit-msg> hook. It needs
-a C<Git::More> object and the name of a file containing the commit
+a C<Git::Repository> object and the name of a file containing the commit
 message.
 
 =head2 check_patchset GIT, HASH
 
 This is the routine used to implement the C<patchset-created> Gerrit
-hook. It needs a C<Git::More> object and the hash containing the
+hook. It needs a C<Git::Repository> object and the hash containing the
 arguments passed to the hook by Gerrit.
 
 =head2 notify_affected_refs GIT
 
 This is the routine used to implement the C<post-receive> hook. It needs a
-C<Git::More> object.
+C<Git::Repository> object.
 
 =head1 SEE ALSO
 
 =over
 
-=item * L<Git::More>
+=item * L<Git::Repository>
 
 =item * L<JIRA::REST>
 

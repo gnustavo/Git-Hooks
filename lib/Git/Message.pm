@@ -1,4 +1,4 @@
-package Git::More::Message;
+package Git::Message;
 # ABSTRACT: A Git commit message
 
 use strict;
@@ -9,8 +9,8 @@ sub new {
     my ($class, $msg) = @_;
 
     # We assume that $msg is the contents of a commit message file as
-    # returned by Git::More::read_commit_msg_file, i.e., with
-    # whitespace cleaned up.
+    # returned by Git::Repository::Plugin::GitHooks::read_commit_msg_file,
+    # i.e., with whitespace cleaned up.
 
     # Our first mission is to split it up into blocks of consecutive
     # non-blank lines separated by blank lines. The blocks all end in
@@ -178,15 +178,16 @@ sub as_string {
 }
 
 
-1; # End of Git::More::Message
+1; # End of Git::Message
 __END__
 
 =head1 SYNOPSIS
 
-    use Git::More;
-    use Git::More::Message;
+    use Git::Repository 'GitHooks';
+    my $git = Git::Repository->new();
 
-    my $msg = Git::More::Message->new($gitmore->read_commit_msg_file($filename));
+    use Git::Message;
+    my $msg = Git::Message->new($git->read_commit_msg_file($filename));
 
     if (my $title = $msg->title) {
         if ($title =~ s/\.$//) {
@@ -294,11 +295,11 @@ always output last.
 The constructor receives the commit message contents in a string,
 parses it and saves the message structure internally.
 
-IMPORTANT: The constructor parser assumes that the message contents
-are cleaned up as if you had passed it through the C<git stripspace
--s> command. You can do that yourself or use the
-C<Git::More::read_commit_msg_file> method to read the message from a
-file and clean it up automatically.
+IMPORTANT: The constructor parser assumes that the message contents are
+cleaned up as if you had passed it through the C<git stripspace -s>
+command. You can do that yourself or use the
+C<Git::Repository::Plugin::GitHooks::read_commit_msg_file> method to read
+the message from a file and clean it up automatically.
 
 =head2 title [TITLE]
 
@@ -348,9 +349,9 @@ footer separating them with empty lines.
 
 =over
 
-=item * C<Git::More>
+=item * C<Git::Repository::Plugin::GitHooks>
 
-A Git extension with some goodies for hook developers.
+A Git::Repository plugin with some goodies for hook developers.
 
 =item * B<git-commit(1) Manual Page>
 

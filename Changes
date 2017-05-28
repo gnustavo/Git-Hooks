@@ -2,6 +2,10 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+  [Incompatible changes]
+
+  - Substitute Git::Repository for Git as the underlying git wrapper.
+
 1.16.0    2017-05-20 18:48:38-03:00 America/Sao_Paulo
 
   [New features]

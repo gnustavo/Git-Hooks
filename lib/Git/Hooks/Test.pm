@@ -1,4 +1,5 @@
 package Git::Hooks::Test;
+# ABSTRACT: Git::Hooks testing utilities
 
 ## no critic (RequireExplicitPackage)
 ## no critic (ErrorHandling::RequireCarping)
@@ -10,7 +11,7 @@ use Exporter qw/import/;
 use Path::Tiny;
 use File::pushd;
 use URI::file;
-use Git::More;
+use Git::Repository 'GitHooks';
 use Error ':try';
 use Test::More;
 use Cwd;
@@ -56,12 +57,7 @@ mkdir $tmpldir, 0777 or BAIL_OUT("can't mkdir $tmpldir: $!");
     mkdir $hooksdir, 0777 or BAIL_OUT("can't mkdir $hooksdir: $!");
 }
 
-my $git_version;
-try {
-    $git_version = Git::command_oneline('version');
-} otherwise {
-    $git_version = 'unknown';
-};
+my $git_version = eval { Git::Repository->version } || 'unknown';
 
 sub newdir {
     my $num = 1 + Test::Builder->new()->current_test();
@@ -72,7 +68,7 @@ sub newdir {
 
 sub install_hooks {
     my ($git, $extra_perl, @hooks) = @_;
-    my $hooks_dir = path($git->repo_path())->child('hooks');
+    my $hooks_dir = path($git->git_dir())->child('hooks');
     my $hook_pl   = $hooks_dir->child('hook.pl');
     {
         ## no critic (RequireBriefOpen)
@@ -181,24 +177,34 @@ sub new_repos {
             # need to pass the argument. Then we have to go back to
             # where we were.
             my $dir = pushd($repodir);
-            Git::command(qw/init -q/, "--template=$tmpldir");
+            Git::Repository->run(qw/init -q/, "--template=$tmpldir");
 
-            $repo = Git::More->repository(Directory => '.');
+            $repo = Git::Repository->new();
 
-            $repo->command(config => 'user.email', 'myself@example.com');
-            $repo->command(config => 'user.name',  'My Self');
+            $repo->run(config => 'user.email', 'myself@example.com');
+            $repo->run(config => 'user.name',  'My Self');
         }
 
-        open my $err_h, '>', $T->child('stderr');
-        Git::command(
-            [qw/clone -q --bare --no-hardlinks/, "--template=$tmpldir", $repodir, $clonedir],
-            { STDERR => $err_h },    # do not complain about cloning an empty repo
-        );
-        close $err_h;
+        {
+            my $cmd = Git::Repository->command(
+                qw/clone -q --bare --no-hardlinks/, "--template=$tmpldir", $repodir, $clonedir,
+            );
 
-        $clone = Git::More->repository(Repository => $clonedir);
+            my $stderr = $cmd->stderr;
 
-        $repo->command(qw/remote add clone/, $clonedir);
+            open my $err_h, '>', $T->child('stderr');
+            while (<$stderr>) {
+                $err_h->print($_);
+            }
+            close $err_h;
+
+            $cmd->close();
+            die "Can't git-clone $repodir into $clonedir" unless $cmd->exit() == 0;
+        }
+
+        $clone = Git::Repository->new(git_dir => $clonedir);
+
+        $repo->run(qw/remote add clone/, $clonedir);
 
         return ($repo, $filename, $clone, $T);
     } otherwise {
@@ -225,8 +231,8 @@ sub new_commit {
 
     $file->append($msg || 'new commit');
 
-    $git->command(add => $file);
-    $git->command(commit => '-q', '-m', $msg || 'commit');
+    $git->run(add => $file);
+    $git->run(commit => '-q', '-m', $msg || 'commit');
 
     return;
 }
@@ -236,37 +242,16 @@ sub new_commit {
 # list containing: (a) a boolean indication of success, (b) the exit
 # code, (c) the command's STDOUT, and (d) the command's STDERR.
 sub test_command {
-    my ($git, $cmd, @args) = @_;
+    my ($git, $command, @args) = @_;
 
-    ## no critic (RequireBriefOpen)
+    my $cmd = $git->command($command, @args);
 
-    # Redirect STDERR to a temporary file
-    open my $oldstderr, '>&', \*STDERR
-        or die "Can't dup STDERR: $!";
-    open STDERR, '>', 'stderr'
-        or die "Can't redirect STDERR to temporary directory: $!";
+    my $stdout = do { local $/ = undef; readline($cmd->stdout); };
+    my $stderr = do { local $/ = undef; readline($cmd->stderr); };
 
-    my ($stdout, $exception);
+    $cmd->close;
 
-    try {
-        $stdout = $git->command($cmd, @args);
-        $stdout = '' unless defined $stdout;
-    } otherwise {
-        $exception = "$_[0]"; # stringify the exception
-    };
-
-    # Redirect STDERR back to its original value
-    open STDERR, '>&', $oldstderr
-        or die "Can't redirect STDERR back to its original value: $!";
-
-    # Grok the subcomand's STDERR
-    my $stderr = path('stderr')->slurp;
-
-    if (defined $exception) {
-        return (0, $?, $exception, $stderr);
-    } else {
-        return (1, 0, $stdout, $stderr);
-    }
+    return ($cmd->exit() == 0, $cmd->exit(), $stdout, $stderr);
 }
 
 sub test_ok {

@@ -40,7 +40,7 @@ my $msgfile = $T->child('msg.txt');
 sub cannot_commit {
     my ($testname, $msg) = @_;
     $filename->append("new line\n");
-    $repo->command(add => $filename);
+    $repo->run(add => $filename);
     $msgfile->spew($msg)
         or BAIL_OUT("cannot_commit: can't '$msgfile'->spew('$msg')\n");
     unless (test_nok($testname, $repo, 'commit', '-F', $msgfile)) {
@@ -51,14 +51,14 @@ sub cannot_commit {
 sub can_commit {
     my ($testname, $msg) = @_;
     $filename->append("new line\n");
-    $repo->command(add => $filename);
+    $repo->run(add => $filename);
     $msgfile->spew($msg)
         or BAIL_OUT("can_commit: can't '$msgfile'->spew('$msg')\n");
     return test_ok("$testname [commit]", $repo, 'commit', '-F', $msgfile);
 }
 
 
-$repo->command(config => "githooks.plugin", 'GerritChangeId');
+$repo->run(config => "githooks.plugin", 'GerritChangeId');
 
 # test EmptyMessages
 foreach my $test (
@@ -100,15 +100,17 @@ foreach my $test (
     [ 'set FIX'           => "FIX: this thing\n\nChange-Id: I1b55098b5a2cce0b3f3da783dda50d5f79f873fa\n" ],
     [ 'set Fix-A-Widget'  => "Fix-A-Widget: this thing\n\nChange-Id: I4f4e2e1e8568ddc1509baecb8c1270a1fb4b6da7\n" ],
 ) {
-    if (can_commit("preset: $test->[0]", $test->[1])) {
-	if (last_log() eq $test->[1]) {
-	    pass("preset: $test->[0] (msg ok)");
+    my ($testname, $message) = @$test;
+    if (can_commit("preset: $testname", $message)) {
+        chomp($message);
+	if (last_log() eq $message) {
+	    pass("preset: $testname (msg ok)");
 	} else {
-	    fail("preset: $test->[0] (msg ok)");
+	    fail("preset: $testname (msg ok)");
 	    diag_last_log();
 	}
     } else {
-	fail("preset: $test->[0] (msg fail)");
+	fail("preset: $testname (msg fail)");
     }
 }
 
@@ -176,7 +178,7 @@ foreach my $test (
     [ 'with-false-tags',     "\n\nFakeLine:\n  foo\n  bar\n\n$CID\nRealTag: abc\n" ],
 ) {
     my $msg = join('', @$test);
-    my $dir = pushd($repo->repo_path());
+    my $dir = pushd($repo->git_dir());
     my $expected = expected($msg);
     my $produced = produced($msg);
     compare("compare: $test->[0]", $expected, $produced);

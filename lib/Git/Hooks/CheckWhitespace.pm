@@ -7,8 +7,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
-use Git::Hooks qw/:DEFAULT :utils/;
-use Git::More;
+use Git::Hooks;
 use Text::Glob qw/glob_to_regex/;
 use Error qw(:try);
 
@@ -19,28 +18,19 @@ my $PKG = __PACKAGE__;
 sub check_affected_refs {
     my ($git) = @_;
 
-    return 1 if im_admin($git);
+    return 1 if $git->im_admin();
 
     my $errors = 0;
 
     foreach my $ref ($git->get_affected_refs()) {
         my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
-        $old_commit = $Git::More::EMPTY_COMMIT if $old_commit eq $Git::More::UNDEF_COMMIT;
-        $errors += try {
-            # WHY SCALAR? Even though we aren't interested in the command
-            # output we can't invoke Git::command in void context. I don't
-            # know why, but in void context it doesn't throw an exception
-            # when the command fails. So, we force it to be invoked in
-            # scalar context.
-            scalar $git->command(
-                [qw/diff-tree -r --check/, $old_commit, $new_commit],
-                {STDERR => 0},
-            );
-            return 0;
-        } otherwise {
-            my $error = shift;
-            $git->error($PKG, "whitespace errors in the changed files in $ref", $error->cmd_output());
-            return 1;
+        $old_commit = $git->empty_commit if $old_commit eq $git->undef_commit;
+        my $cmd = $git->command(qw/diff-tree -r --check/, $old_commit, $new_commit);
+        my $stderr = do { local $/ = undef; readline($cmd->stderr)};
+        $cmd->close;
+        if ($cmd->exit() != 0) {
+            $git->error($PKG, "whitespace errors in the changed files in $ref", $stderr);
+            ++$errors;
         };
     }
 
@@ -50,16 +40,13 @@ sub check_affected_refs {
 sub check_commit {
     my ($git) = @_;
 
-    return try {
-        # See WHY SCALAR? above.
-        scalar $git->command(
-            [qw/diff-index --check --cached/, $git->get_head_or_empty_tree()],
-            {STDERR => 0},
-        );
+    my $cmd = $git->command(qw/diff-index --check --cached/, $git->get_head_or_empty_tree());
+    my $stderr = do { local $/ = undef; readline($cmd->stderr)};
+    $cmd->close;
+    if ($cmd->exit() == 0) {
         return 1;
-    } otherwise {
-        my $error = shift;
-        $git->error($PKG, 'whitespace errors in the changed files', $error->cmd_output());
+    } else {
+        $git->error($PKG, 'whitespace errors in the changed files', $stderr);
         return 0;
     };
 }
@@ -67,18 +54,15 @@ sub check_commit {
 sub check_patchset {
     my ($git, $opts) = @_;
 
-    return 1 if im_admin($git);
+    return 1 if $git->im_admin();
 
-    return try {
-        # See WHY SCALAR? above.
-        scalar $git->command(
-            [qw/diff-tree -r -m --check/, $opts->{'--commit'}],
-            {STDERR => 0},
-        );
+    my $cmd = $git->command(qw/diff-tree -r -m --check/, $opts->{'--commit'});
+    my $stderr = do { local $/ = undef; readline($cmd->stderr)};
+    $cmd->close;
+    if ($cmd->exit() == 0) {
         return 1;
-    } otherwise {
-        my $error = shift;
-        $git->error($PKG, 'whitespace errors in the changed files', $error->cmd_output());
+    } else {
+        $git->error($PKG, 'whitespace errors in the changed files', $stderr);
         return 0;
     };
 }

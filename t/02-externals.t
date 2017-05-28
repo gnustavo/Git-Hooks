@@ -21,14 +21,14 @@ install_hooks($repo, undef, qw/pre-commit/);
 sub check_can_commit {
     my ($testname) = @_;
     $file->append($testname);
-    $repo->command(add => $file);
+    $repo->run(add => $file);
     test_ok($testname, $repo, 'commit', '-m', $testname);
 }
 
 sub check_cannot_commit {
     my ($testname, $regex) = @_;
     $file->append($testname);
-    $repo->command(add => $file);
+    $repo->run(add => $file);
     if ($regex) {
 	test_nok_match($testname, $regex, $repo, 'commit', '-m', $testname);
     } else {
@@ -37,7 +37,7 @@ sub check_cannot_commit {
 }
 
 # install a hook that succeeds
-my $hooksd = path($repo->repo_path())->child('hooks.d');
+my $hooksd = path($repo->git_dir())->child('hooks.d');
 mkdir $hooksd or die "Can't mkdir $hooksd: $!";
 my $hookd  = $hooksd->child('pre-commit');
 mkdir $hookd or die "Can't mkdir $hookd: $!";
@@ -74,6 +74,6 @@ chmod 0755, $hook or die "Cannot chmod $hook: $!\n";
 check_cannot_commit('execute a hook that fails', qr/external hook failure/);
 
 # Disable external hooks
-$repo->command(config => 'githooks.externals', 0);
+$repo->run(config => 'githooks.externals', 0);
 
 check_can_commit('do not execute disabled hooks');

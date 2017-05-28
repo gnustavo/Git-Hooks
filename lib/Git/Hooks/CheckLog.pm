@@ -7,8 +7,8 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
-use Git::Hooks qw/:DEFAULT :utils/;
-use Git::More::Message;
+use Git::Hooks;
+use Git::Message;
 use List::MoreUtils qw/uniq/;
 
 my $PKG = __PACKAGE__;
@@ -221,7 +221,7 @@ sub message_errors {
 
     $errors += pattern_errors($git, $id, $msg);
 
-    my $cmsg = Git::More::Message->new($msg);
+    my $cmsg = Git::Message->new($msg);
 
     $errors += title_errors($git, $id, $cmsg->title);
 
@@ -238,7 +238,7 @@ sub check_message_file {
     _setup_config($git);
 
     my $current_branch = $git->get_current_branch();
-    return 1 unless is_ref_enabled($current_branch, $git->get_config($CFG => 'ref'));
+    return 1 unless $git->is_ref_enabled($current_branch, $git->get_config($CFG => 'ref'));
 
     my $msg = eval {$git->read_commit_msg_file($commit_msg_file)};
 
@@ -253,7 +253,7 @@ sub check_message_file {
 sub check_ref {
     my ($git, $ref) = @_;
 
-    return 1 unless is_ref_enabled($ref, $git->get_config($CFG => 'ref'));
+    return 1 unless $git->is_ref_enabled($ref, $git->get_config($CFG => 'ref'));
 
     my $errors = 0;
 
@@ -270,7 +270,7 @@ sub check_affected_refs {
 
     _setup_config($git);
 
-    return 1 if im_admin($git);
+    return 1 if $git->im_admin();
 
     my $errors = 0;
 
@@ -287,7 +287,7 @@ sub check_patchset {
 
     _setup_config($git);
 
-    return 1 if im_admin($git);
+    return 1 if $git->im_admin();
 
     my $sha1   = $opts->{'--commit'};
     my $commit = $git->get_commit($sha1);
@@ -299,7 +299,7 @@ sub check_patchset {
     $branch = "refs/heads/$branch"
         unless $branch =~ m:^refs/:;
 
-    return 1 unless is_ref_enabled($branch, $git->get_config($CFG => 'ref'));
+    return 1 unless $git->is_ref_enabled($branch, $git->get_config($CFG => 'ref'));
 
     return message_errors($git, $commit, $commit->{body}) == 0;
 }
@@ -480,18 +480,18 @@ without using all of Git::Hooks infrastructure.
 =head2 check_message_file GIT, MSGFILE
 
 This is the routine used to implement the C<commit-msg> hook. It needs
-a C<Git::More> object and the name of a file containing the commit
+a C<Git::Repository> object and the name of a file containing the commit
 message.
 
 =head2 check_affected_refs GIT
 
 This is the routing used to implement the C<update> and the
-C<pre-receive> hooks. It needs a C<Git::More> object.
+C<pre-receive> hooks. It needs a C<Git::Repository> object.
 
 =head2 check_patchset GIT, HASH
 
 This is the routine used to implement the C<patchset-created> Gerrit
-hook. It needs a C<Git::More> object and the hash containing the
+hook. It needs a C<Git::Repository> object and the hash containing the
 arguments passed to the hook by Gerrit.
 
 =head1 REFERENCES

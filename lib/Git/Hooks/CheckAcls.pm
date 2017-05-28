@@ -8,7 +8,7 @@ use utf8;
 use strict;
 use warnings;
 use Error qw(:try);
-use Git::Hooks qw/:DEFAULT :utils/;
+use Git::Hooks;
 
 my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
@@ -58,7 +58,7 @@ sub check_ref {
     } else {
         # This is an U if "merge-base(old, new) == old". Otherwise it's an R.
         try {
-            chomp(my $merge_base = $git->command('merge-base' => $old_commit, $new_commit));
+            chomp(my $merge_base = $git->run('merge-base' => $old_commit, $new_commit));
             $op = ($merge_base eq $old_commit) ? 'U' : 'R';
         } otherwise {
             # Probably $old_commit and $new_commit do not have a common ancestor.
@@ -68,7 +68,7 @@ sub check_ref {
 
     foreach my $acl (grok_acls($git)) {
         my ($who, $what, $refspec) = @$acl;
-        next unless match_user($git, $who);
+        next unless $git->match_user($who);
         next unless match_ref($ref, $refspec);
         if ($what =~ /[^CRUD-]/) {
             $git->error($PKG, "invalid acl 'what' component: '$what'");
@@ -98,7 +98,7 @@ sub check_ref {
 sub check_affected_refs {
     my ($git) = @_;
 
-    return 1 if im_admin($git);
+    return 1 if $git->im_admin();
 
     foreach my $ref ($git->get_affected_refs()) {
         check_ref($git, $ref)
@@ -243,7 +243,7 @@ using all of Git::Hooks infrastructure.
 =head2 check_affected_refs GIT
 
 This is the routine used to implement the C<update> and the
-C<pre-receive> hooks. It needs a C<Git::More> object.
+C<pre-receive> hooks. It needs a C<Git::Repository> object.
 
 =head1 REFERENCES
 

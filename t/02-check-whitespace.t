@@ -19,14 +19,14 @@ sub setup_repos {
 
 sub add_file {
     my ($testname, $contents) = @_;
-    my $filename = path($repo->wc_path())->child('file.txt');
+    my $filename = path($repo->work_tree())->child('file.txt');
 
     unless ($filename->spew($contents)) {
 	fail($testname);
 	diag("[TEST FRAMEWORK INTERNAL ERROR] Cannot create file: $filename; $!\n");
     }
 
-    $repo->command(add => $filename);
+    $repo->run(add => $filename);
     return $filename;
 }
 
@@ -39,26 +39,25 @@ sub check_can_commit {
 sub check_cannot_commit {
     my ($testname, $regex, $contents) = @_;
     my $filename = add_file($testname, $contents);
-    if ($regex) {
-	test_nok_match($testname, $regex, $repo, 'commit', '-m', $testname);
-    } else {
-	test_nok($testname, $repo, 'commit', '-m', $testname);
-    }
-    $repo->command(rm => '--cached', $filename);
+    my $exit = $regex
+        ? test_nok_match($testname, $regex, $repo, 'commit', '-m', $testname)
+        : test_nok($testname, $repo, 'commit', '-m', $testname);
+    $repo->run(rm => '--cached', $filename);
+    return $exit;
 }
 
 sub check_can_push {
     my ($testname, $contents) = @_;
     add_file($testname, $contents);
-    $repo->command(commit => '-m', $testname);
-    test_ok($testname, $repo, 'push', $clone->repo_path(), 'master');
+    $repo->run(commit => '-m', $testname);
+    test_ok($testname, $repo, 'push', $clone->git_dir(), 'master');
 }
 
 sub check_cannot_push {
     my ($testname, $regex, $contents) = @_;
     add_file($testname, $contents);
-    $repo->command(commit => '-m', $testname);
-    test_nok_match($testname, $regex, $repo, 'push', $clone->repo_path(), 'master');
+    $repo->run(commit => '-m', $testname);
+    test_nok_match($testname, $regex, $repo, 'push', $clone->git_dir(), 'master');
 }
 
 
@@ -66,7 +65,7 @@ sub check_cannot_push {
 
 setup_repos();
 
-$repo->command(config => "githooks.plugin", 'CheckWhitespace');
+$repo->run(config => "githooks.plugin", 'CheckWhitespace');
 
 check_can_commit('commit ok', "ok\n");
 
@@ -80,7 +79,7 @@ check_cannot_commit(
 
 setup_repos();
 
-$clone->command(config => "githooks.plugin", 'CheckWhitespace');
+$clone->run(config => "githooks.plugin", 'CheckWhitespace');
 
 check_can_push('push ok', "ok\n");
 

@@ -7,7 +7,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
-use Git::Hooks qw/:DEFAULT :utils/;
+use Git::Hooks;
 use Error qw(:try);
 
 my $PKG = __PACKAGE__;
@@ -39,7 +39,7 @@ sub get_structure {
     unless (exists $cache->{$what}) {
         if (my $value = $git->get_config($CFG => $what)) {
             local $@ = undef;
-            $cache->{$what} = eval {eval_gitconfig($value)};
+            $cache->{$what} = eval {$git->eval_gitconfig($value)};
             die "$PKG: $@\n" if $@;
         } else {
             $cache->{$what} = undef;
@@ -169,7 +169,7 @@ sub check_ref {
 sub check_affected_refs {
     my ($git) = @_;
 
-    return 1 if im_admin($git);
+    return 1 if $git->im_admin();
 
     my $errors = 0;
 
@@ -190,7 +190,7 @@ sub check_commit {
 sub check_patchset {
     my ($git, $opts) = @_;
 
-    return 1 if im_admin($git);
+    return 1 if $git->im_admin();
 
     return check_added_files($git, $git->filter_files_in_commit('A', $opts->{'--commit'}));
 }
@@ -424,17 +424,17 @@ using all of Git::Hooks infrastructure.
 =head2 check_affected_refs GIT
 
 This is the routine used to implement the C<update> and the
-C<pre-receive> hooks. It needs a C<Git::More> object.
+C<pre-receive> hooks. It needs a C<Git::Repository> object.
 
 =head2 check_commit GIT
 
 This is the routine used to implement the C<pre-commit>. It needs a
-C<Git::More> object.
+C<Git::Repository> object.
 
 =head2 check_patchset GIT, OPTS
 
 This is the routine used to implement the C<patchset-created> and the
-C<draft-published> hooks. It needs a C<Git::More> object and a hash
+C<draft-published> hooks. It needs a C<Git::Repository> object and a hash
 containing the parameters passed by Gerrit.
 
 =head2 check_structure STRUCTURE, PATH

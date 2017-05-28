@@ -7,7 +7,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
-use Git::Hooks qw/:DEFAULT :utils/;
+use Git::Hooks;
 use Text::Glob qw/glob_to_regex/;
 use Path::Tiny;
 use List::MoreUtils qw/any none/;
@@ -19,21 +19,21 @@ my $PKG = __PACKAGE__;
 sub check_command {
     my ($git, $commit, $file, $command) = @_;
 
-    my $tmpfile = $git->blob($commit, $file);
-    $tmpfile or return;
+    my $tmpfile = $git->blob($commit, $file)
+        or return;
 
     # interpolate filename in $command
     (my $cmd = $command) =~ s/\{\}/\'$tmpfile\'/g;
 
     # execute command and update $errors
-    my $saved_output = redirect_output();
+    my $saved_output = $git->redirect_output();
     my $exit = do {
         # Let the external command know the commit that's being checked in
         # case it needs to grok something from Git.
         local $ENV{GIT_COMMIT} = $commit;
         system $cmd;
     };
-    my $output = restore_output($saved_output);
+    my $output = $git->restore_output($saved_output);
     if ($exit != 0) {
         $command =~ s/\{\}/\'$file\'/g;
         my $message = do {
@@ -54,7 +54,7 @@ sub check_command {
         $git->error($PKG, $message, $output);
         return;
     } else {
-        # FIXME: What we should do with eventual output from a
+        # FIXME: What should we do with eventual output from a
         # successful command?
     }
     return 1;
@@ -133,7 +133,7 @@ sub check_new_files {
 sub check_affected_refs {
     my ($git) = @_;
 
-    return 1 if im_admin($git);
+    return 1 if $git->im_admin();
 
     my $errors = 0;
 
@@ -155,7 +155,7 @@ sub check_commit {
 sub check_patchset {
     my ($git, $opts) = @_;
 
-    return 1 if im_admin($git);
+    return 1 if $git->im_admin();
 
     return check_new_files($git, $opts->{'--commit'}, $git->filter_files_in_commit('AM', $opts->{'--commit'}));
 }

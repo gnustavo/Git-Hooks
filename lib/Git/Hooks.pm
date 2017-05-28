@@ -9,9 +9,10 @@ use Exporter qw/import/;
 use Sub::Util qw/subname/;
 use Path::Tiny;
 use List::MoreUtils qw/any/;
+use Git::Repository 'GitHooks';
 
-our (@EXPORT, @EXPORT_OK, %EXPORT_TAGS); ## no critic (Modules::ProhibitAutomaticExportation)
-my (%Hooks, @PostHooks);
+our @EXPORT; ## no critic (Modules::ProhibitAutomaticExportation)
+my (%Hooks);
 
 BEGIN {                         ## no critic (RequireArgUnpacking)
     my @installers =
@@ -34,70 +35,8 @@ BEGIN {                         ## no critic (RequireArgUnpacking)
         }
     }
 
-    @EXPORT      = (@installers, 'run_hook');
+    @EXPORT = (@installers, 'run_hook');
 
-    @EXPORT_OK = qw/is_ref_enabled im_memberof match_user im_admin file_temp
-                    eval_gitconfig post_hook redirect_output restore_output/;
-
-    %EXPORT_TAGS = (utils => \@EXPORT_OK);
-}
-
-use Git::More;
-
-##############
-# The following routines are invoked after all hooks have been
-# processed. Some hooks may need to take a global action depending on
-# the overall result of all hooks.
-
-sub post_hook {
-    my ($sub) = @_;
-    push @PostHooks, $sub;
-    return;
-}
-
-sub is_ref_enabled {
-    my ($ref, @specs) = @_;
-
-    return 1 if ! defined $ref || @specs == 0;
-
-    foreach (@specs) {
-        if (/^\^/) {
-            return 1 if $ref =~ qr/$_/;
-        } else {
-            return 1 if $ref eq $_;
-        }
-    }
-
-    return 0;
-}
-
-# The routine redirect_output redirects STDOUT and STDERR to a temporary
-# file and returns a reference that should be passed to the routine
-# restore_output to restore the handles to their original state.
-
-sub redirect_output {
-    ## no critic (RequireBriefOpen, RequireCarping)
-    open(my $oldout, '>&', \*STDOUT)  or die "Can't dup STDOUT: $!";
-    open(my $olderr, '>&', \*STDERR)  or die "Can't dup STDERR: $!";
-    my $tempfile = Path::Tiny->tempfile(UNLINK => 1);
-    open(STDOUT    , '>' , $tempfile) or die "Can't redirect STDOUT to \$tempfile: $!";
-    open(STDERR    , '>&', \*STDOUT)  or die "Can't dup STDOUT for STDERR: $!";
-    ## use critic
-    return [$oldout, $olderr, $tempfile];
-}
-
-# This routine gets a reference returned by redirect_output, restores STDOUT
-# and STDERR to their previous state and returns a string containing every
-# output since the previous call to redirect_output.
-
-sub restore_output {
-    my ($saved) = @_;
-    my ($oldout, $olderr, $tempfile) = @$saved;
-    ## no critic (RequireCarping)
-    open(STDOUT, '>&', $oldout) or die "Can't dup \$oldout: $!";
-    open(STDERR, '>&', $olderr) or die "Can't dup \$olderr: $!";
-    ## use critic
-    return $tempfile->slurp;
 }
 
 # This is an internal routine used to invoke external hooks, feed them
@@ -107,7 +46,7 @@ sub spawn_external_hook {
     my ($git, $file, $hook, @args) = @_;
 
     my $prefix  = '[' . __PACKAGE__ . '(' . path($file)->basename . ')]';
-    my $saved_output = redirect_output();
+    my $saved_output = $git->redirect_output();
 
     if ($hook =~ /^(?:pre-receive|post-receive|pre-push|post-rewrite)$/) {
 
@@ -120,13 +59,13 @@ sub spawn_external_hook {
         my $pid = open my $pipe, '|-'; ## no critic (InputOutput::RequireBriefOpen)
 
         if (! defined $pid) {
-            restore_output($saved_output);
+            $git->restore_output($saved_output);
             $git->error($prefix, "can't fork: $!");
         } elsif ($pid) {
             # parent
             print $pipe $stdin;
             my $exit = close $pipe;
-            my $output = restore_output($saved_output);
+            my $output = $git->restore_output($saved_output);
             if ($exit) {
                 warn $output, "\n" if length $output;
                 return 1;
@@ -138,7 +77,7 @@ sub spawn_external_hook {
         } else {
             # child
             { exec {$file} ($hook, @args) }
-            restore_output($saved_output);
+            $git->restore_output($saved_output);
             die "$prefix: can't exec: $!\n";
         }
 
@@ -151,7 +90,7 @@ sub spawn_external_hook {
 
         my $exit = system {$file} ($hook, @args);
 
-        my $output = restore_output($saved_output);
+        my $output = $git->restore_output($saved_output);
 
         if ($exit == 0) {
             warn $output, "\n" if length $output;
@@ -174,135 +113,13 @@ sub spawn_external_hook {
     return 0;
 }
 
-sub file_temp {
-    my ($git, $rev, $file, @args) = @_;
-
-    carp 'Invoking deprecated routine ', __PACKAGE__, '::file_temp. Please, see documentation.';
-
-    return $git->blob($rev, $file, @args);
-}
-
-sub grok_groups_spec {
-    my ($groups, $specs, $source) = @_;
-    foreach (@$specs) {
-        s/\#.*//;               # strip comments
-        next unless /\S/;       # skip blank lines
-        /^\s*(\w+)\s*=\s*(.+?)\s*$/
-            or die __PACKAGE__, ": invalid line in '$source': $_\n";
-        my ($groupname, $members) = ($1, $2);
-        exists $groups->{"\@$groupname"}
-            and die __PACKAGE__, ": redefinition of group ($groupname) in '$source': $_\n";
-        foreach my $member (split / /, $members) {
-            if ($member =~ /^\@/) {
-                # group member
-                $groups->{"\@$groupname"}{$member} = $groups->{$member}
-                    or die __PACKAGE__, ": unknown group ($member) cited in '$source': $_\n";
-            } else {
-                # user member
-                $groups->{"\@$groupname"}{$member} = undef;
-            }
-        }
-    }
-    return;
-}
-
-sub grok_groups {
-    my ($git) = @_;
-
-    my $cache = $git->cache('githooks');
-
-    unless (exists $cache->{groups}) {
-        my @groups = $git->get_config(githooks => 'groups')
-            or die __PACKAGE__, ": you have to define the githooks.groups option to use groups.\n";
-
-        my $groups = {};
-        foreach my $spec (@groups) {
-            if (my ($groupfile) = ($spec =~ /^file:(.*)/)) {
-                my @groupspecs = path($groupfile)->lines;
-                defined $groupspecs[0]
-                    or die __PACKAGE__, ": can't open groups file ($groupfile): $!\n";
-                grok_groups_spec($groups, \@groupspecs, $groupfile);
-            } else {
-                my @groupspecs = split /\n/, $spec;
-                grok_groups_spec($groups, \@groupspecs, "githooks.groups");
-            }
-        }
-        $cache->{groups} = $groups;
-    }
-
-    return $cache->{groups};
-}
-
-sub im_memberof {
-    my ($git, $myself, $groupname) = @_;
-
-    my $groups = grok_groups($git);
-
-    exists $groups->{$groupname}
-        or die __PACKAGE__, ": group $groupname is not defined.\n";
-
-    my $group = $groups->{$groupname};
-    return 1 if exists $group->{$myself};
-    while (my ($member, $subgroup) = each %$group) {
-        next     unless defined $subgroup;
-        return 1 if     im_memberof($git, $myself, $member);
-    }
-    return 0;
-}
-
-sub match_user {
-    my ($git, $spec) = @_;
-
-    if (my $myself = $git->authenticated_user()) {
-        if ($spec =~ /^\^/) {
-            return 1 if $myself =~ $spec;
-        } elsif ($spec =~ /^@/) {
-            return 1 if im_memberof($git, $myself, $spec);
-        } else {
-            return 1 if $myself eq $spec;
-        }
-    }
-
-    return 0;
-}
-
-sub im_admin {
-    my ($git) = @_;
-    foreach my $spec ($git->get_config(githooks => 'admin')) {
-        return 1 if match_user($git, $spec);
-    }
-    return 0;
-}
-
-sub eval_gitconfig {
-    my ($config) = @_;
-
-    my $value;
-
-    if ($config =~ s/^file://) {
-        $value = do $config;
-        unless ($value) {
-            die "couldn't parse '$config': $@\n" if $@;
-            die "couldn't do '$config': $!\n"    unless defined $value;
-            die "couldn't run '$config'\n"       unless $value;
-        }
-    } elsif ($config =~ s/^eval://) {
-        $value = eval $config; ## no critic (BuiltinFunctions::ProhibitStringyEval)
-        die "couldn't parse '$config':\n$@\n" if $@;
-    } else {
-        $value = $config;
-    }
-
-    return $value;
-}
-
 ##############
 # The following routines prepare the arguments for some hooks to make
 # it easier to deal with them later on.
 
 # Some hooks get information from STDIN as text lines with
 # space-separated fields. This routine reads up all of STDIN and tucks
-# that information in the Git::More object.
+# that information in the Git::Repository object.
 
 sub _prepare_input_data {
     my ($git) = @_;
@@ -360,10 +177,10 @@ sub _prepare_gerrit_args {
         $opt{'--reviewer'}  ||
         undef;
 
-    # Here we make the name and email available in two environment
-    # variables (GERRIT_USER_NAME and GERRIT_USER_EMAIL) so that
-    # Git::More::authenticated_user can more easily grok the userid
-    # from them later.
+    # Here we make the name and email available in two environment variables
+    # (GERRIT_USER_NAME and GERRIT_USER_EMAIL) so that
+    # Git::Repository::Plugin::GitHooks::authenticated_user can more easily
+    # grok the userid from them later.
     if ($user && $user =~ /([^\(]+)\s+\(([^\)]+)\)/) {
         $ENV{GERRIT_USER_NAME}  = $1; ## no critic (Variables::RequireLocalizedPunctuationVars)
         $ENV{GERRIT_USER_EMAIL} = $2; ## no critic (Variables::RequireLocalizedPunctuationVars)
@@ -533,7 +350,7 @@ sub _prepare_gerrit_patchset {
 
     exit(0) if exists $args->[0]{'--is-draft'} and $args->[0]{'--is-draft'} eq 'true';
 
-    post_hook(\&_gerrit_patchset_post_hook);
+    $git->post_hook(\&_gerrit_patchset_post_hook);
 
     return;
 }
@@ -627,7 +444,7 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
 
     $hook_name = path($hook_name)->basename;
 
-    my $git = Git::More->repository();
+    my $git = Git::Repository->new();
 
     $git->hookname($hook_name);
 
@@ -649,7 +466,8 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
         my $ok = eval { $hook->($git, @args) };
         if (defined $ok) {
             # Modern hooks return a boolean value indicating their success.
-            # If they fail they invoke Git::More::error.
+            # If they fail they invoke
+            # Git::Repository::Plugin::GitHooks::error.
             unless ($ok) {
                 $errors += 1;
                 # Let's see if there is a help-on-error message configured
@@ -672,7 +490,7 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
     if ($^O ne 'MSWin32' && $git->get_config(githooks => 'externals')) {
         foreach my $dir (
             grep {-e} map {path($_)->child($hook_name)}
-                ($git->get_config(githooks => 'hooks'), path($git->repo_path())->child('hooks.d'))
+                ($git->get_config(githooks => 'hooks'), path($git->git_dir())->child('hooks.d'))
         ) {
             opendir my $dh, $dir
                 or $git->error(__PACKAGE__, ": cannot opendir '$dir'", $!)
@@ -685,7 +503,7 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
     }
 
     # Some hooks want to do some post-processing
-    foreach my $post_hook (@PostHooks) {
+    foreach my $post_hook ($git->post_hooks) {
         $post_hook->($hook_name, $git, @args);
     }
 
@@ -716,7 +534,7 @@ EOF
 1; # End of Git::Hooks
 __END__
 
-=for Pod::Coverage spawn_external_hook grok_groups_spec grok_groups
+=for Pod::Coverage spawn_external_hook
 
 =head1 SYNOPSIS
 
@@ -886,9 +704,9 @@ is detected the hook is considered to have failed and the exception
 string (B<$@>) is showed to the user.
 
 The best way to produce an error message is to invoke the
-B<Git::More::error> method passing a prefix and a message for uniform
-formating. Note that any hook invokes this method it counts as a failure,
-even if it ultimately returns true!
+B<Git::Repository::Plugin::GitHooks::error> method passing a prefix and a
+message for uniform formating. Note that any hook invokes this method it
+counts as a failure, even if it ultimately returns true!
 
 For example:
 
@@ -899,14 +717,14 @@ For example:
     PRE_COMMIT {
         my ($git) = @_;
 
-        my @changed = $git->command(qw/diff --cached --name-only --diff-filter=AM/);
+        my @changed = $git->filter_files_in_index('AM');
 
         my $errors = 0;
 
-        foreach ($git->command('ls-files' => '-s', @changed)) {
+        foreach ($git->run('ls-files' => '-s', @changed)) {
             chomp;
             my ($mode, $sha, $n, $name) = split / /;
-            my $size = $git->command('cat-file' => '-s', $sha);
+            my $size = $git->file_size(":0:$name");
             $size <= $LIMIT
                 or $git->error('CheckSize', "File '$name' has $size bytes, more than our limit of $LIMIT"
                     and ++$errors;
@@ -922,14 +740,14 @@ For example:
         my ($git) = @_;
         my %violations;
 
-        my @changed = grep {/\.p[lm]$/} $git->command(qw/diff --cached --name-only --diff-filter=AM/);
+        my @changed = grep {/\.p[lm]$/} $git->filter_files_in_index('AM');
 
-        foreach ($git->command('ls-files' => '-s', @changed)) {
+        foreach ($git->run('ls-files' => '-s', @changed)) {
             chomp;
             my ($mode, $sha, $n, $name) = split / /;
             require Perl::Critic;
             state $critic = Perl::Critic->new(-severity => 'stern', -top => 10);
-            my $contents = $git->command('cat-file' => $sha);
+            my $contents = $git->run('cat-file' => $sha);
             my @violations = $critic->critique(\$contents);
             $violations{$name} = \@violations if @violations;
         }
@@ -1502,9 +1320,9 @@ Each one of the hook directives gets a routine-ref or a single block
 (anonymous routine) as argument. The routine/block will be called by
 C<run_hook> with proper arguments, as indicated below. These arguments
 are the ones gotten from @ARGV, with the exception of the ones
-identified by 'GIT' which are C<Git::More> objects that can be used to
+identified by 'GIT' which are C<Git::Repository> objects that can be used to
 grok detailed information about the repository and the current
-transaction. (Please, refer to C<Git::More> specific documentation to
+transaction. (Please, refer to C<Git::Repository> specific documentation to
 know how to use them.)
 
 Note that the hook directives resemble function definitions but they
@@ -1569,10 +1387,10 @@ with lines of the form:
 
     <old-value> SP <new-value> SP <ref-name> LF
 
-The information from these lines is read and can be fetched by the
-hooks using the C<Git::Hooks::get_input_data> method or, perhaps more
-easily, by using the C<Git::More::get_affected_refs> and the
-C<Git::More::get_affected_ref_range> methods.
+The information from these lines is read and can be fetched by the hooks
+using the C<Git::Hooks::get_input_data> method or, perhaps more easily, by
+using the C<Git::Repository::Plugin::GitHooks::get_affected_refs> and the
+C<Git::Repository::Plugin::GitHooks::get_affected_ref_range> methods.
 
 =item * UPDATE(GIT, updated-ref-name, old-object-name, new-object-name)
 
@@ -1614,138 +1432,21 @@ section.
 
 =head1 METHODS FOR PLUGIN DEVELOPERS
 
-Plugins should start by importing the utility routines from
-Git::Hooks:
+Plugins usually begin with the following incantation:
 
-    use Git::Hooks qw/:utils/;
+    package Git::Hooks::MyPlugin;
+    use Git::Hooks;
 
-Usually at the end, the plugin should use one or more of the hook
-directives defined above to install its hook routines in the
-appropriate hooks.
+Usually at the end, the plugin should use one or more of the hook directives
+defined above to install its hook routines in the appropriate hooks.
 
-Every hook routine receives a Git::More object as its first
-argument. You should use it to infer all needed information from the
-Git repository.
+Every hook routine receives a Git::Repository object (with the
+Git::Repository::Plugin::GitHooks plugin enabled) as its first argument. You
+should use it to infer all needed information from the Git repository.
 
-Please, take a look at the code for the standard plugins under the
-Git::Hooks:: namespace in order to get a better understanding about
-this. Hopefully it's not that hard.
-
-The utility routines implemented by Git::Hooks are the following:
-
-=head2 post_hook SUB
-
-Plugin developers may be interested in performing some action
-depending on the overall result of every check made by every other
-hook. As an example, Gerrit's C<patchset-created> hook is invoked
-asynchronously, meaning that the hook's exit code doesn't affect the
-action that triggered the hook. The proper way to signal the hook
-result for Gerrit is to invoke it's API to make a review. But we want
-to perform the review once, at the end of the hook execution, based on
-the overall result of all enabled checks.
-
-To do that plugin developers can use this routine to register
-callbacks that are invoked at the end of C<run_hooks>. The callbacks
-are called with the following arguments:
-
-=over
-
-=item * HOOK_NAME
-
-The basename of the invoked hook.
-
-=item * GIT
-
-The Git::More object that was passed to the plugin hooks.
-
-=item * ARGS...
-
-The remaining arguments that were passed to the plugin hooks.
-
-=back
-
-The callbacks may see if there were any errors signalled by the plugin
-hook by invoking the C<get_errors> method on the GIT object. They may
-be used to signal the hook result in any way they want, but they
-should not die or they will prevent other post hooks to run.
-
-=head2 is_ref_enabled(REF, SPEC, ...)
-
-This routine returns a boolean indicating if REF matches one of the
-ref-specs in SPECS. REF is the complete name of a Git ref and SPECS is
-a list of strings, each one specifying a rule for matching ref names.
-
-As a special case, it returns true if REF is undef or if there is no
-SPEC whatsoever, meaning that by default all refs/commits are enabled.
-
-You may want to use it, for example, in an C<update>, C<pre-receive>,
-or C<post-receive> hook which may be enabled depending on the
-particular refs being affected.
-
-Each SPEC rule may indicate the matching refs as the complete ref
-name (e.g. "refs/heads/master") or by a regular expression starting
-with a caret (C<^>), which is kept as part of the regexp.
-
-=head2 im_memberof(GIT, USER, GROUPNAME)
-
-This routine tells if USER belongs to GROUPNAME. The groupname is
-looked for in the specification given by the C<githooks.groups>
-configuration variable.
-
-=head2 match_user(GIT, SPEC)
-
-This routine checks if the authenticated user (as returned by the
-C<Git::More::authenticated_user> method) matches the specification,
-which may be given in one of the three different forms acceptable for
-the C<githooks.admin> configuration variable above, i.e., as a
-username, as a @group, or as a ^regex.
-
-=head2 im_admin(GIT)
-
-This routine checks if the authenticated user (again, as returned by
-the C<Git::More::authenticated_user> method) matches the
-specifications given by the C<githooks.admin> configuration variable.
-
-=head2 eval_gitconfig(VALUE)
-
-This routine makes it easier to grok config values as Perl code. If
-C<VALUE> is a string beginning with C<eval:>, the remaining of it is
-evaluated as a Perl expression and the resulting value is returned. If
-C<VALUE> is a string beginning with C<file:>, the remaining of it is
-treated as a file name which contents are evaluated as Perl code and
-the resulting value is returned. Otherwise, C<VALUE> itself is
-returned.
-
-=head2 redirect_output
-
-This routine redirects STDOUT and STDERR to a temporary file and returns a
-reference that should be passed to the routine C<restore_output> to restore
-the handles to their original state.
-
-=head2 restore_output REF
-
-This routine gets a reference returned by C<redirect_output>, restores
-STDOUT and STDERR to their previous state and returns a string containing
-every output since the previous call to redirect_output.
-
-=head2 file_temp REV, FILE, ARGS...
-
-This routine is DEPRECATED and has been replaced by the L<Git::More> C<blob>
-method.
-
-This routine returns the name of a temporary file into which the contents of
-the file FILE in revision REV has been copied.
-
-It's useful for hooks that need to read the contents of changed files in
-order to check anything in them.
-
-These files are cached so that if more than one hook needs to get at them
-they're created only once.
-
-By default, all temporary files are removed when the hook exits.
-
-Any remaining ARGS are passed as arguments to C<Path::Tiny::tempfile> so
-that you can have more control over the temporary file creation.
+Please, take a look at the code of the plugins under the Git::Hooks::
+namespace in order to get a better understanding about this. Hopefully it's
+not that hard.
 
 =head1 TO DO
 
@@ -1755,9 +1456,9 @@ There is a to-do list for this module at L<Git::Hooks::TODO>.
 
 =over
 
-=item * C<Git::More>
+=item * C<Git::Repository>
 
-A Git extension with some goodies for hook developers.
+Perl interface to Git repositories.
 
 =item * C<Gerrit::REST>
 

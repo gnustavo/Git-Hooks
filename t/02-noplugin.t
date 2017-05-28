@@ -16,6 +16,6 @@ COMMIT_MSG {
 EOF
 
 $file->append("new line\n");
-$repo->command(add => $file);
+$repo->run(add => $file);
 test_nok('cannot commit', $repo,
 	 'commit', '-q', '-m', 'new commit');

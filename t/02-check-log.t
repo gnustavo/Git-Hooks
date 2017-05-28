@@ -18,7 +18,7 @@ sub check_can_commit {
         or BAIL_OUT("check_can_commit: can't '$msgfile'->spew('$msg')\n");
     $file->append($testname)
         or BAIL_OUT("check_can_commit: can't '$file'->append('$testname')\n");
-    $repo->command(add => $file);
+    $repo->run(add => $file);
     test_ok($testname, $repo, 'commit', '-F', $msgfile);
 }
 
@@ -28,7 +28,7 @@ sub check_cannot_commit {
         or BAIL_OUT("check_cannot_commit: can't '$msgfile'->spew('$msg')\n");
     $file->append($testname)
         or BAIL_OUT("check_cannot_commit: can't '$file'->append('$testname')\n");
-    $repo->command(add => $file);
+    $repo->run(add => $file);
     if ($regex) {
 	test_nok_match($testname, $regex, $repo, 'commit', '-F', $msgfile);
     } else {
@@ -40,36 +40,36 @@ sub check_can_push {
     my ($testname, $ref) = @_;
     new_commit($repo, $file, $testname);
     test_ok($testname, $repo,
-	    'push', $clone->repo_path(), $ref || 'master');
+	    'push', $clone->git_dir(), $ref || 'master');
 }
 
 sub check_cannot_push {
     my ($testname, $regex, $ref) = @_;
     new_commit($repo, $file, $testname);
     test_nok_match($testname, $regex, $repo,
-		   'push', $clone->repo_path(), $ref || 'master');
+		   'push', $clone->git_dir(), $ref || 'master');
 }
 
 
 install_hooks($repo, undef, 'commit-msg');
 
-$repo->command(config => "githooks.plugin", 'CheckLog');
+$repo->run(config => "githooks.plugin", 'CheckLog');
 
 # title-required
 
 check_cannot_commit('deny an empty message', qr/log needs a title line/, '');
 
-$repo->command(config => 'githooks.checklog.ref', 'refs/heads/nobranch');
+$repo->run(config => 'githooks.checklog.ref', 'refs/heads/nobranch');
 check_can_commit( 'allow commit on disabled ref even when commit message is faulty', <<'EOF');
 No
 Title
 EOF
 
-$repo->command(qw/config --remove-section githooks.checklog/);
-$repo->command(config => 'githooks.checklog.ref', 'refs/heads/master');
+$repo->run(qw/config --remove-section githooks.checklog/);
+$repo->run(config => 'githooks.checklog.ref', 'refs/heads/master');
 check_cannot_commit('deny commit on abled ref when commit message is faulty', qr/log needs a title line/, '');
 
-$repo->command(qw/config --remove-section githooks.checklog/);
+$repo->run(qw/config --remove-section githooks.checklog/);
 
 check_cannot_commit('deny without required title', qr/log needs a title line/, <<'EOF');
 No
@@ -86,14 +86,14 @@ check_can_commit('allow with required title only', <<'EOF');
 Title
 EOF
 
-$repo->command(config => 'githooks.checklog.title-required', 0);
+$repo->run(config => 'githooks.checklog.title-required', 0);
 
 check_can_commit('allow without non-required title', <<'EOF');
 No
 Title
 EOF
 
-$repo->command(qw/config --remove-section githooks.checklog/);
+$repo->run(qw/config --remove-section githooks.checklog/);
 
 # title-period
 
@@ -105,7 +105,7 @@ check_cannot_commit('deny with denied period', qr/log title SHOULD NOT end in a 
 Title.
 EOF
 
-$repo->command(config => 'githooks.checklog.title-period', 'require');
+$repo->run(config => 'githooks.checklog.title-period', 'require');
 
 check_cannot_commit('deny without required period', qr/log title SHOULD end in a period/, <<'EOF');
 Title
@@ -115,7 +115,7 @@ check_can_commit('allow with required period', <<'EOF');
 Title.
 EOF
 
-$repo->command(config => 'githooks.checklog.title-period', 'allow');
+$repo->run(config => 'githooks.checklog.title-period', 'allow');
 
 check_can_commit('allow without allowed period', <<'EOF');
 Title
@@ -125,13 +125,13 @@ check_can_commit('allow with allowed period', <<'EOF');
 Title.
 EOF
 
-$repo->command(config => 'githooks.checklog.title-period', 'invalid');
+$repo->run(config => 'githooks.checklog.title-period', 'invalid');
 
 check_cannot_commit('deny due to invalid value', qr/invalid value for the/, <<'EOF');
 Title
 EOF
 
-$repo->command(qw/config --remove-section githooks.checklog/);
+$repo->run(qw/config --remove-section githooks.checklog/);
 
 # title-max-width
 
@@ -141,7 +141,7 @@ check_cannot_commit('deny large title', qr/log title should be at most 50 charac
 The above title has 51 characters.
 EOF
 
-$repo->command(config => 'githooks.checklog.title-max-width', 0);
+$repo->run(config => 'githooks.checklog.title-max-width', 0);
 
 check_can_commit('allow large title', <<'EOF');
 123456789012345678901234567890123456789012345678901
@@ -149,7 +149,7 @@ check_can_commit('allow large title', <<'EOF');
 The above title has 51 characters.
 EOF
 
-$repo->command(qw/config --remove-section githooks.checklog/);
+$repo->run(qw/config --remove-section githooks.checklog/);
 
 # body-max-width
 
@@ -172,7 +172,7 @@ Body first line.
 The previous line has 77 characters.
 EOF
 
-$repo->command(config => 'githooks.checklog.body-max-width', 0);
+$repo->run(config => 'githooks.checklog.body-max-width', 0);
 
 check_can_commit('allow large body', <<'EOF');
 Title
@@ -183,12 +183,12 @@ Body first line.
 The previous line has 73 characters.
 EOF
 
-$repo->command(qw/config --remove-section githooks.checklog/);
+$repo->run(qw/config --remove-section githooks.checklog/);
 
 # match
 
-$repo->command(config => 'githooks.checklog.match', '^has to have');
-$repo->command(config => '--add', 'githooks.checklog.match', '!^must not have');
+$repo->run(config => 'githooks.checklog.match', '^has to have');
+$repo->run(config => '--add', 'githooks.checklog.match', '!^must not have');
 
 check_can_commit('allow if matches', <<'EOF');
 Title
@@ -209,11 +209,11 @@ has to have
 must not have
 EOF
 
-$repo->command(config => '--unset-all', 'githooks.checklog.match');
+$repo->run(config => '--unset-all', 'githooks.checklog.match');
 
 # signed-off-by
 
-$repo->command(config => 'githooks.checklog.signed-off-by', '1');
+$repo->run(config => 'githooks.checklog.signed-off-by', '1');
 
 check_cannot_commit('deny if no signed-off-by', qr/must have a Signed-off-by footer/, <<'EOF');
 Title
@@ -229,12 +229,12 @@ Body
 Signed-off-by: Some One <someone@example.net>
 EOF
 
-$repo->command(qw/config --remove-section githooks.checklog/);
+$repo->run(qw/config --remove-section githooks.checklog/);
 
 # title-match
 
-$repo->command(config => 'githooks.checklog.title-match', '].*\S');
-$repo->command(config => '--add', 'githooks.checklog.title-match', '!#$');
+$repo->run(config => 'githooks.checklog.title-match', '].*\S');
+$repo->run(config => '--add', 'githooks.checklog.title-match', '!#$');
 
 check_can_commit('allow if title matches', <<'EOF');
 [JIRA-100] Title
@@ -266,7 +266,7 @@ check_can_commit('allow if only body matches negative title regex', <<'EOF');
 Body #
 EOF
 
-$repo->command(qw/config --remove-section githooks.checklog/);
+$repo->run(qw/config --remove-section githooks.checklog/);
 
 # encoding
 
@@ -284,12 +284,12 @@ SKIP: {
 xytxuythiswordshouldnotspell
 EOF
 
-    $repo->command(config => '--add', 'githooks.checklog.spelling', 1);
+    $repo->run(config => '--add', 'githooks.checklog.spelling', 1);
 
     check_cannot_commit('deny misspelling with checking', qr/log has a misspelled word/, <<'EOF');
 xytxuythiswordshouldnotspell
 EOF
 
-    $repo->command(config => '--unset-all', 'githooks.checklog.spelling');
+    $repo->run(config => '--unset-all', 'githooks.checklog.spelling');
 }
 

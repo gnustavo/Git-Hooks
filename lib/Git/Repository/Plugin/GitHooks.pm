@@ -1,41 +1,57 @@
-package Git::More;
-# ABSTRACT: A Git extension with some goodies for hook developers
+package Git::Repository::Plugin::GitHooks;
+# ABSTRACT: A Git::Repository plugin with some goodies for hook developers
 
 use strict;
 use warnings;
 
-use parent 'Git';
+use Git::Repository::Plugin;
+our @ISA = qw/Git::Repository::Plugin/;
 
-use Error qw(:try);
+sub _keywords {
+
+    return qw/ undef_commit empty_commit hookname get_config cache
+               clean_cache get_commit get_commits get_commit_msg
+               read_commit_msg_file write_commit_msg_file
+               filter_files_in_index filter_files_in_range
+               filter_files_in_commit set_affected_ref get_affected_refs
+               get_affected_ref_range get_affected_ref_commit_ids
+               get_affected_ref_commits push_input_data get_input_data
+               set_authenticated_user authenticated_user get_current_branch
+               get_sha1 get_head_or_empty_tree blob file_size error
+               get_errors nocarp post_hook post_hooks is_ref_enabled
+               redirect_output restore_output match_user im_admin
+               eval_gitconfig file_temp grok_groups_spec grok_groups
+               im_memberof /;
+
+}
+
 use Carp;
 use Path::Tiny;
-use Git::Hooks qw/:utils/;
-
 # This package variable tells get_config which character encoding is used in
 # the output of the git-config command. Usually none, and decoding isn't
 # necessary. But sometimes it is...
 our $CONFIG_ENCODING = undef;
 
-# The UNDEF_COMMIT is a special SHA-1 used by Git in the update and
-# pre-receive hooks to signify that a reference either was just created (as
-# the old commit) or has been just deleted (as the new commit).
-our $UNDEF_COMMIT = '0000000000000000000000000000000000000000';
+sub undef_commit {
+    return '0000000000000000000000000000000000000000';
+}
 
-# The EMPTY_COMMIT represents a commit with an empty tree.
-our $EMPTY_COMMIT = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+sub empty_commit {
+    return '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+}
 
 sub hookname {
     my ($git, $name) = @_;
 
-    $git->{more}{hookname} = $name if $name;
+    $git->{_plugin_githooks}{hookname} = $name if $name;
 
-    return $git->{more}{hookname};
+    return $git->{_plugin_githooks}{hookname};
 }
 
 sub get_config {
     my ($git, $section, $var) = @_;
 
-    unless (exists $git->{more}{config}) {
+    unless (exists $git->{_plugin_githooks}{config}) {
         my %config;
 
         exists $ENV{HOME}
@@ -60,7 +76,7 @@ EOT
 
         my $config = do {
            local $/ = "\c@";
-           $git->command(config => '--null', '--list');
+           $git->run(qw/config --null --list/);
         };
 
         if (defined $CONFIG_ENCODING) {
@@ -84,10 +100,10 @@ EOT
         $config{githooks}{gerrit}{enabled} //= [1];
         $config{githooks}{'abort-commit'}  //= [1];
 
-        $git->{more}{config} = \%config;
+        $git->{_plugin_githooks}{config} = \%config;
     }
 
-    my $config = $git->{more}{config};
+    my $config = $git->{_plugin_githooks}{config};
 
     $section = lc $section if defined $section;
 
@@ -106,16 +122,16 @@ EOT
 sub cache {
     my ($git, $section) = @_;
 
-    unless (exists $git->{more}{cache}{$section}) {
-        $git->{more}{cache}{$section} = {};
+    unless (exists $git->{_plugin_githooks}{cache}{$section}) {
+        $git->{_plugin_githooks}{cache}{$section} = {};
     }
 
-    return $git->{more}{cache}{$section};
+    return $git->{_plugin_githooks}{cache}{$section};
 }
 
 sub clean_cache {
     my ($git, $section) = @_;
-    delete $git->{more}{cache}{$section};
+    delete $git->{_plugin_githooks}{cache}{$section};
     return;
 }
 
@@ -126,7 +142,8 @@ sub get_commit {
 
     unless (exists $cache->{$commit}) {
         local $/ = "\c@\cJ";
-        my ($pipe, $ctx) = $git->command_output_pipe(
+
+        my $cmd = $git->command(
             'rev-list',
             '--no-walk',
             # See 'git help rev-list' to understand the --pretty argument
@@ -135,7 +152,9 @@ sub get_commit {
             $commit,
         );
 
-        while (<$pipe>) {
+        my $stdout = $cmd->stdout;
+
+        while (<$stdout>) {
             chomp;
             my %commit;
             @commit{qw/header commit tree parent
@@ -145,7 +164,7 @@ sub get_commit {
             $cache->{$commit} = \%commit;
         }
 
-        $git->command_close_pipe($pipe, $ctx);
+        $cmd->close;
     }
 
     return $cache->{$commit};
@@ -174,7 +193,7 @@ sub get_commits {
         # hooks usually don't need to check them. So, in this situation we
         # simply return an empty list of commits.
 
-        return if $new_commit eq $UNDEF_COMMIT;
+        return if $new_commit eq $git->undef_commit;
 
         # When we're called in a post-receive or post-update hook, the
         # pushed references already point to $new_commit. So, in these cases
@@ -186,7 +205,7 @@ sub get_commits {
         # reachable by existing references. Then we'll see if we have to
         # remove any commit from that list.
 
-        my @excludes = $git->command(qw/rev-parse --not --all/);
+        my @excludes = $git->run(qw/rev-parse --not --all/);
 
         if ($git->hookname =~ /^post-(?:receive|update)$/) {
             # We can't simply remove $new_commit from @excludes because it
@@ -196,7 +215,7 @@ sub get_commits {
             # reachable by a single reference, which must be the reference
             # being pushed.
 
-            my @new_commit_refs = $git->command(
+            my @new_commit_refs = $git->run(
                 qw/for-each-ref --format %(refname) --count 2 --points-at/, $new_commit,
             );
             if (@new_commit_refs == 1) {
@@ -208,13 +227,14 @@ sub get_commits {
         # --all wouldn't bring it when we're being called in a post-receive
         # or post-update hook.
 
-        push @excludes, "^$old_commit" unless $old_commit eq $UNDEF_COMMIT;
+        push @excludes, "^$old_commit" unless $old_commit eq $git->undef_commit;
 
         # The commit list to be returned
         my @commits;
 
         local $/ = "\c@\cJ";
-        my ($pipe, $ctx) = $git->command_output_pipe(
+
+        my $cmd = $git->command(
             'rev-list',
             # See 'git help rev-list' to understand the --pretty argument
             '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%s%n%n%b%x00',
@@ -223,7 +243,9 @@ sub get_commits {
             @excludes,
         );
 
-        while (<$pipe>) {
+        my $stdout = $cmd->stdout;
+
+        while (<$stdout>) {
             my %commit;
             @commit{qw/header commit tree parent
                        author_name author_email author_date
@@ -232,7 +254,7 @@ sub get_commits {
             push @commits, \%commit;
         }
 
-        $git->command_close_pipe($pipe, $ctx);
+        $cmd->close;
 
         $cache->{$range} = \@commits;
     }
@@ -251,7 +273,7 @@ sub get_commit_msg {
     # unfolds the first sequence of non-empty lines in a single line
     # which is considered the message's subject (or title).
     foreach my $format (qw/%B %s%n%n%b/) {
-        my $body = $git->command('rev-list' => "--format=$format", '--max-count=1', $commit);
+        my $body = $git->run('rev-list' => "--format=$format", '--max-count=1', $commit);
         $body =~ s/^[^\n]*\n//; # strip first line, which contains the commit id
         chomp $body;            # strip last newline
         next if $body eq $format;
@@ -313,7 +335,7 @@ sub write_commit_msg_file {
 
 sub filter_files_in_index {
     my ($git, $filter) = @_;
-    my $output = $git->command(
+    my $output = $git->run(
         qw/diff-index --name-only --ignore-submodules --no-commit-id --cached -r -z/,
         "--diff-filter=$filter", $git->get_head_or_empty_tree(),
     );
@@ -322,8 +344,8 @@ sub filter_files_in_index {
 
 sub filter_files_in_range {
     my ($git, $filter, $from, $to) = @_;
-    $from = $EMPTY_COMMIT if $from eq $UNDEF_COMMIT;
-    my $output = $git->command(
+    $from = $git->empty_commit if $from eq $git->undef_commit;
+    my $output = $git->run(
         qw/diff-tree --name-only --ignore-submodules --no-commit-id -r -z/,
         "--diff-filter=$filter", $from, $to,
     );
@@ -332,7 +354,7 @@ sub filter_files_in_range {
 
 sub filter_files_in_commit {
     my ($git, $filter, $commit) = @_;
-    my $output = $git->command(
+    my $output = $git->run(
         qw/diff-tree --name-only --ignore-submodules -m -r -z/,
         "--diff-filter=$filter", $commit,
     );
@@ -350,7 +372,7 @@ sub filter_files_in_commit {
 
 sub set_affected_ref {
     my ($git, $ref, $old_commit, $new_commit) = @_;
-    $git->{more}{affected_refs}{$ref}{range} = [$old_commit, $new_commit];
+    $git->{_plugin_githooks}{affected_refs}{$ref}{range} = [$old_commit, $new_commit];
     return;
 }
 
@@ -358,22 +380,22 @@ sub set_affected_ref {
 sub _get_affected_refs_hash {
     my ($git) = @_;
 
-    $git->{more}{affected_refs}
+    $git->{_plugin_githooks}{affected_refs}
         or die __PACKAGE__, ": get_affected_refs(): no affected refs set\n";
 
-    return $git->{more}{affected_refs};
+    return $git->{_plugin_githooks}{affected_refs};
 }
 
 sub get_affected_refs {
     my ($git) = @_;
 
-    return keys %{$git->_get_affected_refs_hash()};
+    return keys %{_get_affected_refs_hash($git)};
 }
 
 sub get_affected_ref_range {
     my ($git, $ref) = @_;
 
-    my $affected = $git->_get_affected_refs_hash();
+    my $affected = _get_affected_refs_hash($git);
 
     exists $affected->{$ref}{range}
         or die __PACKAGE__, ": get_affected_ref_range($ref): no such affected ref\n";
@@ -384,7 +406,7 @@ sub get_affected_ref_range {
 sub get_affected_ref_commit_ids {
     my ($git, $ref) = @_;
 
-    my $affected = $git->_get_affected_refs_hash();
+    my $affected = _get_affected_refs_hash($git);
 
     exists $affected->{$ref}
         or die __PACKAGE__, ": get_affected_ref_commit_ids($ref): no such affected ref\n";
@@ -399,7 +421,7 @@ sub get_affected_ref_commit_ids {
 sub get_affected_ref_commits {
     my ($git, $ref) = @_;
 
-    my $affected = $git->_get_affected_refs_hash();
+    my $affected = _get_affected_refs_hash($git);
 
     exists $affected->{$ref}
         or die __PACKAGE__, ": get_affected_ref_commits($ref): no such affected ref\n";
@@ -413,70 +435,63 @@ sub get_affected_ref_commits {
 
 sub push_input_data {
     my ($git, $data) = @_;
-    push @{$git->{more}{input_data}}, $data;
+    push @{$git->{_plugin_githooks}{input_data}}, $data;
     return;
 }
 
 sub get_input_data {
     my ($git) = @_;
-    return $git->{more}{input_data} || [];
+    return $git->{_plugin_githooks}{input_data} || [];
 }
 
 sub set_authenticated_user {
     my ($git, $user) = @_;
-    return $git->{more}{authenticated_user} = $user;
+    return $git->{_plugin_githooks}{authenticated_user} = $user;
 }
 
 sub authenticated_user {
     my ($git) = @_;
 
-    unless (exists $git->{more}{authenticated_user}) {
+    unless (exists $git->{_plugin_githooks}{authenticated_user}) {
         if (my $userenv = $git->get_config(githooks => 'userenv')) {
             if ($userenv =~ /^eval:(.*)/) {
-                $git->{more}{authenticated_user} = eval $1; ## no critic (BuiltinFunctions::ProhibitStringyEval)
+                $git->{_plugin_githooks}{authenticated_user} = eval $1; ## no critic (BuiltinFunctions::ProhibitStringyEval)
                 die __PACKAGE__, ": error evaluating userenv value ($userenv): $@\n"
                     if $@;
             } elsif (exists $ENV{$userenv}) {
-                $git->{more}{authenticated_user} = $ENV{$userenv};
+                $git->{_plugin_githooks}{authenticated_user} = $ENV{$userenv};
             } else {
                 die __PACKAGE__, ": option userenv environment variable ($userenv) is not defined.\n";
             }
         } else {
-            $git->{more}{authenticated_user} = $ENV{GERRIT_USER_EMAIL} || $ENV{USER} || undef;
+            $git->{_plugin_githooks}{authenticated_user} = $ENV{GERRIT_USER_EMAIL} || $ENV{USER} || undef;
         }
     }
 
-    return $git->{more}{authenticated_user};
+    return $git->{_plugin_githooks}{authenticated_user};
 }
 
 sub get_current_branch {
     my ($git) = @_;
-    my $branch;
-    try {
-        $branch = $git->command_oneline([qw/symbolic-ref HEAD/], {STDERR => 0});
-    } otherwise {
-        # In dettached head state
-    };
-    return $branch;
+    my $cmd = $git->command(qw/symbolic-ref HEAD/);
+
+    # Return undef if we're in dettached head state
+    return eval { $cmd->final_output } || undef;
 }
 
 sub get_sha1 {
     my ($git, $rev) = @_;
 
-    return $git->command_oneline(['rev-parse', '--verify', $rev], {STDERR => 0});
+    return $git->run('rev-parse', '--verify', $rev)->final_output;
 }
 
 sub get_head_or_empty_tree {
     my ($git) = @_;
 
-    my $head = 'HEAD';
-    try {
-        scalar($git->command_oneline([qw/rev-parse --verify HEAD/], {STDERR => 0}));
-    } otherwise {
-        # Initial commit: return the empty tree object
-        $head = $EMPTY_COMMIT;
-    };
-    return $head;
+    my $cmd = $git->command(qw/rev-parse --verify HEAD/);
+
+    # Return the empty tree object if in the initial commit
+    return eval { $cmd->final_output } || $git->empty_commit;
 }
 
 sub blob {
@@ -500,24 +515,28 @@ sub blob {
 
         # Create temporary file and copy contents to it
         open my $tmp, '>:', $filepath ## no critic (RequireBriefOpen)
-            or throw Error::Simple("Internal error: can't create file '$filepath': $!");
-        my ($pipe, $ctx) = $git->command_output_pipe(qw/cat-file blob/, $blob);
+            or die "Internal error: can't create file '$filepath': $!";
+
+        my $cmd = $git->command(qw/cat-file blob/, $blob);
+        my $stdout = $cmd->stdout;
         my $read;
-        while ($read = sysread $pipe, my $buffer, 64 * 1024) {
+        while ($read = sysread $stdout, my $buffer, 64 * 1024) {
             my $length = length $buffer;
             my $offset = 0;
             while ($length) {
                 my $written = syswrite $tmp, $buffer, $length, $offset;
                 defined $written
-                    or throw Error::Simple("Internal error: can't write to '$filepath': $!");
+                    or die "Internal error: can't write to '$filepath': $!";
                 $length -= $written;
                 $offset += $written;
             }
         }
         defined $read
-            or throw Error::Simple("Internal error: can't read from git cat-file pipe: $!");
-        $git->command_close_pipe($pipe, $ctx);
-        $tmp->close();
+            or die "Internal error: can't read from git cat-file pipe: $!";
+        $cmd->close;
+
+        $tmp->close;
+
         $cache->{$blob} = $filepath;
     }
 
@@ -527,7 +546,7 @@ sub blob {
 sub file_size {
     my ($git, $rev, $file) = @_;
 
-    chomp(my $size = $git->command('cat-file', '-s', "$rev:$file"));
+    chomp(my $size = $git->run('cat-file', '-s', "$rev:$file"));
 
     return $size;
 }
@@ -544,15 +563,15 @@ sub error {
         # hook he/she won't be able to use that information. So, we may have
         # to strip the context from the details.
         $details =~ s/ at .*? line \d+(?: thread \d+)?\.?$//s
-            if $git->{more}{nocarp};
+            if $git->{_plugin_githooks}{nocarp};
 
         $details =~ s/\n*$//s; # strip trailing newlines
         $details =~ s/^/  /gm; # prefix each line with two spaces
         $fmtmsg .= ":\n\n$details\n";
     }
     $fmtmsg .= "\n";            # end in a newline
-    push @{$git->{more}{errors}}, $fmtmsg;
-    if ($git->{more}{nocarp}) {
+    push @{$git->{_plugin_githooks}{errors}}, $fmtmsg;
+    if ($git->{_plugin_githooks}{nocarp}) {
         warn $fmtmsg;           ## no critic (RequireCarping)
     } else {
         carp $fmtmsg;
@@ -563,24 +582,215 @@ sub error {
 sub get_errors {
     my ($git) = @_;
 
-    return exists $git->{more}{errors} ? @{$git->{more}{errors}} : ();
+    return exists $git->{_plugin_githooks}{errors} ? @{$git->{_plugin_githooks}{errors}} : ();
 }
 
 sub nocarp {
     my ($git) = @_;
-    $git->{more}{nocarp} = 1;
+    $git->{_plugin_githooks}{nocarp} = 1;
     return;
 }
 
+##############
+# The following routines are invoked after all hooks have been
+# processed. Some hooks may need to take a global action depending on
+# the overall result of all hooks.
+
+sub post_hook {
+    my ($git, $sub) = @_;
+    push @{$git->{_plugin_githooks}{post_hooks}}, $sub;
+    return;
+}
+
+sub post_hooks {
+    my ($git) = @_;
+    return @{$git->{_plugin_githooks}{post_hooks}};
+}
+
+sub is_ref_enabled {
+    my ($git, $ref, @specs) = @_;
+
+    return 1 if ! defined $ref || @specs == 0;
+
+    foreach (@specs) {
+        if (/^\^/) {
+            return 1 if $ref =~ qr/$_/;
+        } else {
+            return 1 if $ref eq $_;
+        }
+    }
+
+    return 0;
+}
+
+# The routine redirect_output redirects STDOUT and STDERR to a temporary
+# file and returns a reference that should be passed to the routine
+# restore_output to restore the handles to their original state.
+
+sub redirect_output {
+    my ($git) = @_;
+    ## no critic (RequireBriefOpen, RequireCarping)
+    open(my $oldout, '>&', \*STDOUT)  or die "Can't dup STDOUT: $!";
+    open(my $olderr, '>&', \*STDERR)  or die "Can't dup STDERR: $!";
+    my $tempfile = Path::Tiny->tempfile(UNLINK => 1);
+    open(STDOUT    , '>' , $tempfile) or die "Can't redirect STDOUT to \$tempfile: $!";
+    open(STDERR    , '>&', \*STDOUT)  or die "Can't dup STDOUT for STDERR: $!";
+    ## use critic
+    return [$oldout, $olderr, $tempfile];
+}
+
+# This routine gets a reference returned by redirect_output, restores STDOUT
+# and STDERR to their previous state and returns a string containing every
+# output since the previous call to redirect_output.
+
+sub restore_output {
+    my ($git, $saved) = @_;
+    my ($oldout, $olderr, $tempfile) = @$saved;
+    ## no critic (RequireCarping)
+    open(STDOUT, '>&', $oldout) or die "Can't dup \$oldout: $!";
+    open(STDERR, '>&', $olderr) or die "Can't dup \$olderr: $!";
+    ## use critic
+    return $tempfile->slurp;
+}
+
+sub match_user {
+    my ($git, $spec) = @_;
+
+    if (my $myself = $git->authenticated_user()) {
+        if ($spec =~ /^\^/) {
+            return 1 if $myself =~ $spec;
+        } elsif ($spec =~ /^@/) {
+            return 1 if im_memberof($git, $myself, $spec);
+        } else {
+            return 1 if $myself eq $spec;
+        }
+    }
+
+    return 0;
+}
+
+sub im_admin {
+    my ($git) = @_;
+    foreach my $spec ($git->get_config(githooks => 'admin')) {
+        return 1 if match_user($git, $spec);
+    }
+    return 0;
+}
+
+sub eval_gitconfig {
+    my ($git, $config) = @_;
+
+    my $value;
+
+    if ($config =~ s/^file://) {
+        $value = do $config;
+        unless ($value) {
+            die "couldn't parse '$config': $@\n" if $@;
+            die "couldn't do '$config': $!\n"    unless defined $value;
+            die "couldn't run '$config'\n"       unless $value;
+        }
+    } elsif ($config =~ s/^eval://) {
+        $value = eval $config; ## no critic (BuiltinFunctions::ProhibitStringyEval)
+        die "couldn't parse '$config':\n$@\n" if $@;
+    } else {
+        $value = $config;
+    }
+
+    return $value;
+}
+
+sub file_temp {
+    my ($git, $rev, $file, @args) = @_;
+
+    carp 'Invoking deprecated routine ', __PACKAGE__, '::file_temp. Please, see documentation.';
+
+    return $git->blob($rev, $file, @args);
+}
+
+sub grok_groups_spec {
+    my ($groups, $specs, $source) = @_;
+    foreach (@$specs) {
+        s/\#.*//;               # strip comments
+        next unless /\S/;       # skip blank lines
+        /^\s*(\w+)\s*=\s*(.+?)\s*$/
+            or die __PACKAGE__, ": invalid line in '$source': $_\n";
+        my ($groupname, $members) = ($1, $2);
+        exists $groups->{"\@$groupname"}
+            and die __PACKAGE__, ": redefinition of group ($groupname) in '$source': $_\n";
+        foreach my $member (split / /, $members) {
+            if ($member =~ /^\@/) {
+                # group member
+                $groups->{"\@$groupname"}{$member} = $groups->{$member}
+                    or die __PACKAGE__, ": unknown group ($member) cited in '$source': $_\n";
+            } else {
+                # user member
+                $groups->{"\@$groupname"}{$member} = undef;
+            }
+        }
+    }
+    return;
+}
+
+sub grok_groups {
+    my ($git) = @_;
+
+    my $cache = $git->cache('githooks');
+
+    unless (exists $cache->{groups}) {
+        my @groups = $git->get_config(githooks => 'groups')
+            or die __PACKAGE__, ": you have to define the githooks.groups option to use groups.\n";
+
+        my $groups = {};
+        foreach my $spec (@groups) {
+            if (my ($groupfile) = ($spec =~ /^file:(.*)/)) {
+                my @groupspecs = path($groupfile)->lines;
+                defined $groupspecs[0]
+                    or die __PACKAGE__, ": can't open groups file ($groupfile): $!\n";
+                grok_groups_spec($groups, \@groupspecs, $groupfile);
+            } else {
+                my @groupspecs = split /\n/, $spec;
+                grok_groups_spec($groups, \@groupspecs, "githooks.groups");
+            }
+        }
+        $cache->{groups} = $groups;
+    }
+
+    return $cache->{groups};
+}
+
+sub im_memberof {
+    my ($git, $myself, $groupname) = @_;
+
+    my $groups = grok_groups($git);
+
+    exists $groups->{$groupname}
+        or die __PACKAGE__, ": group $groupname is not defined.\n";
+
+    my $group = $groups->{$groupname};
+    return 1 if exists $group->{$myself};
+    while (my ($member, $subgroup) = each %$group) {
+        next     unless defined $subgroup;
+        return 1 if     im_memberof($git, $myself, $member);
+    }
+    return 0;
+}
+
 
-1; # End of Git::More
+1; # End of Git::Repository::Plugin::GitHooks
 __END__
+
+=for Pod::Coverage grok_groups_spec grok_groups
+
+=head1 NAME
+
+Git::Repository::Plugin::GitHooks - Add useful methods for hooks to Git::Repository
 
 =head1 SYNOPSIS
 
-    use Git::More;
+    # load the plugin
+    use Git::Repository 'GitHooks';
 
-    my $git = Git::More->repository();
+    my $git = Git::Repository->new();
 
     my $config  = $git->get_config();
     my $branch  = $git->get_current_branch();
@@ -592,10 +802,10 @@ __END__
 
 =head1 DESCRIPTION
 
-This is an extension of the C<Git> class. It's meant to implement a
-few extra methods commonly needed by Git hook developers.
+This module adds several methods useful to implement Git hooks to
+B<Git::Repository>.
 
-In particular, it's used by the standard hooks implemented by the
+In particular, it is used by the standard hooks implemented by the
 C<Git::Hooks> framework.
 
 =head1 CONFIGURATION VARIABLES
@@ -607,12 +817,140 @@ and sub-section names may contain any characters, except newline. If your
 config files have non-ASCII characters you should ensure that they are
 properly decoded by specifying their encoding like this:
 
-    $Git::More::CONFIG_ENCODING = 'UTF-8';
+    $Git::Repository::Plugin::GitHooks::CONFIG_ENCODING = 'UTF-8';
 
 The acceptable values for this variable are all the encodings supported by
 the C<Encode> module.
 
 =head1 METHODS
+
+=head2 undef_commit
+
+The undefined commit is a special SHA-1 used by Git in the update and
+pre-receive hooks to signify that a reference either was just created (as
+the old commit) or has been just deleted (as the new commit).
+
+=head2 empty_commit
+
+The empty commit represents a commit with an empty tree.
+
+=head2 im_admin(GIT)
+
+This routine checks if the authenticated user (again, as returned by the
+C<authenticated_user> method) matches the specifications given by the
+C<githooks.admin> configuration variable.
+
+=head2 eval_gitconfig(VALUE)
+
+This routine makes it easier to grok config values as Perl code. If
+C<VALUE> is a string beginning with C<eval:>, the remaining of it is
+evaluated as a Perl expression and the resulting value is returned. If
+C<VALUE> is a string beginning with C<file:>, the remaining of it is
+treated as a file name which contents are evaluated as Perl code and
+the resulting value is returned. Otherwise, C<VALUE> itself is
+returned.
+
+=head2 redirect_output
+
+This routine redirects STDOUT and STDERR to a temporary file and returns a
+reference that should be passed to the routine C<restore_output> to restore
+the handles to their original state.
+
+=head2 restore_output REF
+
+This routine gets a reference returned by C<redirect_output>, restores
+STDOUT and STDERR to their previous state and returns a string containing
+every output since the previous call to redirect_output.
+
+=head2 file_temp REV, FILE, ARGS...
+
+This routine is DEPRECATED and has been replaced by the C<blob> method.
+
+This routine returns the name of a temporary file into which the contents of
+the file FILE in revision REV has been copied.
+
+It's useful for hooks that need to read the contents of changed files in
+order to check anything in them.
+
+These files are cached so that if more than one hook needs to get at them
+they're created only once.
+
+By default, all temporary files are removed when the hook exits.
+
+Any remaining ARGS are passed as arguments to C<Path::Tiny::tempfile> so
+that you can have more control over the temporary file creation.
+
+=head2 post_hook SUB
+
+Plugin developers may be interested in performing some action
+depending on the overall result of every check made by every other
+hook. As an example, Gerrit's C<patchset-created> hook is invoked
+asynchronously, meaning that the hook's exit code doesn't affect the
+action that triggered the hook. The proper way to signal the hook
+result for Gerrit is to invoke it's API to make a review. But we want
+to perform the review once, at the end of the hook execution, based on
+the overall result of all enabled checks.
+
+To do that plugin developers can use this routine to register
+callbacks that are invoked at the end of C<run_hooks>. The callbacks
+are called with the following arguments:
+
+=over
+
+=item * HOOK_NAME
+
+The basename of the invoked hook.
+
+=item * GIT
+
+The Git::Repository object that was passed to the plugin hooks.
+
+=item * ARGS...
+
+The remaining arguments that were passed to the plugin hooks.
+
+=back
+
+The callbacks may see if there were any errors signalled by the plugin
+hook by invoking the C<get_errors> method on the GIT object. They may
+be used to signal the hook result in any way they want, but they
+should not die or they will prevent other post hooks to run.
+
+=head2 post_hooks
+
+Returns the list of post hook functions registered with the post_hook method
+above.
+
+=head2 is_ref_enabled(REF, SPEC, ...)
+
+This routine returns a boolean indicating if REF matches one of the
+ref-specs in SPECS. REF is the complete name of a Git ref and SPECS is
+a list of strings, each one specifying a rule for matching ref names.
+
+As a special case, it returns true if REF is undef or if there is no
+SPEC whatsoever, meaning that by default all refs/commits are enabled.
+
+You may want to use it, for example, in an C<update>, C<pre-receive>,
+or C<post-receive> hook which may be enabled depending on the
+particular refs being affected.
+
+Each SPEC rule may indicate the matching refs as the complete ref
+name (e.g. "refs/heads/master") or by a regular expression starting
+with a caret (C<^>), which is kept as part of the regexp.
+
+=head2 im_memberof(GIT, USER, GROUPNAME)
+
+This routine tells if USER belongs to GROUPNAME. The groupname is
+looked for in the specification given by the C<githooks.groups>
+configuration variable.
+
+=head2 match_user(GIT, SPEC)
+
+This routine checks if the authenticated user (as returned by the
+C<authenticated_user> method) matches the specification, which may be given
+in one of the three different forms acceptable for the C<githooks.admin>
+configuration variable above, i.e., as a username, as a @group, or as a
+^regex.
 
 =head2 hookname [NAME]
 
@@ -624,7 +962,7 @@ last name set.
 
 This method groks the configuration options for the repository by
 invoking C<git config --list>. The configuration is cached during the
-first invokation in the object C<Git::More> object. So, if the
+first invokation in the object C<Git::Repository> object. So, if the
 configuration is changed afterwards, the method won't notice it. This
 is usually ok for hooks, though.
 
@@ -695,7 +1033,7 @@ the variable's last value or C<undef>, if it's not defined.
 =head2 cache SECTION
 
 This method may be used by plugin developers to cache information in
-the context of a Git::More object. SECTION is a string (usually a
+the context of a Git::Repository object. SECTION is a string (usually a
 plugin name) that is associated with a hash-ref. The method simply
 returns the hash-ref, which can be used by the caller to store any
 kind of information.
@@ -958,8 +1296,8 @@ order to check anything in them.
 These objects are cached so that if more than one hook needs to get at them
 they're created only once.
 
-By default, all temporary files are removed when the Git::More object is
-destroyed.
+By default, all temporary files are removed when the Git::Repository object
+is destroyed.
 
 Any remaining ARGS are passed as arguments to C<File::Temp::newdir> so that you
 can have more control over the temporary file creation.
@@ -1012,4 +1350,5 @@ and to produce its own message with B<warn> instead of B<carp>.
 
 =head1 SEE ALSO
 
-C<Git>
+C<Git::Repository::Plugin>, C<Git::Hooks>.
+
