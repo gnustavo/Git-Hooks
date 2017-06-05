@@ -10,6 +10,8 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
   - Remove the G::R::P::GitHooks::nocarp method.
 
+  - Remove the G::R::P::GitHooks::eval_gitconfig method.
+
   [New features]
 
   - Add a the CheckReference plugin.

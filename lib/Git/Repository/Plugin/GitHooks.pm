@@ -13,7 +13,7 @@ sub _keywords {
 
                  hookname cache clean_cache post_hook post_hooks
 
-                 get_config eval_gitconfig
+                 get_config
 
                  undef_commit empty_commit get_commit get_commits
                  get_commit_msg read_commit_msg_file write_commit_msg_file
@@ -691,28 +691,6 @@ sub im_admin {
     return 0;
 }
 
-sub eval_gitconfig {
-    my ($git, $config) = @_;
-
-    my $value;
-
-    if ($config =~ s/^file://) {
-        $value = do $config;
-        unless ($value) {
-            die "couldn't parse '$config': $@\n" if $@;
-            die "couldn't do '$config': $!\n"    unless defined $value;
-            die "couldn't run '$config'\n"       unless $value;
-        }
-    } elsif ($config =~ s/^eval://) {
-        $value = eval $config; ## no critic (BuiltinFunctions::ProhibitStringyEval)
-        die "couldn't parse '$config':\n$@\n" if $@;
-    } else {
-        $value = $config;
-    }
-
-    return $value;
-}
-
 sub file_temp {
     my ($git, $rev, $file, @args) = @_;
 
@@ -853,16 +831,6 @@ The empty commit represents a commit with an empty tree.
 This routine checks if the authenticated user (again, as returned by the
 C<authenticated_user> method) matches the specifications given by the
 C<githooks.admin> configuration variable.
-
-=head2 eval_gitconfig(VALUE)
-
-This routine makes it easier to grok config values as Perl code. If
-C<VALUE> is a string beginning with C<eval:>, the remaining of it is
-evaluated as a Perl expression and the resulting value is returned. If
-C<VALUE> is a string beginning with C<file:>, the remaining of it is
-treated as a file name which contents are evaluated as Perl code and
-the resulting value is returned. Otherwise, C<VALUE> itself is
-returned.
 
 =head2 redirect_output
 
