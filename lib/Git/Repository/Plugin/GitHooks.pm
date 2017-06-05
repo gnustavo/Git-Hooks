@@ -9,24 +9,45 @@ our @ISA = qw/Git::Repository::Plugin/;
 
 sub _keywords {
 
-    return qw/ undef_commit empty_commit hookname get_config cache
-               clean_cache get_commit get_commits get_commit_msg
-               read_commit_msg_file write_commit_msg_file
-               filter_files_in_index filter_files_in_range
-               filter_files_in_commit set_affected_ref get_affected_refs
-               get_affected_ref_range get_affected_ref_commit_ids
-               get_affected_ref_commits push_input_data get_input_data
-               set_authenticated_user authenticated_user get_current_branch
-               get_sha1 get_head_or_empty_tree blob file_size error
-               get_errors nocarp post_hook post_hooks is_ref_enabled
-               redirect_output restore_output match_user im_admin
-               eval_gitconfig file_temp grok_groups_spec grok_groups
-               im_memberof /;
+    return qw/
 
+                 hookname cache clean_cache post_hook post_hooks
+
+                 get_config eval_gitconfig
+
+                 undef_commit empty_commit get_commit get_commits
+                 get_commit_msg read_commit_msg_file write_commit_msg_file
+                 get_sha1
+
+                 set_affected_ref get_affected_refs get_affected_ref_range
+                 get_affected_ref_commit_ids get_affected_ref_commits
+
+                 set_authenticated_user authenticated_user
+
+                 get_current_branch
+
+                 error get_errors nocarp
+
+                 match_user im_admin grok_groups_spec grok_groups im_memberof
+
+                 push_input_data get_input_data
+
+                 filter_files_in_index filter_files_in_range filter_files_in_commit
+
+                 blob file_size
+
+                 get_head_or_empty_tree is_ref_enabled
+
+                 redirect_output restore_output
+
+                 file_temp
+
+             /;
 }
 
 use Carp;
 use Path::Tiny;
+
 # This package variable tells get_config which character encoding is used in
 # the output of the git-config command. Usually none, and decoding isn't
 # necessary. But sometimes it is...
