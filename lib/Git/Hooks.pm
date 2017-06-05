@@ -113,328 +113,6 @@ sub spawn_external_hook {
     return 0;
 }
 
-##############
-# The following routines prepare the arguments for some hooks to make
-# it easier to deal with them later on.
-
-# Some hooks get information from STDIN as text lines with
-# space-separated fields. This routine reads up all of STDIN and tucks
-# that information in the Git::Repository object.
-
-sub _prepare_input_data {
-    my ($git) = @_;
-    while (<STDIN>) { ## no critic (InputOutput::ProhibitExplicitStdin)
-        chomp;
-        $git->push_input_data([split]);
-    }
-    return;
-}
-
-# The pre-receive and post-receive hooks get the list of affected
-# commits via STDIN. This routine gets them all and set all affected
-# refs in the Git object.
-
-sub _prepare_receive {
-    my ($git) = @_;
-    _prepare_input_data($git);
-    foreach (@{$git->get_input_data()}) {
-        my ($old_commit, $new_commit, $ref) = @$_;
-        $git->set_affected_ref($ref, $old_commit, $new_commit);
-    }
-    return;
-}
-
-# The update hook get three arguments telling which reference is being
-# updated, from which commit, to which commit. Here we use these
-# arguments to set the affected ref in the Git object.
-
-sub _prepare_update {
-    my ($git, $args) = @_;
-    $git->set_affected_ref(@$args);
-    return;
-}
-
-# Gerrit hooks get a list of option/value pairs. Here we convert the
-# list into a hash and change the original argument list into a single
-# hash-ref. We also record information about the user performing the
-# push. Based on:
-# https://gerrit-review.googlesource.com/Documentation/config-hooks.html
-
-sub _prepare_gerrit_args {
-    my ($git, $args) = @_;
-
-    my %opt = @$args;
-
-    # Each Gerrit hook receive the full name and email of the user
-    # performing the hooked operation via a specific option in the
-    # format "User Name (email@example.net)". Here we grok it.
-    my $user =
-        $opt{'--uploader'}  ||
-        $opt{'--author'}    ||
-        $opt{'--submitter'} ||
-        $opt{'--abandoner'} ||
-        $opt{'--restorer'}  ||
-        $opt{'--reviewer'}  ||
-        undef;
-
-    # Here we make the name and email available in two environment variables
-    # (GERRIT_USER_NAME and GERRIT_USER_EMAIL) so that
-    # Git::Repository::Plugin::GitHooks::authenticated_user can more easily
-    # grok the userid from them later.
-    if ($user && $user =~ /([^\(]+)\s+\(([^\)]+)\)/) {
-        $ENV{GERRIT_USER_NAME}  = $1; ## no critic (Variables::RequireLocalizedPunctuationVars)
-        $ENV{GERRIT_USER_EMAIL} = $2; ## no critic (Variables::RequireLocalizedPunctuationVars)
-    }
-
-    # Now we create a Gerrit::REST object connected to the Gerrit
-    # server and tack it to the hook arguments so that Gerrit plugins
-    # can interact with it.
-
-    # We 'require' the module instead of 'use' it because it's only
-    # used if one sets up Gerrit hooks, which may not be the most
-    # common usage of Git::Hooks.
-    eval {require Gerrit::REST}
-        or die __PACKAGE__, ": Please, install the Gerrit::REST module to use Gerrit hooks.\n";
-
-    $opt{gerrit} = do {
-        my %info;
-        foreach my $arg (qw/url username password/) {
-            $info{$arg} = $git->get_config('githooks.gerrit' => $arg)
-                or die __PACKAGE__, ": Missing githooks.gerrit.$arg configuration variable.\n";
-        }
-
-        Gerrit::REST->new(@info{qw/url username password/});
-    };
-
-    @$args = (\%opt);
-
-    return;
-}
-
-# The ref-update Gerrit hook is invoked synchronously when a user
-# pushes commits to a branch. So, it acts much like Git's standard
-# 'update' hook. This routine prepares the options as usual and sets
-# the affected ref accordingly. The documented arguments for the hook
-# are these:
-
-# ref-update --project <project name> --refname <refname> --uploader \
-# <uploader> --oldrev <sha1> --newrev <sha1>
-
-sub _prepare_gerrit_ref_update {
-    my ($git, $args) = @_;
-
-    _prepare_gerrit_args($git, $args);
-
-    # The --refname argument contains the branch short-name if it's in the
-    # refs/heads/ namespace. But we need to always use the branch long-name,
-    # so we change it here.
-    my $refname = $args->[0]{'--refname'};
-    $refname = "refs/heads/$refname"
-        unless $refname =~ m:^refs/:;
-
-    $git->set_affected_ref($refname, @{$args->[0]}{qw/--oldrev --newrev/});
-    return;
-}
-
-# The following routine is the post_hook used by the Gerrit hooks
-# patchset-created and draft-published. It basically casts a vote on the
-# patchset based on the errors found during the hook processing.
-
-sub _gerrit_patchset_post_hook {
-    my ($hook_name, $git, $args) = @_;
-
-    for my $arg (qw/project branch change patchset/) {
-        exists $args->{"--$arg"}
-            or die __PACKAGE__, ": Missing --$arg argument to Gerrit's $hook_name hook.\n";
-    }
-
-    # We have to use the most complete form of Gerrit change ids because
-    # it's the only unanbiguous one. Vide:
-    # https://gerrit.cpqd.com.br/Documentation/rest-api-changes.html#change-id.
-
-    # Up to Gerrit 2.12 the argument --change passed the change's Change-Id
-    # code. So, we had to build the complete change id using the information
-    # passed on the arguments --project and --branch. From Gerrit 2.13 on
-    # the --change argument already contains the complete change id. So we
-    # have to figure out if we need to build it or not.
-
-    # Also, for the old Gerrit we have to url-escape the change-id because
-    # the project name may contain slashes (and perhaps other reserved
-    # characters). This is possibly not a complete solution. Vide:
-    # http://mark.stosberg.com/blog/2010/12/percent-encoding-uris-in-perl.html.
-
-    require URI::Escape;
-    my $id = $args->{'--change'} =~ /~/
-        ? $args->{'--change'}
-        : URI::Escape::uri_escape(join('~', @{$args}{qw/--project --branch --change/}));
-
-    my $patchset = $args->{'--patchset'};
-
-    # Grok all configuration options at once to make it easier to deal with them below.
-    my %cfg = map {$_ => $git->get_config('githooks.gerrit' => $_) || undef}
-        qw/review-label vote-nok vote-ok votes-to-approve votes-to-reject comment-ok auto-submit/;
-
-    # Convert DEPRECATED configuration options to new ones.
-    if (any {defined $cfg{$_}} qw/review-label vote-nok vote-ok/) {
-        if (any {defined $cfg{$_}} qw/votes-to-approve votes-to-reject/) {
-            die __PACKAGE__ . ": Mixing deprecated githooks.gerrit configuration options (review-label vote-nok vote-ok) with new ones (votes-to-approve votes-to-reject) is not permited. Please, convert the deprecated ones.\n"
-        }
-        $cfg{'votes-to-approve'} = $cfg{'votes-to-reject'} = $cfg{'review-label'} || 'Code-Review';
-        $cfg{'votes-to-reject'} .= $cfg{'vote-nok'} || '-1';
-        $cfg{'votes-to-approve'} .= $cfg{'vote-ok'}  || '+1';
-    }
-
-    # https://gerrit-documentation.storage.googleapis.com/Documentation/2.13.1/rest-api-changes.html#set-review
-    my %review_input;
-    my $auto_submit = 0;
-
-    if (my @errors = $git->get_errors()) {
-        $review_input{labels}  = $cfg{'votes-to-reject'} || 'Code-Review-1';
-        $review_input{message} = join("\n\n", @errors);
-    } else {
-        $review_input{labels}  = $cfg{'votes-to-approve'} || 'Code-Review+1';
-        $review_input{message} = "[Git::Hooks] $cfg{'comment-ok'}"
-            if $cfg{'comment-ok'};
-        $auto_submit = 1 if $cfg{'auto-submit'};
-    }
-
-    # Convert, e.g., 'LabelA-1,LabelB+2' into { LabelA => '-1', LabelB => '+2' }
-    $review_input{labels} = { map {/^([-\w]+)([-+]\d+)$/i} split(',', $review_input{labels}) };
-
-    if (my $notify = $git->get_config('githooks.gerrit' => 'notify')) {
-        $review_input{notify} = $notify;
-    }
-
-    # Cast review
-    eval { $args->{gerrit}->POST("/changes/$id/revisions/$patchset/review", \%review_input) }
-        or die __PACKAGE__ . ": error in Gerrit::REST::POST(/changes/$id/revisions/$patchset/review): $@\n";
-
-    # Auto submit if requested and passed verification
-    if ($auto_submit) {
-        eval { $args->{gerrit}->POST("/changes/$id/submit", {wait_for_merge => 'true'}) }
-            or die __PACKAGE__ . ": I couldn't submit the change. Perhaps you have to rebase it manually to resolve a conflict. Please go to its web page to check it out. The error message follows: $@\n";
-    }
-
-    return;
-}
-
-# Gerrit's patchset-created hook is invoked when a commit is pushed to a
-# refs/for/* branch for revision. It's invoked asynchronously, i.e., it
-# can't stop the push to happen. Instead, if it detects any problem, we must
-# reject the commit via Gerrit's own revision process. So, we prepare a post
-# hook action in which we see if there were errors that should be signaled
-# via a code review action. Note, however, that draft changes can only be
-# accessed by their respective owners and usually can't be voted on by the
-# hook. So, draft changes aren't voted on and we exit the hook prematurely.
-# The arguments for the hook are these:
-
-# patchset-created --change <change id> --is-draft <boolean> \
-# --kind <change kind> --change-url <change url> \
-# --change-owner <change owner> --project <project name> \
-# --branch <branch> --topic <topic> --uploader <uploader>
-# --commit <sha1> --patchset <patchset id>
-
-# Gerrit's draft-published hook is invoked when a draft change is
-# published. In this state they're are visible by the hook and can be voted
-# on. The arguments for the hook are these:
-
-# draft-published --change <change id> --change-url <change url> \
-# --change-owner <change owner> --project <project name> \
-# --branch <branch> --topic <topic> --uploader <uploader> \
-# --commit <sha1> --patchset <patchset id>
-
-sub _prepare_gerrit_patchset {
-    my ($git, $args) = @_;
-
-    _prepare_gerrit_args($git, $args);
-
-    exit(0) if exists $args->[0]{'--is-draft'} and $args->[0]{'--is-draft'} eq 'true';
-
-    $git->post_hook(\&_gerrit_patchset_post_hook);
-
-    return;
-}
-
-# The %prepare_hook hash maps hook names to the routine that must be
-# invoked in order to "prepare" their arguments.
-
-my %prepare_hook = (
-    'update'           => \&_prepare_update,
-    'pre-push'         => \&_prepare_input_data,
-    'post-rewrite'     => \&_prepare_input_data,
-    'pre-receive'      => \&_prepare_receive,
-    'post-receive'     => \&_prepare_receive,
-    'ref-update'       => \&_prepare_gerrit_ref_update,
-    'patchset-created' => \&_prepare_gerrit_patchset,
-    'draft-published'  => \&_prepare_gerrit_patchset,
-);
-
-################
-
-# This routine loads every plugin configured in the githooks.plugin
-# option.
-
-sub _load_plugins {
-    my ($git) = @_;
-
-    my %enabled_plugins  = map {($_ => undef)} map {split} $git->get_config(githooks => 'plugin');
-
-    return unless %enabled_plugins; # no one configured
-
-    my %disabled_plugins = map {($_ => undef)} map {split} $git->get_config(githooks => 'disable');
-
-    # Remove disabled plugins from the list of enabled ones
-    foreach my $plugin (keys %enabled_plugins) {
-        my ($prefix, $basename) = ($plugin =~ /^(.+::)?(.+)/);
-
-        if (   exists $disabled_plugins{$plugin}
-            || exists $disabled_plugins{$basename}
-            || exists $ENV{$basename} && ! $ENV{$basename}
-        ) {
-            delete $enabled_plugins{$plugin};
-        } else {
-            $enabled_plugins{$plugin} = [$prefix, $basename];
-        }
-    }
-
-    # Define the list of directories where we'll look for the hook
-    # plugins. First the local directory 'githooks' under the
-    # repository path, then the optional list of directories
-    # specified by the githooks.plugins config option, and,
-    # finally, the Git::Hooks standard hooks directory.
-    my @plugin_dirs = grep {-d} (
-        'githooks',
-        $git->get_config(githooks => 'plugins'),
-        path($INC{'Git/Hooks.pm'})->parent->child('Hooks'),
-    );
-
-    # Load remaining enabled plugins
-    while (my ($key, $plugin) = each %enabled_plugins) {
-        my ($prefix, $basename) = @$plugin;
-        my $exit = do {
-            if ($prefix) {
-                # It must be a module name
-                ## no critic (ProhibitStringyEval, RequireCheckingReturnValueOfEval)
-                eval "require $prefix$basename";
-            } else {
-                # Otherwise, it's a basename we must look for in @plugin_dirs
-                $basename .= '.pm' unless $basename =~ /\.p[lm]$/i;
-                my @scripts = grep {!-d} map {path($_)->child($basename)} @plugin_dirs;
-                $basename = shift @scripts
-                    or die __PACKAGE__, ": can't find enabled hook $basename.\n";
-                do $basename;
-            }
-        };
-        unless ($exit) {
-            die __PACKAGE__, ": couldn't parse $basename: $@\n" if $@;
-            die __PACKAGE__, ": couldn't do $basename: $!\n"    unless defined $exit;
-            die __PACKAGE__, ": couldn't run $basename\n";
-        }
-    }
-
-    return;
-}
-
 # This is the main routine of Git::Hooks. It gets the original hook
 # name and arguments, sets up the environment, loads plugins and
 # invokes the appropriate hook functions.
@@ -442,23 +120,16 @@ sub _load_plugins {
 sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplexity)
     my ($hook_name, @args) = @_;
 
-    $hook_name = path($hook_name)->basename;
-
     my $git = Git::Repository->new();
 
-    $git->hookname($hook_name);
+    my $hook_basename = $git->prepare_hook($hook_name, @args);
 
-    # Some hooks need some argument munging before we invoke them
-    if (my $prepare = $prepare_hook{$hook_name}) {
-        $prepare->($git, \@args);
-    }
-
-    _load_plugins($git);
+    $git->load_plugins();
 
     my $errors = 0;             # Count number of errors found
 
     # Call every hook function installed by the hook scripts before.
-    for my $hook (@{$Hooks{$hook_name}}) {
+    for my $hook (@{$Hooks{$hook_basename}}) {
         my ($package) = subname($hook) =~ m/^(.+)::/;
         my $ok = eval { $hook->($git, @args) };
         if (defined $ok) {
@@ -477,7 +148,7 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
         } elsif (length $@) {
             $errors += 1;
             # Old hooks die when they fail...
-            $git->error(__PACKAGE__ . "($hook_name)", "Hook failed", $@);
+            $git->error(__PACKAGE__ . "($hook_basename)", "Hook failed", $@);
         } else {
             # ...and return undef when they succeed.
         }
@@ -486,14 +157,14 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
     # Invoke enabled external hooks. This doesn't work in Windows yet.
     if ($^O ne 'MSWin32' && $git->get_config(githooks => 'externals')) {
         foreach my $dir (
-            grep {-e} map {path($_)->child($hook_name)}
+            grep {-e} map {path($_)->child($hook_basename)}
                 ($git->get_config(githooks => 'hooks'), path($git->git_dir())->child('hooks.d'))
         ) {
             opendir my $dh, $dir
                 or $git->error(__PACKAGE__, ": cannot opendir '$dir'", $!)
                     and next;
             foreach my $file (grep {!-d && -x} map {path($dir)->child($_)} readdir $dh) {
-                spawn_external_hook($git, $file, $hook_name, @args)
+                spawn_external_hook($git, $file, $hook_basename, @args)
                     or $git->error(__PACKAGE__, ": error in external hook '$file'");
             }
         }
@@ -501,7 +172,7 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
 
     # Some hooks want to do some post-processing
     foreach my $post_hook ($git->post_hooks) {
-        $post_hook->($hook_name, $git, @args);
+        $post_hook->($hook_basename, $git, @args);
     }
 
     if ($errors || scalar($git->get_errors())) {
@@ -510,7 +181,7 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
             $git->error(__PACKAGE__, $help);
         }
 
-        if (($hook_name eq 'commit-msg' or $hook_name eq 'pre-commit')
+        if (($hook_basename eq 'commit-msg' or $hook_basename eq 'pre-commit')
                 and not $git->get_config(githooks => 'abort-commit')) {
             warn <<"EOF";
 ATTENTION: To fix the problems in this commit, please consider
