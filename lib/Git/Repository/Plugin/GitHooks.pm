@@ -136,7 +136,7 @@ EOT
     } elsif (exists $config->{$section}{$var}) {
         return wantarray ? @{$config->{$section}{$var}} : $config->{$section}{$var}[-1];
     } else {
-        return wantarray ? () : undef;
+        return;
     }
 }
 
