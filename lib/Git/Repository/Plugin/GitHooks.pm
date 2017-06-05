@@ -11,8 +11,8 @@ sub _keywords {
 
     return qw/
 
-                 prepare_hook load_plugins cache clean_cache post_hook
-                 post_hooks
+                 prepare_hook load_plugins invoke_external_hooks
+                 cache clean_cache post_hook post_hooks
 
                  get_config
 
@@ -1093,6 +1093,103 @@ sub load_plugins {
     return;
 }
 
+# This is an internal routine used by the method invoke_external_hook
+# below.
+
+sub _invoke_external_hook {
+    my ($git, $file, $hook, @args) = @_;
+
+    my $prefix  = '[' . __PACKAGE__ . '(' . path($file)->basename . ')]';
+    my $saved_output = $git->redirect_output();
+
+    if ($hook =~ /^(?:pre-receive|post-receive|pre-push|post-rewrite)$/) {
+
+        # These hooks receive information via STDIN that we read once
+        # before invoking any hook. Now, we must regenerate the same
+        # information and output it to the external hooks we invoke.
+
+        my $stdin = join("\n", map {join(' ', @$_)} @{$git->get_input_data}) . "\n";
+
+        my $pid = open my $pipe, '|-'; ## no critic (InputOutput::RequireBriefOpen)
+
+        if (! defined $pid) {
+            $git->restore_output($saved_output);
+            $git->error($prefix, "can't fork: $!");
+        } elsif ($pid) {
+            # parent
+            print $pipe $stdin;
+            my $exit = close $pipe;
+            my $output = $git->restore_output($saved_output);
+            if ($exit) {
+                warn $output, "\n" if length $output;
+                return 1;
+            } elsif ($!) {
+                $git->error($prefix, "Error closing pipe to external hook: $!", $output);
+            } else {
+                $git->error($prefix, "External hook exited with code $?", $output);
+            }
+        } else {
+            # child
+            { exec {$file} ($hook, @args) }
+            $git->restore_output($saved_output);
+            die "$prefix: can't exec: $!\n";
+        }
+
+    } else {
+
+        if (@args && ref $args[0]) {
+            # This is a Gerrit hook and we need to expand its arguments
+            @args = %{$args[0]};
+        }
+
+        my $exit = system {$file} ($hook, @args);
+
+        my $output = $git->restore_output($saved_output);
+
+        if ($exit == 0) {
+            warn $output, "\n" if length $output;
+            return 1;
+        } else {
+            my $message = do {
+                if ($exit == -1) {
+                    "failed to execute external hook: $!";
+                } elsif ($exit & 127) {
+                    sprintf("external hook died with signal %d, %s coredump",
+                            ($exit & 127), ($exit & 128) ? 'with' : 'without');
+                } else {
+                    sprintf("'$file' exited abnormally with value %d", $exit >> 8);
+                }
+            };
+            $git->error($prefix, $message, $output);
+        }
+    }
+
+    return 0;
+}
+
+sub invoke_external_hooks {
+    my ($git, @args) = @_;
+
+    return if $^O eq 'MSWin32' || ! $git->get_config(githooks => 'externals');
+
+    my $hookname = $git->{_plugin_githooks}{hookname};
+
+    foreach my $dir (
+        grep {-e}
+        map  {path($_)->child($hookname)}
+        ($git->get_config(githooks => 'hooks'), path($git->git_dir())->child('hooks.d'))
+    ) {
+        opendir my $dh, $dir
+            or $git->error(__PACKAGE__, ": cannot opendir '$dir'", $!)
+            and next;
+        foreach my $file (grep {!-d && -x} map {path($dir)->child($_)} readdir $dh) {
+            _invoke_external_hook($git, $file, $hookname, @args)
+                or $git->error(__PACKAGE__, ": error in external hook '$file'");
+        }
+    }
+    return;
+}
+
 
 1; # End of Git::Repository::Plugin::GitHooks
 __END__
@@ -1647,6 +1744,10 @@ doesn't die.
 
 This method returns a list of all error messages recorded with the
 C<error> method.
+
+=head2 invoke_external_hooks ARGS...
+
+This method is used by Git::Hooks::run_hooks to invoke external hooks.
 
 =head1 SEE ALSO
 
