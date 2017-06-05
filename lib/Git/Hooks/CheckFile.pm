@@ -179,8 +179,8 @@ CheckFile - Git::Hooks plugin for checking files
 
 =head1 DESCRIPTION
 
-This Git::Hooks plugin hooks itself to the hooks below to check if the
-contents of files added to or modified in the repository meet specified
+This Git::Hooks plugin hooks itself to the hooks below to check if the names
+and contents of files added to or modified in the repository meet specified
 constraints. If they don't, the commit/push is aborted.
 
 =over

@@ -814,6 +814,12 @@ Check if newly added files and reference names (branches and tags) comply
 with specified policies, so that you can impose a strict structure to the
 repository's file and reference hierarchies.
 
+=item * Git::Hooks::CheckReference
+
+Check if newly added reference names (branches, tags are just the most
+common Git references) comply with specified policies, so that you can
+impose a strict structure to the repository's reference hierarchies.
+
 =item * Git::Hooks::GerritChangeId
 
 Inserts a C<Change-Id> line in the commit log message to allow
