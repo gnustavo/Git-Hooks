@@ -448,9 +448,6 @@ sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplex
 
     $git->hookname($hook_name);
 
-    # Don't show context in error messages if requested
-    $git->nocarp if $git->get_config(githooks => 'nocarp');
-
     # Some hooks need some argument munging before we invoke them
     if (my $prepare = $prepare_hook{$hook_name}) {
         $prepare->($git, \@args);
