@@ -8,7 +8,7 @@ Chaves
 CheckAcls
 CheckJira
 CheckLog
-CheckStructure
+CheckReference
 checkwhitespace
 CODESPEC
 commit/M

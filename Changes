@@ -6,6 +6,8 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
   - Substitute Git::Repository for Git as the underlying git wrapper.
 
+  - Remove the CheckStructure plugin.
+
   - Remove the G::R::P::GitHooks::nocarp method.
 
   [New features]
