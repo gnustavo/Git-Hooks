@@ -8,13 +8,16 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
   - Remove the CheckStructure plugin.
 
-  - Remove the G::R::P::GitHooks::nocarp method.
-
-  - Remove the G::R::P::GitHooks::eval_gitconfig method.
+  - Remove the following methods from Git::Repository::Plugin::GitHooks,
+    which aren't used by plugins: nocarp, clean_cache, eval_gitconfig,
+    set_affected_ref.
 
   [New features]
 
   - Add a the CheckReference plugin.
+
+  - Add the following methods to Git::Repository::Plugin::GitHooks:
+    prepare_hook, load_plugins, invoke_external_hooks.
 
 1.16.0    2017-05-20 18:48:38-03:00 America/Sao_Paulo
 
