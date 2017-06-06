@@ -21,7 +21,7 @@ sub _keywords {
                  get_sha1
 
                  get_affected_refs get_affected_ref_range
-                 get_affected_ref_commit_ids get_affected_ref_commits
+                 get_affected_ref_commits
 
                  set_authenticated_user authenticated_user
 
@@ -412,21 +412,6 @@ sub get_affected_ref_range {
         or die __PACKAGE__, ": get_affected_ref_range($ref): no such affected ref\n";
 
     return @{$affected->{$ref}{range}};
-}
-
-sub get_affected_ref_commit_ids {
-    my ($git, $ref) = @_;
-
-    my $affected = _get_affected_refs_hash($git);
-
-    exists $affected->{$ref}
-        or die __PACKAGE__, ": get_affected_ref_commit_ids($ref): no such affected ref\n";
-
-    unless (exists $affected->{$ref}{ids}) {
-        $affected->{$ref}{ids} = [ map { $_->{'commit'} } $git->get_affected_ref_commits($ref) ];
-    }
-
-    return @{$affected->{$ref}{ids}};
 }
 
 sub get_affected_ref_commits {
@@ -1608,11 +1593,6 @@ the current push command.
 
 This method returns the two-element list of commit ids representing
 the OLDCOMMIT and the NEWCOMMIT of the affected REF.
-
-=head2 get_affected_ref_commit_ids(REF)
-
-This method returns the list of commit ids leading from the affected
-REF's NEWCOMMIT to OLDCOMMIT.
 
 =head2 get_affected_ref_commits(REF)
 
