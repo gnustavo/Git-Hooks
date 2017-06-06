@@ -23,7 +23,7 @@ sub _keywords {
                  get_affected_refs get_affected_ref_range
                  get_affected_ref_commits
 
-                 set_authenticated_user authenticated_user
+                 authenticated_user
 
                  get_current_branch
 
@@ -438,11 +438,6 @@ sub push_input_data {
 sub get_input_data {
     my ($git) = @_;
     return $git->{_plugin_githooks}{input_data} || [];
-}
-
-sub set_authenticated_user {
-    my ($git, $user) = @_;
-    return $git->{_plugin_githooks}{authenticated_user} = $user;
 }
 
 sub authenticated_user {
@@ -1620,13 +1615,6 @@ Git hooks like pre-receive, post-receive, pre-push, and post-rewrite.
 
 This method returns an array-ref pointing to a list of all pieces of
 data saved by calls to C<push_input_data> method above.
-
-=head2 set_authenticated_user USERNAME
-
-This method can be used to set the username of the authenticated user
-when the default heristics defined above aren't enough. The name will
-be cached so that subsequent invokations of B<authenticated_user> will
-return this.
 
 =head2 get_current_branch
 
