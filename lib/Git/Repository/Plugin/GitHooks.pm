@@ -20,7 +20,7 @@ sub _keywords {
                  get_commit_msg read_commit_msg_file write_commit_msg_file
                  get_sha1
 
-                 set_affected_ref get_affected_refs get_affected_ref_range
+                 get_affected_refs get_affected_ref_range
                  get_affected_ref_commit_ids get_affected_ref_commits
 
                  set_authenticated_user authenticated_user
@@ -378,7 +378,10 @@ sub filter_files_in_commit {
     return grep { $files{$_} == $num_parents } keys %files;
 }
 
-sub set_affected_ref {
+# Internal funtion to set the affected references in an update or
+# pre-receive hook.
+
+sub _set_affected_ref {
     my ($git, $ref, $old_commit, $new_commit) = @_;
     $git->{_plugin_githooks}{affected_refs}{$ref}{range} = [$old_commit, $new_commit];
     return;
@@ -780,7 +783,7 @@ sub _prepare_receive {
     _prepare_input_data($git);
     foreach (@{$git->get_input_data()}) {
         my ($old_commit, $new_commit, $ref) = @$_;
-        $git->set_affected_ref($ref, $old_commit, $new_commit);
+        _set_affected_ref($git, $ref, $old_commit, $new_commit);
     }
     return;
 }
@@ -791,7 +794,7 @@ sub _prepare_receive {
 
 sub _prepare_update {
     my ($git, $args) = @_;
-    $git->set_affected_ref(@$args);
+    _set_affected_ref($git, @$args);
     return;
 }
 
@@ -873,7 +876,7 @@ sub _prepare_gerrit_ref_update {
     $refname = "refs/heads/$refname"
         unless $refname =~ m:^refs/:;
 
-    $git->set_affected_ref($refname, @{$args->[0]}{qw/--oldrev --newrev/});
+    _set_affected_ref($git, $refname, @{$args->[0]}{qw/--oldrev --newrev/});
     return;
 }
 
@@ -1596,19 +1599,10 @@ is that if a file isn't changed with respect to one or more of COMMIT's
 parents, then it must have been checked already in those commits and we
 don't need to check it again.
 
-=head2 set_affected_ref REF OLDCOMMIT NEWCOMMIT
-
-This method should be used in the beginning of an C<update>,
-C<pre-receive>, or C<post-receive> hook in order to record the
-references that were affected by the push command. The information
-recorded will be later used by the following C<get_affected_ref*>
-methods.
-
 =head2 get_affected_refs
 
-This method returns the list of names of references that were affected
-by the current push command, as they were set by calls to the
-C<set_affected_ref> method.
+This method returns the list of names of references that were affected by
+the current push command.
 
 =head2 get_affected_ref_range(REF)
 
