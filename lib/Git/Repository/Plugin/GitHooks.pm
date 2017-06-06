@@ -16,7 +16,7 @@ sub _keywords {
 
                  get_config
 
-                 undef_commit empty_commit get_commit get_commits
+                 undef_commit empty_tree get_commit get_commits
                  get_commit_msg read_commit_msg_file write_commit_msg_file
                  get_sha1
 
@@ -56,7 +56,7 @@ sub undef_commit {
     return '0000000000000000000000000000000000000000';
 }
 
-sub empty_commit {
+sub empty_tree {
     return '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 }
 
@@ -350,7 +350,7 @@ sub filter_files_in_index {
 
 sub filter_files_in_range {
     my ($git, $filter, $from, $to) = @_;
-    $from = $git->empty_commit if $from eq $git->undef_commit;
+    $from = $git->empty_tree if $from eq $git->undef_commit;
     my $output = $git->run(
         qw/diff-tree --name-only --ignore-submodules --no-commit-id -r -z/,
         "--diff-filter=$filter", $from, $to,
@@ -480,7 +480,7 @@ sub get_head_or_empty_tree {
     my $cmd = $git->command(qw/rev-parse --verify HEAD/);
 
     # Return the empty tree object if in the initial commit
-    return eval { $cmd->final_output } || $git->empty_commit;
+    return eval { $cmd->final_output } || $git->empty_tree;
 }
 
 sub blob {
@@ -1218,9 +1218,10 @@ The undefined commit is a special SHA-1 used by Git in the update and
 pre-receive hooks to signify that a reference either was just created (as
 the old commit) or has been just deleted (as the new commit).
 
-=head2 empty_commit
+=head2 empty_tree
 
-The empty commit represents a commit with an empty tree.
+The empty commit represents an L<empty tree for
+Git|https://stackoverflow.com/questions/9765453/is-gits-semi-secret-empty-tree-object-reliable-and-why-is-there-not-a-symbolic>.
 
 =head2 im_admin(GIT)
 

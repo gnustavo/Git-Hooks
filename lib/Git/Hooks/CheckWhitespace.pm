@@ -24,8 +24,11 @@ sub check_affected_refs {
 
     foreach my $ref ($git->get_affected_refs()) {
         my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
-        $old_commit = $git->empty_commit if $old_commit eq $git->undef_commit;
-        my $cmd = $git->command(qw/diff-tree -r --check/, $old_commit, $new_commit);
+        my $cmd = $git->command(
+            qw/diff-tree -r --check/,
+            $old_commit eq $git->undef_commit ? $git->empty_tree : $old_commit,
+            $new_commit,
+        );
         my $stderr = do { local $/ = undef; readline($cmd->stderr)};
         $cmd->close;
         if ($cmd->exit() != 0) {
