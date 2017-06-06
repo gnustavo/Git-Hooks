@@ -37,8 +37,6 @@ sub _keywords {
 
                  get_head_or_empty_tree is_ref_enabled
 
-                 file_temp
-
              /;
 }
 
@@ -627,14 +625,6 @@ sub im_admin {
     return 0;
 }
 
-sub file_temp {
-    my ($git, $rev, $file, @args) = @_;
-
-    carp 'Invoking deprecated routine ', __PACKAGE__, '::file_temp. Please, see documentation.';
-
-    return $git->blob($rev, $file, @args);
-}
-
 sub _grok_groups_spec {
     my ($groups, $specs, $source) = @_;
     foreach (@$specs) {
@@ -1217,24 +1207,6 @@ Git|https://stackoverflow.com/questions/9765453/is-gits-semi-secret-empty-tree-o
 This routine checks if the authenticated user (again, as returned by the
 C<authenticated_user> method) matches the specifications given by the
 C<githooks.admin> configuration variable.
-
-=head2 file_temp REV, FILE, ARGS...
-
-This routine is DEPRECATED and has been replaced by the C<blob> method.
-
-This routine returns the name of a temporary file into which the contents of
-the file FILE in revision REV has been copied.
-
-It's useful for hooks that need to read the contents of changed files in
-order to check anything in them.
-
-These files are cached so that if more than one hook needs to get at them
-they're created only once.
-
-By default, all temporary files are removed when the hook exits.
-
-Any remaining ARGS are passed as arguments to C<Path::Tiny::tempfile> so
-that you can have more control over the temporary file creation.
 
 =head2 post_hook SUB
 
