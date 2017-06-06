@@ -87,6 +87,12 @@ sub _jira {
     return $cache->{jira};
 }
 
+sub _disconnect_jira {
+    my ($git) = @_;
+    delete $git->cache($PKG)->{jira};
+    return;
+}
+
 # Returns a JIRA::REST object or undef if there is any problem
 
 sub get_issue {
@@ -339,8 +345,7 @@ sub check_ref {
             or ++$errors;
     }
 
-    # Disconnect from JIRA
-    $git->clean_cache($PKG);
+    _disconnect_jira($git);
 
     return $errors == 0;
 }
@@ -360,8 +365,7 @@ sub check_affected_refs {
             or ++$errors;
     }
 
-    # Disconnect from JIRA
-    $git->clean_cache($PKG);
+    _disconnect_jira($git);
 
     return $errors == 0;
 }
@@ -440,8 +444,7 @@ sub notify_affected_refs {
         $errors += notify_ref($git, $ref, $visibility);
     }
 
-    # Disconnect from JIRA
-    $git->clean_cache($PKG);
+    _disconnect_jira($git);
 
     return $errors == 0;
 }

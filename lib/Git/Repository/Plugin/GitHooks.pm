@@ -12,7 +12,7 @@ sub _keywords {
     return qw/
 
                  prepare_hook load_plugins invoke_external_hooks
-                 cache clean_cache post_hook post_hooks
+                 cache post_hook post_hooks
 
                  get_config
 
@@ -141,12 +141,6 @@ sub cache {
     }
 
     return $git->{_plugin_githooks}{cache}{$section};
-}
-
-sub clean_cache {
-    my ($git, $section) = @_;
-    delete $git->{_plugin_githooks}{cache}{$section};
-    return;
 }
 
 sub get_commit {
@@ -1445,12 +1439,6 @@ the context of a Git::Repository object. SECTION is a string (usually a
 plugin name) that is associated with a hash-ref. The method simply
 returns the hash-ref, which can be used by the caller to store any
 kind of information.
-
-=head2 clean_cache SECTION
-
-This method deletes the cache entry for SECTION. It may be used by
-hooks just before returning to B<Git::Hooks::run_hooks> in order to
-get rid of any value kept in the SECTION's cache.
 
 =head2 get_commit COMMIT
 
