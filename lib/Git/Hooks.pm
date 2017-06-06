@@ -4,11 +4,8 @@ package Git::Hooks;
 use 5.010;
 use strict;
 use warnings;
-use Carp;
 use Exporter qw/import/;
 use Sub::Util qw/subname/;
-use Path::Tiny;
-use List::MoreUtils qw/any/;
 use Git::Repository 'GitHooks';
 
 our @EXPORT; ## no critic (Modules::ProhibitAutomaticExportation)
