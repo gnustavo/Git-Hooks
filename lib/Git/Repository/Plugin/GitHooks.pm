@@ -29,7 +29,7 @@ sub _keywords {
 
                  error get_errors
 
-                 match_user im_admin grok_groups_spec grok_groups im_memberof
+                 match_user im_admin
 
                  push_input_data get_input_data
 
@@ -644,7 +644,7 @@ sub match_user {
         if ($spec =~ /^\^/) {
             return 1 if $myself =~ $spec;
         } elsif ($spec =~ /^@/) {
-            return 1 if im_memberof($git, $myself, $spec);
+            return 1 if _im_memberof($git, $myself, $spec);
         } else {
             return 1 if $myself eq $spec;
         }
@@ -669,7 +669,7 @@ sub file_temp {
     return $git->blob($rev, $file, @args);
 }
 
-sub grok_groups_spec {
+sub _grok_groups_spec {
     my ($groups, $specs, $source) = @_;
     foreach (@$specs) {
         s/\#.*//;               # strip comments
@@ -693,7 +693,7 @@ sub grok_groups_spec {
     return;
 }
 
-sub grok_groups {
+sub _grok_groups {
     my ($git) = @_;
 
     my $cache = $git->cache('githooks');
@@ -708,10 +708,10 @@ sub grok_groups {
                 my @groupspecs = path($groupfile)->lines;
                 defined $groupspecs[0]
                     or die __PACKAGE__, ": can't open groups file ($groupfile): $!\n";
-                grok_groups_spec($groups, \@groupspecs, $groupfile);
+                _grok_groups_spec($groups, \@groupspecs, $groupfile);
             } else {
                 my @groupspecs = split /\n/, $spec;
-                grok_groups_spec($groups, \@groupspecs, "githooks.groups");
+                _grok_groups_spec($groups, \@groupspecs, "githooks.groups");
             }
         }
         $cache->{groups} = $groups;
@@ -720,10 +720,10 @@ sub grok_groups {
     return $cache->{groups};
 }
 
-sub im_memberof {
+sub _im_memberof {
     my ($git, $myself, $groupname) = @_;
 
-    my $groups = grok_groups($git);
+    my $groups = _grok_groups($git);
 
     exists $groups->{$groupname}
         or die __PACKAGE__, ": group $groupname is not defined.\n";
@@ -732,7 +732,7 @@ sub im_memberof {
     return 1 if exists $group->{$myself};
     while (my ($member, $subgroup) = each %$group) {
         next     unless defined $subgroup;
-        return 1 if     im_memberof($git, $myself, $member);
+        return 1 if     _im_memberof($git, $myself, $member);
     }
     return 0;
 }
@@ -1171,8 +1171,6 @@ sub invoke_external_hooks {
 1; # End of Git::Repository::Plugin::GitHooks
 __END__
 
-=for Pod::Coverage grok_groups_spec grok_groups
-
 =head1 NAME
 
 Git::Repository::Plugin::GitHooks - Add useful methods for hooks to Git::Repository
@@ -1319,12 +1317,6 @@ particular refs being affected.
 Each SPEC rule may indicate the matching refs as the complete ref
 name (e.g. "refs/heads/master") or by a regular expression starting
 with a caret (C<^>), which is kept as part of the regexp.
-
-=head2 im_memberof(GIT, USER, GROUPNAME)
-
-This routine tells if USER belongs to GROUPNAME. The groupname is
-looked for in the specification given by the C<githooks.groups>
-configuration variable.
 
 =head2 match_user(GIT, SPEC)
 
