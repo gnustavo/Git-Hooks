@@ -15,6 +15,12 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
   - Remove the CheckStructure plugin.
 
+  [Deprecations]
+
+  - Remove the deprecated configuration options
+    githooks.gerrit.review-label, githooks.gerrit.vote-ok, and
+    githooks.gerrit.vote-nok.
+
   [New features]
 
   - Add a the CheckReference plugin.

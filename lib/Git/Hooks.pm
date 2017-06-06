@@ -837,32 +837,6 @@ Allowed values are NONE, OWNER, OWNER_REVIEWERS, and ALL.
 
 If not set, the default is ALL.
 
-=head2 githooks.gerrit.review-label LABEL
-
-This option is DEPRECATED. Please, use C<githooks.gerrit.votes-to-approve> and
-C<githooks.gerrit.votes-to-reject> instead.
-
-This option defines the
-L<label|https://gerrit-review.googlesource.com/Documentation/config-labels.html>
-that must be used in Gerrit's review process. If not specified, the standard
-C<Code-Review> label is used.
-
-=head2 githooks.gerrit.vote-ok +N
-
-This option is DEPRECATED. Please, use C<githooks.gerrit.votes-to-approve> and
-C<githooks.gerrit.votes-to-reject> instead.
-
-This option defines the vote that must be used to approve a review. If
-not specified, +1 is used.
-
-=head2 githooks.gerrit.vote-nok -N
-
-This option is DEPRECATED. Please, use C<githooks.gerrit.votes-to-approve> and
-C<githooks.gerrit.votes-to-reject> instead.
-
-This option defines the vote that must be used to reject a review. If
-not specified, -1 is used.
-
 =head2 githooks.help-on-error MESSAGE
 
 This option allows you to specify a helpful message that will be shown if

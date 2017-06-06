@@ -852,17 +852,7 @@ sub _gerrit_patchset_post_hook {
 
     # Grok all configuration options at once to make it easier to deal with them below.
     my %cfg = map {$_ => $git->get_config('githooks.gerrit' => $_) || undef}
-        qw/review-label vote-nok vote-ok votes-to-approve votes-to-reject comment-ok auto-submit/;
-
-    # Convert DEPRECATED configuration options to new ones.
-    if (any {defined $cfg{$_}} qw/review-label vote-nok vote-ok/) {
-        if (any {defined $cfg{$_}} qw/votes-to-approve votes-to-reject/) {
-            die __PACKAGE__ . ": Mixing deprecated githooks.gerrit configuration options (review-label vote-nok vote-ok) with new ones (votes-to-approve votes-to-reject) is not permited. Please, convert the deprecated ones.\n"
-        }
-        $cfg{'votes-to-approve'} = $cfg{'votes-to-reject'} = $cfg{'review-label'} || 'Code-Review';
-        $cfg{'votes-to-reject'} .= $cfg{'vote-nok'} || '-1';
-        $cfg{'votes-to-approve'} .= $cfg{'vote-ok'}  || '+1';
-    }
+        qw/votes-to-approve votes-to-reject comment-ok auto-submit/;
 
     # https://gerrit-documentation.storage.googleapis.com/Documentation/2.13.1/rest-api-changes.html#set-review
     my %review_input;
