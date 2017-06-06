@@ -6,19 +6,18 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
   - Substitute Git::Repository for Git as the underlying git wrapper.
 
-  - Remove the CheckStructure plugin.
+  - Substitute Git::Repository::Plugin::GitHooks for the Git::More module,
+    to take advantage of Git::Repository's plugin architecture.
 
-  - Remove the following methods from Git::Repository::Plugin::GitHooks,
-    which aren't used by plugins: nocarp, clean_cache, eval_gitconfig,
-    set_affected_ref, get_affected_ref_commit_ids, set_authenticated_user,
-    grok_groups_spec, grok_groups, im_memberof.
+  - Move all the functions that were defined on Git::Hooks to
+    Git::Repository::Plugin::GitHooks, leaving only the ones directly used
+    either by Git::Hooks or by one of its plugins "exported".
+
+  - Remove the CheckStructure plugin.
 
   [New features]
 
   - Add a the CheckReference plugin.
-
-  - Add the following methods to Git::Repository::Plugin::GitHooks:
-    prepare_hook, load_plugins, invoke_external_hooks.
 
 1.16.0    2017-05-20 18:48:38-03:00 America/Sao_Paulo
 

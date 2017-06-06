@@ -31,8 +31,6 @@ sub _keywords {
 
                  match_user im_admin
 
-                 push_input_data get_input_data
-
                  filter_files_in_index filter_files_in_range filter_files_in_commit
 
                  blob file_size
@@ -429,13 +427,13 @@ sub get_affected_ref_commits {
     return @{$affected->{$ref}{commits}};
 }
 
-sub push_input_data {
+sub _push_input_data {
     my ($git, $data) = @_;
     push @{$git->{_plugin_githooks}{input_data}}, $data;
     return;
 }
 
-sub get_input_data {
+sub _get_input_data {
     my ($git) = @_;
     return $git->{_plugin_githooks}{input_data} || [];
 }
@@ -749,7 +747,7 @@ sub _prepare_input_data {
     my ($git) = @_;
     while (<STDIN>) { ## no critic (InputOutput::ProhibitExplicitStdin)
         chomp;
-        $git->push_input_data([split]);
+        _push_input_data($git, [split]);
     }
     return;
 }
@@ -761,7 +759,7 @@ sub _prepare_input_data {
 sub _prepare_receive {
     my ($git) = @_;
     _prepare_input_data($git);
-    foreach (@{$git->get_input_data()}) {
+    foreach (@{_get_input_data($git)}) {
         my ($old_commit, $new_commit, $ref) = @$_;
         _set_affected_ref($git, $ref, $old_commit, $new_commit);
     }
@@ -1085,7 +1083,7 @@ sub _invoke_external_hook {
         # before invoking any hook. Now, we must regenerate the same
         # information and output it to the external hooks we invoke.
 
-        my $stdin = join("\n", map {join(' ', @$_)} @{$git->get_input_data}) . "\n";
+        my $stdin = join("\n", map {join(' ', @$_)} @{_get_input_data($git)}) . "\n";
 
         my $pid = open my $pipe, '|-'; ## no critic (InputOutput::RequireBriefOpen)
 
@@ -1593,20 +1591,6 @@ This method returns the username of the authenticated user performing
 the Git action. It groks it from the C<githooks.userenv> configuration
 variable specification, which is described in the C<Git::Hooks>
 documentation. It's useful for most access control check plugins.
-
-=head2 push_input_data DATA
-
-This method gets a single value and tucks it in an internal list so
-that every piece of data can be gotten later with the
-C<get_input_data> method below.
-
-It's used by C<Git::Hooks> to save arguments read from STDIN by some
-Git hooks like pre-receive, post-receive, pre-push, and post-rewrite.
-
-=head2 get_input_data
-
-This method returns an array-ref pointing to a list of all pieces of
-data saved by calls to C<push_input_data> method above.
 
 =head2 get_current_branch
 
