@@ -37,8 +37,6 @@ sub _keywords {
 
                  get_head_or_empty_tree is_ref_enabled
 
-                 redirect_output restore_output
-
                  file_temp
 
              /;
@@ -605,36 +603,6 @@ sub is_ref_enabled {
     return 0;
 }
 
-# The routine redirect_output redirects STDOUT and STDERR to a temporary
-# file and returns a reference that should be passed to the routine
-# restore_output to restore the handles to their original state.
-
-sub redirect_output {
-    my ($git) = @_;
-    ## no critic (RequireBriefOpen, RequireCarping)
-    open(my $oldout, '>&', \*STDOUT)  or die "Can't dup STDOUT: $!";
-    open(my $olderr, '>&', \*STDERR)  or die "Can't dup STDERR: $!";
-    my $tempfile = Path::Tiny->tempfile(UNLINK => 1);
-    open(STDOUT    , '>' , $tempfile) or die "Can't redirect STDOUT to \$tempfile: $!";
-    open(STDERR    , '>&', \*STDOUT)  or die "Can't dup STDOUT for STDERR: $!";
-    ## use critic
-    return [$oldout, $olderr, $tempfile];
-}
-
-# This routine gets a reference returned by redirect_output, restores STDOUT
-# and STDERR to their previous state and returns a string containing every
-# output since the previous call to redirect_output.
-
-sub restore_output {
-    my ($git, $saved) = @_;
-    my ($oldout, $olderr, $tempfile) = @$saved;
-    ## no critic (RequireCarping)
-    open(STDOUT, '>&', $oldout) or die "Can't dup \$oldout: $!";
-    open(STDERR, '>&', $olderr) or die "Can't dup \$olderr: $!";
-    ## use critic
-    return $tempfile->slurp;
-}
-
 sub match_user {
     my ($git, $spec) = @_;
 
@@ -1075,7 +1043,15 @@ sub _invoke_external_hook {
     my ($git, $file, $hook, @args) = @_;
 
     my $prefix  = '[' . __PACKAGE__ . '(' . path($file)->basename . ')]';
-    my $saved_output = $git->redirect_output();
+
+    my $tempfile = Path::Tiny->tempfile(UNLINK => 1);
+
+    ## no critic (RequireBriefOpen, RequireCarping)
+    open(my $oldout, '>&', \*STDOUT)  or die "Can't dup STDOUT: $!";
+    open(STDOUT    , '>' , $tempfile) or die "Can't redirect STDOUT to \$tempfile: $!";
+    open(my $olderr, '>&', \*STDERR)  or die "Can't dup STDERR: $!";
+    open(STDERR    , '>&', \*STDOUT)  or die "Can't dup STDOUT for STDERR: $!";
+    ## use critic
 
     if ($hook =~ /^(?:pre-receive|post-receive|pre-push|post-rewrite)$/) {
 
@@ -1083,18 +1059,21 @@ sub _invoke_external_hook {
         # before invoking any hook. Now, we must regenerate the same
         # information and output it to the external hooks we invoke.
 
-        my $stdin = join("\n", map {join(' ', @$_)} @{_get_input_data($git)}) . "\n";
-
         my $pid = open my $pipe, '|-'; ## no critic (InputOutput::RequireBriefOpen)
 
         if (! defined $pid) {
-            $git->restore_output($saved_output);
             $git->error($prefix, "can't fork: $!");
         } elsif ($pid) {
             # parent
-            print $pipe $stdin;
-            my $exit = close $pipe;
-            my $output = $git->restore_output($saved_output);
+            $pipe->print(join("\n", map {join(' ', @$_)} @{_get_input_data($git)}) . "\n");
+            my $exit = $pipe->close;
+
+            ## no critic (RequireBriefOpen, RequireCarping)
+            open(STDOUT, '>&', $oldout) or die "Can't dup \$oldout: $!";
+            open(STDERR, '>&', $olderr) or die "Can't dup \$olderr: $!";
+            ## use critic
+
+            my $output = $tempfile->slurp;
             if ($exit) {
                 warn $output, "\n" if length $output;
                 return 1;
@@ -1106,7 +1085,12 @@ sub _invoke_external_hook {
         } else {
             # child
             { exec {$file} ($hook, @args) }
-            $git->restore_output($saved_output);
+
+            ## no critic (RequireBriefOpen, RequireCarping)
+            open(STDOUT, '>&', $oldout) or die "Can't dup \$oldout: $!";
+            open(STDERR, '>&', $olderr) or die "Can't dup \$olderr: $!";
+            ## use critic
+
             die "$prefix: can't exec: $!\n";
         }
 
@@ -1119,7 +1103,12 @@ sub _invoke_external_hook {
 
         my $exit = system {$file} ($hook, @args);
 
-        my $output = $git->restore_output($saved_output);
+        ## no critic (RequireBriefOpen, RequireCarping)
+        open(STDOUT, '>&', $oldout) or die "Can't dup \$oldout: $!";
+        open(STDERR, '>&', $olderr) or die "Can't dup \$olderr: $!";
+        ## use critic
+
+        my $output = $tempfile->slurp;
 
         if ($exit == 0) {
             warn $output, "\n" if length $output;
@@ -1228,18 +1217,6 @@ Git|https://stackoverflow.com/questions/9765453/is-gits-semi-secret-empty-tree-o
 This routine checks if the authenticated user (again, as returned by the
 C<authenticated_user> method) matches the specifications given by the
 C<githooks.admin> configuration variable.
-
-=head2 redirect_output
-
-This routine redirects STDOUT and STDERR to a temporary file and returns a
-reference that should be passed to the routine C<restore_output> to restore
-the handles to their original state.
-
-=head2 restore_output REF
-
-This routine gets a reference returned by C<redirect_output>, restores
-STDOUT and STDERR to their previous state and returns a string containing
-every output since the previous call to redirect_output.
 
 =head2 file_temp REV, FILE, ARGS...
 

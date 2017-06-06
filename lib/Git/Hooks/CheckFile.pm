@@ -26,14 +26,28 @@ sub check_command {
     (my $cmd = $command) =~ s/\{\}/\'$tmpfile\'/g;
 
     # execute command and update $errors
-    my $saved_output = $git->redirect_output();
-    my $exit = do {
+    my ($exit, $output);
+    {
+        my $tempfile = Path::Tiny->tempfile(UNLINK => 1);
+
+        ## no critic (RequireBriefOpen, RequireCarping)
+        open(my $oldout, '>&', \*STDOUT)  or die "Can't dup STDOUT: $!";
+        open(STDOUT    , '>' , $tempfile) or die "Can't redirect STDOUT to \$tempfile: $!";
+        open(my $olderr, '>&', \*STDERR)  or die "Can't dup STDERR: $!";
+        open(STDERR    , '>&', \*STDOUT)  or die "Can't dup STDOUT for STDERR: $!";
+
         # Let the external command know the commit that's being checked in
         # case it needs to grok something from Git.
         local $ENV{GIT_COMMIT} = $commit;
-        system $cmd;
-    };
-    my $output = $git->restore_output($saved_output);
+        $exit = system $cmd;
+
+        open(STDOUT, '>&', $oldout) or die "Can't dup \$oldout: $!";
+        open(STDERR, '>&', $olderr) or die "Can't dup \$olderr: $!";
+        ## use critic
+
+        $output = $tempfile->slurp;
+    }
+
     if ($exit != 0) {
         $command =~ s/\{\}/\'$file\'/g;
         my $message = do {
