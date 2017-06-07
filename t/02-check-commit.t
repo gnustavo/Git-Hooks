@@ -152,7 +152,7 @@ EOS
 # check-code repo
 
 $repo->run(qw/config githooks.checkcommit.check-code/,
-                'sub { my ($git, $commit) = @_; return $commit->{author_name} =~ /valid/; };');
+                'sub { my ($git, $commit) = @_; return $commit->author_name =~ /valid/; };');
 
 check_can_commit('check-code commit ok', 'valid');
 

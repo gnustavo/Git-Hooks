@@ -13,6 +13,10 @@ Revision history for perl module Git-Hooks. -*- text -*-
     Git::Repository::Plugin::GitHooks, leaving only the ones directly used
     either by Git::Hooks or by one of its plugins "exported".
 
+  - The get_commit, get_commits, and get_affected_ref_commits methods now
+    return Git::Repository::Log objects instead of naked hashes to represent
+    commits.
+
   - Remove the CheckStructure plugin.
 
   [Deprecations]

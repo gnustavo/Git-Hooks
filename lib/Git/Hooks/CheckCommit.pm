@@ -9,6 +9,7 @@ use strict;
 use warnings;
 use Error ':try';
 use Git::Hooks;
+use Git::Repository::Log;
 use List::MoreUtils qw/any none/;
 
 my $PKG = __PACKAGE__;
@@ -50,15 +51,16 @@ sub match_errors {
         foreach my $info (qw/name email/) {
             if (my $checks = $cache->{identity}{$info}) {
                 foreach my $who (qw/author committer/) {
-                    my $data = $commit->{"${who}_${info}"};
+                    my $who_info = "${who}_${info}";
+                    my $data     = $commit->$who_info;
 
                     unless (any  { $data =~ $_ } @{$checks->{''}}) {
-                        $git->error($PKG, "commit $commit->{commit} $who $info ($data) does not match any positive githooks.checkcommit.$info option");
+                        $git->error($PKG, "commit @{[$commit->commit]} $who $info ($data) does not match any positive githooks.checkcommit.$info option");
                         ++$errors;
                     }
 
                     unless (none { $data =~ $_ } @{$checks->{'!'}}) {
-                        $git->error($PKG, "commit $commit->{commit} $who $info ($data) matches some negative githooks.checkcommit.$info option");
+                        $git->error($PKG, "commit @{[$commit->commit]} $who $info ($data) matches some negative githooks.checkcommit.$info option");
                         ++$errors;
                     }
                 }
@@ -96,10 +98,11 @@ sub email_valid_errors {
 
         if (my $ev = $cache->{email_valid}) {
             foreach my $who (qw/author committer/) {
-                my $email = $commit->{"${who}_email"};
+                my $who_email = "${who}_email";
+                my $email     = $commit->$who_email;
                 unless ($ev->address($email)) {
                     my $fail = $ev->details();
-                    $git->error($PKG, "commit $commit->{commit} $who email ($email) failed $fail check");
+                    $git->error($PKG, "commit @{[$commit->commit]} $who email ($email) failed $fail check");
                     ++$errors;
                 }
             }
@@ -143,13 +146,15 @@ sub canonical_errors {
 
     if (my $mailmap = $git->get_config($CFG => 'canonical')) {
         foreach my $who (qw/author committer/) {
-            my $identity  = $commit->{"${who}_name"} . ' <' . $commit->{"${who}_email"} . '>';
+            my $who_name  = "${who}_name";
+            my $who_email = "${who}_email";
+            my $identity  = $commit->$who_name . ' <' . $commit->$who_email . '>';
             my $canonical = _canonical_identity($git, $mailmap, $identity);
 
             if ($identity ne $canonical) {
                 $git->error(
                     $PKG,
-                    "commit $commit->{commit} $who identity ($identity) isn't canonical ($canonical)",
+                    "commit @{[$commit->commit]} $who identity ($identity) isn't canonical ($canonical)",
                 );
                 ++$errors;
             }
@@ -167,32 +172,16 @@ sub signature_errors {
     my $signature = $git->get_config($CFG => 'signature');
 
     if (defined $signature && $signature ne 'nocheck') {
-        my $status;
-        {
-            local $/ = "\c@\cJ";
-            my ($pipe, $ctx) = $git->command_output_pipe(
-                'rev-list',
-                '--no-walk',
-                # See 'git help rev-list' to understand the --pretty argument
-                '--pretty=format:%G?',
-                '--encoding=UTF-8',
-                $commit,
-            );
-
-            my $header = <$pipe>;
-            chomp($status = <$pipe>);
-
-            $git->command_close_pipe($pipe, $ctx);
-        }
+        my $status = $git->run(qw/log -1 --format='%G?'/, $commit->commit);
 
         if ($status eq 'B') {
-            $git->error($PKG, "commit $commit->{commit} has a BAD signature");
+            $git->error($PKG, "commit @{[$commit->commit]} has a BAD signature");
             ++$errors;
         } elsif ($signature ne 'optional' && $status eq 'N') {
-            $git->error($PKG, "commit $commit->{commit} has NO signature");
+            $git->error($PKG, "commit @{[$commit->commit]} has NO signature");
             ++$errors;
         } elsif ($signature eq 'trusted' && $status eq 'U') {
-            $git->error($PKG, "commit $commit->{commit} has an UNTRUSTED signature");
+            $git->error($PKG, "commit @{[$commit->commit]} has an UNTRUSTED signature");
             ++$errors;
         }
     }
@@ -286,13 +275,13 @@ sub check_pre_commit {
 
     _setup_config($git);
 
-    my $commit = {
-        commit          => '<new>',
-        author_name     => $ENV{GIT_AUTHOR_NAME},
-        author_email    => $ENV{GIT_AUTHOR_EMAIL},
-        committer_name  => $ENV{GIT_COMMITTER_NAME},
-        committer_email => $ENV{GIT_COMMITTER_EMAIL},
-    };
+    # Construct a fake commit object to pass to the error checking routines.
+    my $commit = Git::Repository::Log->new(
+        commit    => '<new>',
+        author    => "$ENV{GIT_AUTHOR_NAME} <$ENV{GIT_AUTHOR_EMAIL}> 1234567890 -0300",
+        committer => "$ENV{GIT_COMMITTER_NAME} <$ENV{GIT_COMMITTER_EMAIL}> 1234567890 -0300",
+        message   => "Fake\n",
+    );
 
     return 0 ==
         (match_errors($git, $commit) +

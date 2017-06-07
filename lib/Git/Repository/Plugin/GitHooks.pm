@@ -17,7 +17,7 @@ sub _keywords {
                  get_config
 
                  undef_commit empty_tree get_commit get_commits
-                 get_commit_msg read_commit_msg_file write_commit_msg_file
+                 read_commit_msg_file write_commit_msg_file
                  get_sha1
 
                  get_affected_refs get_affected_ref_range
@@ -142,31 +142,12 @@ sub get_commit {
 
     my $cache = $git->cache('commits');
 
-    unless (exists $cache->{$commit}) {
-        local $/ = "\c@\cJ";
-
-        my $cmd = $git->command(
-            'rev-list',
-            '--no-walk',
-            # See 'git help rev-list' to understand the --pretty argument
-            '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%s%n%n%b%x00',
-            '--encoding=UTF-8',
-            $commit,
-        );
-
-        my $stdout = $cmd->stdout;
-
-        while (<$stdout>) {
-            chomp;
-            my %commit;
-            @commit{qw/header commit tree parent
-                       author_name author_email author_date
-                       committer_name committer_email committer_date
-                       body/} = split "\cJ", $_, 11;
-            $cache->{$commit} = \%commit;
-        }
-
-        $cmd->close;
+    # $commit may be a symbolic reference, but we only want to cache commits
+    # by their SHA1 ids, since the symbolic references may change.
+    unless ($commit =~ /^[0-9A-F]{40}$/ && exists $cache->{$commit}) {
+        my @commits = $git->log('-1', $commit);
+        $commit = $commits[0]->{commit};
+        $cache->{$commit} = $commits[0];
     }
 
     return $cache->{$commit};
@@ -231,57 +212,10 @@ sub get_commits {
 
         push @excludes, "^$old_commit" unless $old_commit eq $git->undef_commit;
 
-        # The commit list to be returned
-        my @commits;
-
-        local $/ = "\c@\cJ";
-
-        my $cmd = $git->command(
-            'rev-list',
-            # See 'git help rev-list' to understand the --pretty argument
-            '--pretty=format:%H%n%T%n%P%n%aN%n%aE%n%ai%n%cN%n%cE%n%ci%n%s%n%n%b%x00',
-            '--encoding=UTF-8',
-            $new_commit,
-            @excludes,
-        );
-
-        my $stdout = $cmd->stdout;
-
-        while (<$stdout>) {
-            my %commit;
-            @commit{qw/header commit tree parent
-                       author_name author_email author_date
-                       committer_name committer_email committer_date
-                       body/} = split "\cJ", $_, 11;
-            push @commits, \%commit;
-        }
-
-        $cmd->close;
-
-        $cache->{$range} = \@commits;
+        $cache->{$range} = [$git->log($new_commit, @excludes)];
     }
 
     return @{$cache->{$range}};
-}
-
-sub get_commit_msg {
-    my ($git, $commit) = @_;
-
-    # We want to use the %B format to grok the commit message, but it
-    # was implemented only in Git v1.7.2. If we try to use it with
-    # rev-list in previous Gits we get back the same format
-    # unexpanded. In this case, we try the second best option which is
-    # to use the format %s%n%n%b. The difference is that this format
-    # unfolds the first sequence of non-empty lines in a single line
-    # which is considered the message's subject (or title).
-    foreach my $format (qw/%B %s%n%n%b/) {
-        my $body = $git->run('rev-list' => "--format=$format", '--max-count=1', $commit);
-        $body =~ s/^[^\n]*\n//; # strip first line, which contains the commit id
-        chomp $body;            # strip last newline
-        next if $body eq $format;
-        return $body;
-    }
-    die __PACKAGE__, "::get_commit_msg: cannot get commit msg.\n";
 }
 
 sub read_commit_msg_file {
@@ -1152,7 +1086,6 @@ Git::Repository::Plugin::GitHooks - Add useful methods for hooks to Git::Reposit
     my $config  = $git->get_config();
     my $branch  = $git->get_current_branch();
     my @commits = $git->get_commits($oldcommit, $newcommit);
-    my $message = $git->get_commit_msg('HEAD');
 
     my $files_modified_by_commit = $git->filter_files_in_index('AM');
     my $files_modified_by_push   = $git->filter_files_in_range('AM', $oldcommit, $newcommit);
@@ -1355,52 +1288,27 @@ kind of information.
 
 =head2 get_commit COMMIT
 
-This method returns a hash representing COMMIT. It obtains this information
-by invoking C<git rev-list --no-walk --encoding=UTF-8 COMMIT>.
-
-The returned hash has the following structure (the codes are explained in
-the C<git help rev-list> document):
-
-    {
-        commit          => %H:  commit hash
-        tree            => %T:  tree hash
-        parent          => %P:  parent hashes (space separated)
-        author_name     => %aN: author name
-        author_email    => %aE: author email
-        author_date     => %ai: author date in ISO8601 format
-        committer_name  => %cN: committer name
-        committer_email => %cE: committer email
-        committer_date  => %ci: committer date in ISO8601 format
-        body            => %B:  raw body (aka commit message)
-    }
-
-All character data is UTF-8 encoded.
+This method returns a Git::Repository::Log object representing COMMIT.
 
 =head2 get_commits OLDCOMMIT NEWCOMMIT
 
-This method returns a list of hashes representing every commit
-reachable from NEWCOMMIT but not from OLDCOMMIT. It obtains this
-information by invoking C<git rev-list NEWCOMMIT ^OLDCOMMIT>.
+This method returns a list of Git::Repository::Log objects representing
+every commit reachable from NEWCOMMIT but not from OLDCOMMIT.
 
 There are two special cases, though:
 
-If NEWCOMMIT is the null SHA-1, i.e.,
+If NEWCOMMIT is the undefined commit, i.e.,
 '0000000000000000000000000000000000000000', this means that a branch,
-pointing to OLDCOMMIT, has been removed. In this case the method
-returns an empty list, meaning that no new commit has been created.
+pointing to OLDCOMMIT, has been removed. In this case the method returns an
+empty list, meaning that no new commit has been created.
 
-If OLDCOMMIT is the null SHA-1, this means that a new branch poiting
-to NEWCOMMIT is being created. In this case we want all commits
-reachable from NEWCOMMIT but not reachable from any other branch. The
-syntax for this is NEWCOMMIT ^B1 ^B2 ... ^Bn", i.e., NEWCOMMIT
-followed by every other branch name prefixed by carets. We can get at
-their names using the technique described in, e.g., L<this
+If OLDCOMMIT is the undefined commit, this means that a new branch pointing
+to NEWCOMMIT is being created. In this case we want all commits reachable
+from NEWCOMMIT but not reachable from any other branch. The syntax for this
+is NEWCOMMIT ^B1 ^B2 ... ^Bn", i.e., NEWCOMMIT followed by every other
+branch name prefixed by carets. We can get at their names using the
+technique described in, e.g., L<this
 discussion|http://stackoverflow.com/questions/3511057/git-receive-update-hooks-and-new-branches>.
-
-=head2 get_commit_msg COMMIT_ID
-
-This method returns the commit message (a.k.a. body) of the commit
-identified by COMMIT_ID. The result is a string.
 
 =head2 read_commit_msg_file FILENAME
 

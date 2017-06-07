@@ -27,7 +27,8 @@ my $gerrit_script = $T->child('gerrit-commit-msg');
 install_hooks($repo, undef, qw/commit-msg/);
 
 sub last_log {
-    return eval { $repo->get_commit_msg('HEAD') } || 'NO LOG FOR EMPTY REPO';
+    my $commit = eval { $repo->get_commit('HEAD') };
+    return $commit ? $commit->message : 'NO LOG FOR EMPTY REPO';
 }
 
 sub diag_last_log {
@@ -102,7 +103,6 @@ foreach my $test (
 ) {
     my ($testname, $message) = @$test;
     if (can_commit("preset: $testname", $message)) {
-        chomp($message);
 	if (last_log() eq $message) {
 	    pass("preset: $testname (msg ok)");
 	} else {

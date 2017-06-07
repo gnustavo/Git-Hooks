@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use Exporter qw/import/;
 use Sub::Util qw/subname/;
-use Git::Repository 'GitHooks';
+use Git::Repository qw'GitHooks Log';
 
 our @EXPORT; ## no critic (Modules::ProhibitAutomaticExportation)
 my (%Hooks);
@@ -991,8 +991,9 @@ Usually at the end, the plugin should use one or more of the hook directives
 defined above to install its hook routines in the appropriate hooks.
 
 Every hook routine receives a Git::Repository object (with the
-Git::Repository::Plugin::GitHooks plugin enabled) as its first argument. You
-should use it to infer all needed information from the Git repository.
+Git::Repository::Plugin::GitHooks and the Git::Repository::Plugin::Log
+plugins enabled) as its first argument. You should use it to infer all
+needed information from the Git repository.
 
 Please, take a look at the code of the plugins under the Git::Hooks::
 namespace in order to get a better understanding about this. Hopefully it's

@@ -213,7 +213,7 @@ sub message_errors {
 
     # assert(defined $msg)
 
-    my $id = defined $commit ? $commit->{commit} : '';
+    my $id = defined $commit ? $commit->commit : '';
 
     my $errors = 0;
 
@@ -258,7 +258,7 @@ sub check_ref {
     my $errors = 0;
 
     foreach my $commit ($git->get_affected_ref_commits($ref)) {
-        $errors += message_errors($git, $commit, $commit->{body});
+        $errors += message_errors($git, $commit, $commit->message);
     }
 
     return $errors == 0;
@@ -301,7 +301,7 @@ sub check_patchset {
 
     return 1 unless $git->is_ref_enabled($branch, $git->get_config($CFG => 'ref'));
 
-    return message_errors($git, $commit, $commit->{body}) == 0;
+    return message_errors($git, $commit, $commit->message) == 0;
 }
 
 # Install hooks

@@ -8,6 +8,7 @@ use utf8;
 use strict;
 use warnings;
 use Git::Hooks;
+use Git::Repository::Log;
 use Path::Tiny;
 use List::MoreUtils qw/uniq/;
 
@@ -153,8 +154,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
 
     unless (@keys) {
         if ($git->get_config($CFG => 'require')) {
-            my $shortid = exists $commit->{commit} ? substr($commit->{commit}, 0, 8) : '';
-            $git->error($PKG, "commit $shortid must cite a JIRA in its message");
+            $git->error($PKG, "commit @{[substr($commit->commit, 0, 10)]} must cite a JIRA in its message");
             return 0;
         } else {
             return 1;
@@ -285,7 +285,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
 sub check_commit_msg {
     my ($git, $commit, $ref) = @_;
 
-    return _check_jira_keys($git, $commit, $ref, uniq(grok_msg_jiras($git, $commit->{body})));
+    return _check_jira_keys($git, $commit, $ref, uniq(grok_msg_jiras($git, $commit->message)));
 }
 
 sub check_patchset {
@@ -326,11 +326,15 @@ sub check_message_file {
     # Remove comment lines from the message file contents.
     $msg =~ s/^#[^\n]*\n//mgs;
 
-    return check_commit_msg(
-        $git,
-        { body => $msg }, # fake a commit hash to simplify check_commit_msg
-        $current_branch,
+    # Construct a fake commit object to pass to the check_commit_msg
+    my $commit = Git::Repository::Log->new(
+        commit    => '<new>',
+        author    => 'Fake Author <author@example.net> 1234567890 -0300',
+        committer => 'Fake Committer <committer@example.net> 1234567890 -0300',
+        message   => $msg,
     );
+
+    return check_commit_msg($git, $commit, $current_branch);
 }
 
 sub check_ref {
@@ -373,13 +377,13 @@ sub check_affected_refs {
 sub notify_commit_msg {
     my ($git, $commit, $ref, $visibility) = @_;
 
-    my @keys = uniq(grok_msg_jiras($git, $commit->{body}));
+    my @keys = uniq(grok_msg_jiras($git, $commit->message));
 
     return 0 unless @keys;
 
     my $jira = _jira($git) or return 1;
 
-    my $show = $git->run(show => '--stat', $commit->{commit});
+    my $show = $git->run(show => '--stat', $commit->commit);
 
     my %comment = (
         body => <<EOF,
