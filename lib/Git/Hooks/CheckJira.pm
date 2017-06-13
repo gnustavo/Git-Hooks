@@ -305,7 +305,11 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
 sub check_commit_msg {
     my ($git, $commit, $ref) = @_;
 
-    return _check_jira_keys($git, $commit, $ref, uniq(grok_msg_jiras($git, $commit->message)));
+    if ($commit->parent() > 1 && $git->get_config($CFG => 'skip-merges')) {
+        return 1;
+    } else {
+        return _check_jira_keys($git, $commit, $ref, uniq(grok_msg_jiras($git, $commit->message)));
+    }
 }
 
 sub check_patchset {
@@ -795,6 +799,11 @@ In this case, NAME must be the name of a JIRA group.
 In this case, the visibility isn't restricted at all.
 
 =back
+
+=head2 githooks.checkjira.skip-merges [01]
+
+By default, all commits are checkes. You can exempt merge commits from being
+checked by setting this option to 0.
 
 =head2 githooks.checkjira.project KEY
 

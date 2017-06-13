@@ -32,7 +32,8 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
   - CheckReference: new plugin.
 
-  - CheckJira: New configuration options: 'jql', and 'ref-jql'.
+  - CheckJira: New configuration options: 'jql', 'ref-jql', and
+    'skip-merges'.
 
 1.16.0    2017-05-20 18:48:38-03:00 America/Sao_Paulo
 
