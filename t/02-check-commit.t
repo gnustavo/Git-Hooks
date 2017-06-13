@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
-use Test::More tests => 26;
+use Test::More tests => 29;
 use Test::Requires::Git;
 use Path::Tiny;
 
@@ -42,6 +42,34 @@ sub check_cannot_commit {
         : test_nok($testname, $repo, 'commit', '-m', $testname);
     $repo->run(rm => '--cached', $file);
     return $exit;
+}
+
+sub merge {
+    my ($git, $testname) = @_;
+
+    $git->run(qw'checkout -q -b xpto');
+    $git->run(qw'commit --allow-empty -m', $testname);
+    $git->run(qw'checkout -q master');
+    $git->run(qw'merge --no-ff xpto');
+    $git->run(qw'branch -d xpto');
+}
+
+sub check_can_push_merge {
+    my ($testname) = @_;
+
+    merge($repo, $testname);
+
+    return test_ok($testname, $repo, 'push', $clone->git_dir(), 'master');
+}
+
+sub check_cannot_push_merge {
+    my ($testname, $regex) = @_;
+
+    merge($repo, $testname);
+
+    return $regex
+        ? test_nok_match($testname, $regex, $repo, 'push', $clone->git_dir(), 'master')
+        : test_nok($testname, $repo, 'push', $clone->git_dir(), 'master');
 }
 
 sub check_can_push {
@@ -215,6 +243,25 @@ SKIP: {
 
     $clone->run(qw/config --remove-section githooks.checkcommit/);
 }
+
+# merges
+
+$clone->run(qw/config githooks.userenv GITMERGER/);
+
+$ENV{GITMERGER} = 'user';
+check_can_push_merge('allow merges by default');
+
+$clone->run(qw/config githooks.checkcommit.merger merger/);
+
+$ENV{GITMERGER} = 'user';
+check_cannot_push_merge('deny merges by non-mergers', qr/are not allowed to do merges/);
+
+$ENV{GITMERGER} = 'merger';
+check_can_push_merge('allow merges by merger');
+
+delete $ENV{GITMERGER};
+$clone->run(qw/config --unset githooks.userenv/);
+$clone->run(qw/config --remove-section githooks.checkcommit/);
 
 # check-code clone
 

@@ -71,6 +71,21 @@ sub match_errors {
     return $errors;
 }
 
+sub merge_errors {
+    my ($git, $commit) = @_;
+
+    if ($commit->parent() > 1) { # it's a merge commit
+        if (my @mergers = $git->get_config($CFG => 'merger')) {
+            if (none {$git->match_user($_)} @mergers) {
+                $git->error($PKG, "commit @{[$commit->commit]} is a merge but you (@{[$git->authenticated_user]}) are not allowed to do merges");
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
 sub email_valid_errors {
     my ($git, $commit) = @_;
 
@@ -252,6 +267,7 @@ sub commit_errors {
 
     return
         match_errors($git, $commit) +
+        merge_errors($git, $commit) +
         email_valid_errors($git, $commit) +
         canonical_errors($git, $commit) +
         signature_errors($git, $commit) +
@@ -354,7 +370,7 @@ DRAFT_PUBLISHED  \&check_patchset;
 
 
 __END__
-=for Pod::Coverage match_errors email_valid_errors canonical_errors identity_errors signature_errors spelling_errors pattern_errors subject_errors body_errors footer_errors commit_errors code_errors check_pre_commit check_post_commit check_ref check_affected_refs check_patchset
+=for Pod::Coverage match_errors merge_errors email_valid_errors canonical_errors identity_errors signature_errors spelling_errors pattern_errors subject_errors body_errors footer_errors commit_errors code_errors check_pre_commit check_post_commit check_ref check_affected_refs check_patchset
 
 =head1 NAME
 
@@ -476,7 +492,7 @@ means addresses like: C<rjbs@[1.2.3.4]>. The default is true.
 
 =head2 githooks.checkcommit.canonical MAILMAP
 
-This option requires the use of cannonical names and emails for authors and
+This option requires the use of canonical names and emails for authors and
 committers, as configured in a F<MAILMAP> file and checked by the
 C<git-check-mailmap> command. Please, read that command's documentation to
 know how to configure a mailmap file for name and email canonicalization.
@@ -527,6 +543,13 @@ signatures.
 =back
 
 This check is performed by the C<post-commit> local hook.
+
+=head2 githooks.checkcommit.merger WHO
+
+This multi-valued option restricts who can push commit merges to the
+repository. WHO may be specified as a username, a groupname, or a regex,
+like the C<githooks.admin> option (see L<Git::Hooks/CONFIGURATION>) so that
+only users matching WHO may push merge commits.
 
 =head2 githooks.checkcommit.check-code CODESPEC
 
