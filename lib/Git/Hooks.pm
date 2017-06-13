@@ -6,12 +6,13 @@ use strict;
 use warnings;
 use Exporter qw/import/;
 use Sub::Util qw/subname/;
-use Git::Repository qw'GitHooks Log';
+use Git::Repository qw/GitHooks Log/;
 
 our @EXPORT; ## no critic (Modules::ProhibitAutomaticExportation)
-my (%Hooks);
 
-BEGIN {                         ## no critic (RequireArgUnpacking)
+my %Hooks;
+
+BEGIN {
     my @installers =
         qw/ APPLYPATCH_MSG PRE_APPLYPATCH POST_APPLYPATCH
             PRE_COMMIT PREPARE_COMMIT_MSG COMMIT_MSG
@@ -23,13 +24,10 @@ BEGIN {                         ## no critic (RequireArgUnpacking)
           /;
 
     for my $installer (@installers) {
-        my $hook = lc $installer;
-        $hook =~ tr/_/-/;
+        my $hook = $installer;
+        $hook =~ tr/A-Z_/a-z-/;
         no strict 'refs';       ## no critic (ProhibitNoStrict)
-        *{__PACKAGE__ . '::' . $installer} = sub (&) {
-            my ($sub) = @_;
-            push @{$Hooks{$hook}}, sub { $sub->(@_); };
-        }
+        *{"Git::Hooks::$installer"} = sub (&) { push @{$Hooks{$hook}}, shift }
     }
 
     @EXPORT = (@installers, 'run_hook');
@@ -40,7 +38,7 @@ BEGIN {                         ## no critic (RequireArgUnpacking)
 # name and arguments, sets up the environment, loads plugins and
 # invokes the appropriate hook functions.
 
-sub run_hook {                  ## no critic (Subroutines::ProhibitExcessComplexity)
+sub run_hook {
     my ($hook_name, @args) = @_;
 
     my $git = Git::Repository->new();
