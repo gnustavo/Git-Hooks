@@ -37,6 +37,8 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
   - CheckCommit: New configuration options: 'merger' and 'push-limit'.
 
+  - CheckFile: New configuration option: 'basename.sizelimit'.
+
 1.16.0    2017-05-20 18:48:38-03:00 America/Sao_Paulo
 
   [New features]

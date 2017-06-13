@@ -104,6 +104,10 @@ sub check_new_files {
             $re_checks{$name}{$check} = [map {qr/$_/} $git->get_config("$CFG.$name" => $check)];
         }
     }
+    foreach ($git->get_config("$CFG.basename" => 'sizelimit')) {
+        my ($bytes, $regexp) = split ' ', $_, 2;
+        unshift @{$re_checks{basename}{sizelimit}}, [qr/$regexp/, $bytes];
+    }
 
     # Now we iterate through every new file and apply to them the matching
     # commands.
@@ -128,8 +132,17 @@ sub check_new_files {
         }
 
         my $size = $git->file_size($commit, $file);
-        if ($sizelimit && $sizelimit < $size) {
-            $git->error($PKG, "File '$file' has $size bytes but the current limit is just $sizelimit bytes.");
+
+        my $file_sizelimit = $sizelimit;
+        foreach my $spec (@{$re_checks{basename}{sizelimit}}) {
+            if ($basename =~ $spec->[0]) {
+                $file_sizelimit = $spec->[1];
+                last;
+            }
+        }
+
+        if ($file_sizelimit && $file_sizelimit < $size) {
+            $git->error($PKG, "File '$file' has $size bytes but the current limit is just $file_sizelimit bytes.");
             ++$errors;
             next FILE;    # Don't botter checking the contents of huge files
         }
@@ -334,6 +347,11 @@ file with a name beginning with a dot.
     [githooks "checkfile"]
         basename.allow ^\\.gitignore
         basename.deny  ^\\.
+
+=head2 githooks.checkfile.basename.sizelimit BYTES REGEXP
+
+This directive takes precedence over the C<githooks.checkfile.sizelimit> for
+files which basename matches REGEXP.
 
 =head2 githooks.checkfile.path.deny REGEXP
 

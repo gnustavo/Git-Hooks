@@ -6,7 +6,7 @@ use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
 use Path::Tiny;
-use Test::More tests => 18;
+use Test::More tests => 19;
 
 my ($repo, $clone);
 
@@ -114,8 +114,13 @@ check_can_commit('small file', 'file.txt', 'truncate', '12');
 
 check_cannot_commit('big file', qr/the current limit is just/, 'file.txt', 'truncate', '123456789');
 
+$repo->run(config => "githooks.checkfile.basename.sizelimit", '2 \.txt$');
+
+check_cannot_commit('basename big file', qr/the current limit is just 2 bytes/, 'file.txt', 'truncate', '123');
+
 $repo->run(config => '--unset-all', "githooks.checkfile.sizelimit");
 
+$repo->run(config => '--unset-all', "githooks.checkfile.basename.sizelimit");
 
 $repo->run(config => "githooks.checkfile.basename.deny", 'txt');
 
