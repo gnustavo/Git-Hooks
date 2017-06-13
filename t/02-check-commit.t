@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
-use Test::More tests => 29;
+use Test::More tests => 30;
 use Test::Requires::Git;
 use Path::Tiny;
 
@@ -261,6 +261,15 @@ check_can_push_merge('allow merges by merger');
 
 delete $ENV{GITMERGER};
 $clone->run(qw/config --unset githooks.userenv/);
+$clone->run(qw/config --remove-section githooks.checkcommit/);
+
+# push-limit
+
+$clone->run(qw/config githooks.checkcommit.push-limit 1/);
+
+$repo->run(qw/commit --allow-empty -mempty/);
+check_cannot_push('push-limit deny', qr/more than our current limit of/, 'master', 'name');
+
 $clone->run(qw/config --remove-section githooks.checkcommit/);
 
 # check-code clone

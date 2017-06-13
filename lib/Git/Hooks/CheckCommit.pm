@@ -279,7 +279,16 @@ sub check_ref {
 
     my $errors = 0;
 
-    foreach my $commit ($git->get_affected_ref_commits($ref)) {
+    my @commits = $git->get_affected_ref_commits($ref);
+
+    if (my $limit = $git->get_config($CFG => 'push-limit')) {
+        if (@commits > $limit) {
+            $git->error($PKG, "you're pushing @{[scalar @commits]} commits to $ref, more than our current limit of $limit");
+            ++$errors;
+        }
+    }
+
+    foreach my $commit (@commits) {
         $errors += commit_errors($git, $commit, $ref);
     }
 
@@ -550,6 +559,14 @@ This multi-valued option restricts who can push commit merges to the
 repository. WHO may be specified as a username, a groupname, or a regex,
 like the C<githooks.admin> option (see L<Git::Hooks/CONFIGURATION>) so that
 only users matching WHO may push merge commits.
+
+=head2 githooks.checkcommit.push-limit N
+
+This limits the number of commits that may be pushed at once on top of any
+reference. Set it to 1 to force developers to squash their commits before
+pushing them. Or set it to a low number (such as 3) to deny long chains of
+commits to be pushed, which are usually made by Git newbies who don't know
+yet how to amend commits. ;-)
 
 =head2 githooks.checkcommit.check-code CODESPEC
 
