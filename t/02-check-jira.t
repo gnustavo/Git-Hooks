@@ -53,7 +53,7 @@ my %issues = (
                   status => { name => 'Taken' },
                   fixVersions => [{name => '1.2.3'}, {name => '1.2'}],
                }},
-    'GIT-4' => {key => 'GIT-3',
+    'GIT-4' => {key => 'GIT-4',
                 fields => {
                   resolution => undef,
                   assignee => { name => 'user'},
@@ -64,7 +64,7 @@ my %issues = (
 );
 
 sub GET {
-    my ($self, $endpoint) = @_;
+    my ($jira, $endpoint) = @_;
     my $key;
     if ($endpoint =~ m:/issue/(.*):) {
         $key = $1;
@@ -75,6 +75,41 @@ sub GET {
 	return $issues{$key};
     } else {
 	die "JIRA::Client(fake): no such issue ($key)\n";
+    }
+}
+
+my %queries = (
+    'key IN (GIT-0) AND project IN (OTHER)'                      => [],
+    'key IN (GIT-0) AND project IN (GIT)'                        => [$issues{'GIT-0'}],
+    'key IN (GIT-1) AND project IN (GIT)'                        => [$issues{'GIT-1'}],
+    'key IN (GIT-2) AND project IN (GIT)'                        => [$issues{'GIT-2'}],
+    'key IN (GIT-2)'                                             => [$issues{'GIT-2'}],
+    'key IN (GIT-3) AND project IN (GIT)'                        => [$issues{'GIT-3'}],
+    'key IN (GIT-2,GIT-3) AND project IN (GIT)'                  => [@issues{'GIT-2','GIT-3'}],
+    'key IN (GIT-4) AND project IN (GIT)'                        => [$issues{'GIT-4'}],
+    'key IN (GIT-2) AND project IN (GIT) AND status IN (Taken)'  => [],
+    'key IN (GIT-3) AND project IN (GIT) AND status IN (Taken)'  => [$issues{'GIT-3'}],
+    'key IN (GIT-3) AND project IN (GIT) AND issuetype IN (Bug)' => [],
+    'key IN (GIT-2) AND project IN (GIT) AND issuetype IN (Bug)' => [$issues{'GIT-2'}],
+);
+
+sub set_search_iterator {
+    my ($jira, $query) = @_;
+    my $jql = $query->{jql};
+    if (exists $queries{$jql}) {
+        $jira->{iterator} = [@{$queries{$jql}}];
+    } else {
+        die $jql;
+    }
+    return;
+}
+
+sub next_issue {
+    my ($jira) = @_;
+    if (@{$jira->{iterator}}) {
+        return shift @{$jira->{iterator}};
+    } else {
+        return;
     }
 }
 
@@ -137,7 +172,7 @@ $repo->run(checkout => '-q', 'master');
 
 $repo->run(config => 'githooks.checkjira.project', 'OTHER');
 check_cannot_commit('deny commit citing non-allowed projects [GIT-0]',
-		    qr/do not cite issue GIT-0/);
+		    qr/not match the expression/);
 
 $repo->run(config => 'githooks.checkjira.require', '0');
 check_can_commit('allow commit if JIRA is not required');
@@ -151,10 +186,10 @@ check_cannot_commit('deny commit if cannot connect to JIRA [GIT-0]',
 $repo->run(config => '--replace-all', 'githooks.checkjira.jirapass', 'valid');
 
 check_cannot_commit('deny commit if cannot get issue [GIT-0]',
-		    qr/cannot get issue/);
+		    qr/not match the expression/);
 
 check_cannot_commit('deny commit if issue is already resolved [GIT-1]',
-		    qr/is already resolved/);
+		    qr/cannot be used because it is already resolved/);
 
 $repo->run(config => '--replace-all', 'githooks.checkjira.unresolved', 0);
 check_can_commit('allow commit if issue can be resolved [GIT-1]');
@@ -173,13 +208,13 @@ check_can_commit('allow commit if valid issue cited [GIT-2]');
 
 $repo->run(config => '--replace-all', 'githooks.checkjira.status', 'Taken');
 check_cannot_commit('deny commit if not in valid status [GIT-2]',
-		    qr/cannot be used because it is in the unapproved status/);
+		    qr/not match the expression/);
 check_can_commit('allow commit if in valid status [GIT-3]');
 $repo->run(config => '--unset-all', 'githooks.checkjira.status');
 
 $repo->run(config => '--replace-all', 'githooks.checkjira.issuetype', 'Bug');
 check_cannot_commit('deny commit if not with valid type [GIT-3]',
-		    qr/cannot be used because it is of the unapproved type/);
+		    qr/not match the expression/);
 check_can_commit('allow commit if with valid type [GIT-2]');
 $repo->run(config => '--unset-all', 'githooks.checkjira.issuetype');
 

@@ -154,15 +154,15 @@ repositories I have this in their F<.git/config>:
             plugin = CheckJira
             plugin = GerritChangeId
     [githooks "checkjira"]
-            project = CDS
+            jql = project = CDS
 
 C<GerritChangeId> doesn't require any configuration. It simply inserts
 a C<Change-Id> line in the messages of all commits. These are required
 by Gerrit.
 
 I use C<CheckJira> to remind me to cite a JIRA issue in every commit
-message. The C<project> value makes it accept only issues of the CDS
-JIRA project for this particular repository.
+message. The C<jql> filter makes it accept only issues of the CDS JIRA
+project for this particular repository.
 
 =head3 Disabling plugins temporarily
 

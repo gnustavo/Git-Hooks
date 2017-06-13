@@ -25,9 +25,14 @@ Revision history for perl module Git-Hooks. -*- text -*-
     githooks.gerrit.review-label, githooks.gerrit.vote-ok, and
     githooks.gerrit.vote-nok.
 
+  - CheckJira: Deprecates the configuration options 'project', 'status', and
+    'issuetype'.
+
   [New features]
 
-  - Add a the CheckReference plugin.
+  - CheckReference: new plugin.
+
+  - CheckJira: New configuration options: 'jql', and 'ref-jql'.
 
 1.16.0    2017-05-20 18:48:38-03:00 America/Sao_Paulo
 
