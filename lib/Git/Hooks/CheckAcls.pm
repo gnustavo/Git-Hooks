@@ -7,7 +7,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
-use Error qw/:try/;
+use Try::Tiny;
 use Git::Hooks;
 
 my $PKG = __PACKAGE__;
@@ -57,12 +57,12 @@ sub check_ref {
         $op = 'R';              # rewrite a non-branch
     } else {
         # This is an U if "merge-base(old, new) == old". Otherwise it's an R.
-        try {
+        $op = try {
             chomp(my $merge_base = $git->run('merge-base' => $old_commit, $new_commit));
-            $op = ($merge_base eq $old_commit) ? 'U' : 'R';
-        } otherwise {
+            ($merge_base eq $old_commit) ? 'U' : 'R';
+        } catch {
             # Probably $old_commit and $new_commit do not have a common ancestor.
-            $op = 'R';
+            'R';
         };
     }
 

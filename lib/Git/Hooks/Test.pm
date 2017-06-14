@@ -12,7 +12,7 @@ use Path::Tiny;
 use File::pushd;
 use URI::file;
 use Git::Repository 'GitHooks';
-use Error ':try';
+use Try::Tiny;
 use Test::More;
 use Cwd;
 
@@ -206,9 +206,9 @@ sub new_repos {
 
         $repo->run(qw/remote add clone/, $clonedir);
 
-        return ($repo, $filename, $clone, $T);
-    } otherwise {
-        my $E = shift;
+        ($repo, $filename, $clone, $T);
+    } catch {
+        my $E = $_;
         my $exception = "$E";   # stringify it
         if (-s $stderr) {
             open my $err_h, '<', $stderr;
@@ -223,6 +223,7 @@ sub new_repos {
         $exception =~ s/\n/;/g;
         local $, = ':';
         BAIL_OUT("Error setting up repos for test: Exception='$exception'; CWD=$T; git-version=$git_version; \@INC=(@INC).\n");
+        ();
     };
 }
 

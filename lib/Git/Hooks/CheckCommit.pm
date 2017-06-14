@@ -7,7 +7,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
-use Error ':try';
+use Try::Tiny;
 use Git::Hooks;
 use Git::Repository::Log;
 use List::MoreUtils qw/any none/;
@@ -133,21 +133,21 @@ sub _canonical_identity {
     my $cache = $git->cache($PKG);
 
     unless (exists $cache->{canonical}{$identity}) {
-        try {
-            my $canonical = $git->run(
-                '-c', "mailmap.file=$mailmap",
-                'check-mailmap',
-                $identity,
-            );
-
-            chomp($cache->{canonical}{$identity} = $canonical);
-        } otherwise {
-            $cache->{canonical}{$identity} = $identity;
-            $git->error($PKG, <<'EOS');
+        $cache->{canonical}{$identity} =
+            try {
+                chomp(my $canonical = $git->run(
+                    '-c', "mailmap.file=$mailmap",
+                    'check-mailmap',
+                    $identity,
+                ));
+                $canonical;
+            } catch {
+                $git->error($PKG, <<'EOS');
 The githooks.checkcommit.canonical option requires the git-check-mailmap
 command which isn't found. It's available since Git 1.8.4. You should either
 upgrade your Git or disable this option.
 EOS
+                $identity;
         };
     }
 

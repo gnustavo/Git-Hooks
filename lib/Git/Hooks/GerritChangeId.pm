@@ -11,7 +11,7 @@ use Git::Hooks;
 use Git::Message;
 use Path::Tiny;
 use Carp;
-use Error qw/:try/;
+use Try::Tiny;
 
 my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
@@ -31,10 +31,9 @@ sub gen_change_id {
         [ author    => [qw/var GIT_AUTHOR_IDENT/] ],
         [ committer => [qw/var GIT_COMMITTER_IDENT/] ],
     ) {
+        # It's OK if we can't find info.
         try {
             $fh->print($info->[0], ' ', scalar($git->run(@{$info->[1]})));
-        } otherwise {
-            # Can't find info. That's ok.
         };
     }
 
