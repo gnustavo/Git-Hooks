@@ -884,15 +884,17 @@ C<Git::Repository> object.
 
 =over
 
-=item This script is heavily inspired (and sometimes derived) from Joyjit
-Nath's L<git-jira-hook|https://github.com/joyjit/git-jira-hook>.
+=item * L<git-jira-hook|https://github.com/joyjit/git-jira-hook>
 
-=item L<JIRA SOAP API deprecation
+This script is heavily inspired (and sometimes derived) from Joyjit Nath's hook.
+
+=item * L<JIRA SOAP API deprecation
 notice|https://developer.atlassian.com/display/JIRADEV/SOAP+and+XML-RPC+API+Deprecated+in+JIRA+6.0>
 
-=item <Yet Another Commit
-Checker|https://github.com/sford/yet-another-commit-checker> is a Bitbucket
-plugin which implements some nice checks with JIRA, from which we stole some
-ideas.
+=item * L<Yet Another Commit
+Checker|https://github.com/sford/yet-another-commit-checker>
+
+This Bitbucket plugin implements some nice checks with JIRA, from which we
+stole some ideas.
 
 =back

@@ -1122,7 +1122,9 @@ The information from these lines is read and can be fetched by the
 hooks using the C<Git::Hooks::get_input_data> method.
 
 =item * REF_UPDATE(GIT, OPTS)
+
 =item * PATCHSET_CREATED(GIT, OPTS)
+
 =item * DRAFT_PUBLISHED(GIT, OPTS)
 
 These are Gerrit-specific hooks. Gerrit invokes them passing a list of

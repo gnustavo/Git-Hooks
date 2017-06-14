@@ -165,10 +165,14 @@ message.
 
 =head1 REFERENCES
 
-L<Gerrit's Home Page|http://gerrit.googlecode.com/>.
+=over
 
-L<Gerrit's official commit-msg
-hook|https://gerrit.googlesource.com/gerrit/+/master/gerrit-server/src/main/resources/com/google/gerrit/server/tools/root/hooks/commit-msg>.
+=item * L<Gerrit's Home Page|http://gerrit.googlecode.com/>
 
-L<Gerrit's official hook
-documentation|https://gerrit.googlesource.com/gerrit/+/master/Documentation/cmd-hook-commit-msg.txt>.
+=item * L<Gerrit's official commit-msg
+hook|https://gerrit.googlesource.com/gerrit/+/master/gerrit-server/src/main/resources/com/google/gerrit/server/tools/root/hooks/commit-msg>
+
+=item * L<Gerrit's official hook
+documentation|https://gerrit.googlesource.com/gerrit/+/master/Documentation/cmd-hook-commit-msg.txt>
+
+=back

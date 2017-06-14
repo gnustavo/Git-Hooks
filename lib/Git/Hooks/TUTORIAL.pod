@@ -382,6 +382,6 @@ manually, though.
 
 =head1 DEVELOPER TUTORIAL
 
-If you want to develop your own hooks or plugins, please read the
-L<Git::Hooks/Implementing Hooks> and the L<Git::Hooks/Implementing Plugins>
-sections of the L<Git::Hooks> documentation.
+If you want to develop your own hooks or plugins, please read the sections
+L<Git::Hooks/Implementing Hooks> and L<Git::Hooks/Implementing Plugins>
+documentation.

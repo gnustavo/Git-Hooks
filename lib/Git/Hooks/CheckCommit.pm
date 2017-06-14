@@ -612,7 +612,9 @@ to have failed and a proper message is produced to the user.
 
 =over
 
-=item * L<Email::Valid> Module used to check validity of email addresses.
+=item * L<Email::Valid>
+
+Module used to check validity of email addresses.
 
 =item * L<A Git Horror Story: Repository Integrity With Signed Commits|http://mikegerwitz.com/papers/git-horror-story>
 
