@@ -7,7 +7,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
-use Error qw(:try);
+use Error qw/:try/;
 use Git::Hooks;
 
 my $PKG = __PACKAGE__;

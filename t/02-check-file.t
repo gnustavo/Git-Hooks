@@ -80,90 +80,90 @@ sub check_cannot_push {
 
 setup_repos();
 
-$repo->run(config => "githooks.plugin", 'CheckFile');
+$repo->run(qw/config githooks.plugin CheckFile/);
 
 check_can_commit('commit sans configuration', 'file.txt');
 
-$repo->run(config => "githooks.checkfile.name", '*.other true');
+$repo->run(qw/config githooks.checkfile.name/, '*.other true');
 
 check_can_commit('commit miss', 'file.txt');
 
-$repo->run(config => "githooks.checkfile.name", '*.txt true');
+$repo->run(qw/config githooks.checkfile.name/, '*.txt true');
 
 check_can_commit('commit hit/pass', 'file.txt');
 
-$repo->run(config => '--replace-all', "githooks.checkfile.name", '*.txt false');
+$repo->run(qw/config --replace-all githooks.checkfile.name/, '*.txt false');
 
 check_cannot_commit('commit hit/fail', qr/failed with exit code/, 'file.txt');
 
-$repo->run(config => '--replace-all', "githooks.checkfile.name", 'qr/\.txt$/ false');
+$repo->run(qw/config --replace-all githooks.checkfile.name/, 'qr/\.txt$/ false');
 
 check_cannot_commit('commit hit/regexp', qr/failed with exit code/, 'file.txt');
 
 check_cannot_commit('commit add hit', qr/failed with exit code/, 'file2.txt');
 
-$repo->run(config => '--replace-all', "githooks.checkfile.name", '*.txt test -f {} && true');
+$repo->run(qw/config --replace-all githooks.checkfile.name/, '*.txt test -f {} && true');
 
 check_can_commit('commit hit {}', 'file.txt');
 
-$repo->run(config => '--unset-all', "githooks.checkfile.name");
+$repo->run(qw/config --unset-all githooks.checkfile.name/);
 
-$repo->run(config => "githooks.checkfile.sizelimit", '4');
+$repo->run(qw/config githooks.checkfile.sizelimit 4/);
 
 check_can_commit('small file', 'file.txt', 'truncate', '12');
 
 check_cannot_commit('big file', qr/the current limit is just/, 'file.txt', 'truncate', '123456789');
 
-$repo->run(config => "githooks.checkfile.basename.sizelimit", '2 \.txt$');
+$repo->run(qw/config githooks.checkfile.basename.sizelimit/, '2 \.txt$');
 
 check_cannot_commit('basename big file', qr/the current limit is just 2 bytes/, 'file.txt', 'truncate', '123');
 
-$repo->run(config => '--unset-all', "githooks.checkfile.sizelimit");
+$repo->run(qw/config --unset-all githooks.checkfile.sizelimit/);
 
-$repo->run(config => '--unset-all', "githooks.checkfile.basename.sizelimit");
+$repo->run(qw/config --unset-all githooks.checkfile.basename.sizelimit/);
 
-$repo->run(config => "githooks.checkfile.basename.deny", 'txt');
+$repo->run(qw/config githooks.checkfile.basename.deny txt/);
 
 check_cannot_commit('deny basename', qr/basename was denied/, 'file.txt');
 
-$repo->run(config => "githooks.checkfile.basename.allow", 'txt');
+$repo->run(qw/config githooks.checkfile.basename.allow txt/);
 
 check_can_commit('allow basename', 'file.txt');
 
-$repo->run(config => '--unset-all', "githooks.checkfile.basename.deny");
-$repo->run(config => '--unset-all', "githooks.checkfile.basename.allow");
+$repo->run(qw/config --unset-all githooks.checkfile.basename.deny/);
+$repo->run(qw/config --unset-all githooks.checkfile.basename.allow/);
 
 
-$repo->run(config => "githooks.checkfile.path.deny", 'txt');
+$repo->run(qw/config githooks.checkfile.path.deny txt/);
 
 check_cannot_commit('deny path', qr/path was denied/, 'file.txt');
 
-$repo->run(config => "githooks.checkfile.path.allow", 'txt');
+$repo->run(qw/config githooks.checkfile.path.allow txt/);
 
 check_can_commit('allow path', 'file.txt');
 
-$repo->run(config => '--unset-all', "githooks.checkfile.path.deny");
-$repo->run(config => '--unset-all', "githooks.checkfile.path.allow");
+$repo->run(qw/config --unset-all githooks.checkfile.path.deny/);
+$repo->run(qw/config --unset-all githooks.checkfile.path.allow/);
 
 # PRE-RECEIVE
 
 setup_repos();
 
-$clone->run(config => "githooks.plugin", 'CheckFile');
+$clone->run(qw/config githooks.plugin CheckFile/);
 
 check_can_push('push sans configuration', 'file.txt');
 
-$clone->run(config => "githooks.checkfile.name", '*.txt true');
+$clone->run(qw/config githooks.checkfile.name/, '*.txt true');
 
 check_can_push('commit hit/pass', 'file.txt');
 
-$clone->run(config => '--replace-all', "githooks.checkfile.name", '*.txt false');
+$clone->run(qw/config --replace-all githooks.checkfile.name/, '*.txt false');
 
 check_cannot_push('commit hit/fail', qr/failed with exit code/, 'file.txt');
 
-$clone->run(config => '--unset-all', "githooks.checkfile.name");
+$clone->run(qw/config --unset-all githooks.checkfile.name/);
 
-$clone->run(config => "githooks.checkfile.sizelimit", '4');
+$clone->run(qw/config githooks.checkfile.sizelimit 4/);
 
 check_can_push('small file', 'file.txt', 'truncate', '12');
 

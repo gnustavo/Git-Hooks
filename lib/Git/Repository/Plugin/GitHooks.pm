@@ -915,7 +915,7 @@ sub get_current_branch {
 sub get_sha1 {
     my ($git, $rev) = @_;
 
-    return $git->run('rev-parse', '--verify', $rev)->final_output;
+    return $git->run(qw/rev-parse --verify/, $rev)->final_output;
 }
 
 sub get_head_or_empty_tree {
@@ -979,7 +979,7 @@ sub blob {
 sub file_size {
     my ($git, $rev, $file) = @_;
 
-    chomp(my $size = $git->run('cat-file', '-s', "$rev:$file"));
+    chomp(my $size = $git->run(qw/cat-file -s/, "$rev:$file"));
 
     return $size;
 }

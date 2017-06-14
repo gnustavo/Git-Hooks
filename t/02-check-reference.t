@@ -37,15 +37,15 @@ sub check_cannot_push {
 
 setup_repos();
 
-$clone->run(qw'config githooks.plugin CheckReference');
+$clone->run(qw/config githooks.plugin CheckReference/);
 
 check_can_push('allow by default', 'allow-anything');
 
-$clone->run(qw'config githooks.checkreference.deny ^refs/heads/');
+$clone->run(qw{config githooks.checkreference.deny ^refs/heads/});
 
 check_cannot_push('deny anything', 'deny-anything');
 
-$clone->run(qw'config githooks.checkreference.allow ^refs/heads/(?:feature|release|hotfix)');
+$clone->run(qw{config githooks.checkreference.allow ^refs/heads/(?:feature|release|hotfix)});
 
 check_can_push('allow feature', 'feature/x');
 

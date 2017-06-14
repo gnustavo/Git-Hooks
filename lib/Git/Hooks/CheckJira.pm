@@ -99,8 +99,8 @@ sub _jql_query {
         $jira->set_search_iterator({
             jql    => $jql,
             fields => $git->get_config($CFG => 'check-code')
-                ? [qw'*all']
-                : [qw'assignee fixVersions resolution'],
+                ? [qw/*all/]
+                : [qw/assignee fixVersions resolution/],
         });
         while (my $issue = $jira->next_issue) {
             $cache->{jql}{$jql}{$issue->{key}} = $issue;

@@ -11,7 +11,7 @@ use Git::Hooks;
 use Git::Message;
 use Path::Tiny;
 use Carp;
-use Error qw(:try);
+use Error qw/:try/;
 
 my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;

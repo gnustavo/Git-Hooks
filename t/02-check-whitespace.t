@@ -65,7 +65,7 @@ sub check_cannot_push {
 
 setup_repos();
 
-$repo->run(config => "githooks.plugin", 'CheckWhitespace');
+$repo->run(qw/config githooks.plugin CheckWhitespace/);
 
 check_can_commit('commit ok', "ok\n");
 
@@ -79,7 +79,7 @@ check_cannot_commit(
 
 setup_repos();
 
-$clone->run(config => "githooks.plugin", 'CheckWhitespace');
+$clone->run(qw/config githooks.plugin CheckWhitespace/);
 
 check_can_push('push ok', "ok\n");
 

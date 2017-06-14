@@ -40,18 +40,18 @@ sub check_cannot_commit {
     my $exit = $regex
         ? test_nok_match($testname, $regex, $repo, 'commit', '-m', $testname)
         : test_nok($testname, $repo, 'commit', '-m', $testname);
-    $repo->run(rm => '--cached', $file);
+    $repo->run(qw/rm --cached/, $file);
     return $exit;
 }
 
 sub merge {
     my ($git, $testname) = @_;
 
-    $git->run(qw'checkout -q -b xpto');
-    $git->run(qw'commit --allow-empty -m', $testname);
-    $git->run(qw'checkout -q master');
-    $git->run(qw'merge --no-ff xpto');
-    $git->run(qw'branch -d xpto');
+    $git->run(qw/checkout -q -b xpto/);
+    $git->run(qw/commit --allow-empty -m/, $testname);
+    $git->run(qw/checkout -q master/);
+    $git->run(qw/merge --no-ff xpto/);
+    $git->run(qw/branch -d xpto/);
 }
 
 sub check_can_push_merge {
@@ -96,7 +96,7 @@ sub check_cannot_push {
 
 install_hooks($repo, undef, 'pre-commit');
 
-$repo->run(config => "githooks.plugin", 'CheckCommit');
+$repo->run(qw/config githooks.plugin CheckCommit/);
 
 # name
 
@@ -219,7 +219,7 @@ SKIP: {
 
 install_hooks($clone, undef, 'pre-receive');
 
-$clone->run(config => "githooks.plugin", 'CheckCommit');
+$clone->run(qw/config githooks.plugin CheckCommit/);
 
 $clone->run(qw/config githooks.checkcommit.name valid1/);
 

@@ -181,8 +181,8 @@ sub new_repos {
 
             $repo = Git::Repository->new();
 
-            $repo->run(config => 'user.email', 'myself@example.com');
-            $repo->run(config => 'user.name',  'My Self');
+            $repo->run(qw/config user.email myself@example.com/);
+            $repo->run(qw/config user.name/, 'My Self');
         }
 
         {
@@ -232,7 +232,7 @@ sub new_commit {
     $file->append($msg || 'new commit');
 
     $git->run(add => $file);
-    $git->run(commit => '-q', '-m', $msg || 'commit');
+    $git->run(qw/commit -q -m/, $msg || 'commit');
 
     return;
 }

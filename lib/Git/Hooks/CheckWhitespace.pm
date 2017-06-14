@@ -9,7 +9,7 @@ use strict;
 use warnings;
 use Git::Hooks;
 use Text::Glob qw/glob_to_regex/;
-use Error qw(:try);
+use Error qw/:try/;
 
 my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;

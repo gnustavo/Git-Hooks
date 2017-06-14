@@ -7,7 +7,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
-use Error qw(:try);
+use Error qw/:try/;
 use Path::Tiny;
 use Git::Hooks;
 
@@ -125,7 +125,7 @@ sub check_rebase {
     }
 
     # Find the base commit of the rebased sequence
-    my $base_commit = $git->run('rev-list', '--topo-order', '--reverse', "$upstream..$branch");
+    my $base_commit = $git->run(qw/rev-list --topo-order --reverse/, "$upstream..$branch");
 
     # If $upstream is a decendant of $branch, $base_commit is
     # empty. In this situation the rebase will turn out to be a simple

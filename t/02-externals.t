@@ -74,6 +74,6 @@ chmod 0755, $hook or die "Cannot chmod $hook: $!\n";
 check_cannot_commit('execute a hook that fails', qr/external hook failure/);
 
 # Disable external hooks
-$repo->run(config => 'githooks.externals', 0);
+$repo->run(qw/config githooks.externals 0/);
 
 check_can_commit('do not execute disabled hooks');
