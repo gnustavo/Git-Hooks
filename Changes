@@ -30,7 +30,10 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
   [New features]
 
-  - CheckReference: new plugin.
+  - New configuration options for the 'githooks' section: 'error-header' and
+    'error-footer'.
+
+  - CheckReference: New plugin.
 
   - CheckJira: New configuration options: 'jql', 'ref-jql', and
     'skip-merges'.

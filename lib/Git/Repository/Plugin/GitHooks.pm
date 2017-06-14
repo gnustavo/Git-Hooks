@@ -223,9 +223,9 @@ sub _gerrit_patchset_post_hook {
     my %review_input;
     my $auto_submit = 0;
 
-    if (my @errors = $git->get_errors()) {
+    if (my $errors = $git->get_errors()) {
         $review_input{labels}  = $cfg{'votes-to-reject'} || 'Code-Review-1';
-        $review_input{message} = join("\n\n", @errors);
+        $review_input{message} = $errors;
     } else {
         $review_input{labels}  = $cfg{'votes-to-approve'} || 'Code-Review+1';
         $review_input{message} = "[Git::Hooks] $cfg{'comment-ok'}"
@@ -619,18 +619,39 @@ sub error {
     }
     $fmtmsg .= "\n";            # end in a newline
     push @{$git->{_plugin_githooks}{errors}}, $fmtmsg;
-    if ($nocarp) {
-        warn $fmtmsg;           ## no critic (RequireCarping)
-    } else {
-        carp $fmtmsg;
-    }
+
+    # Return true to allow for the idiom: <expression> or $git->error(...) and <next|last|return>;
     return 1;
 }
 
 sub get_errors {
     my ($git) = @_;
 
-    return exists $git->{_plugin_githooks}{errors} ? @{$git->{_plugin_githooks}{errors}} : ();
+    return unless exists $git->{_plugin_githooks}{errors};
+
+    my $errors = '';
+
+    if (my $header = $git->get_config(githooks => 'error-header')) {
+        $errors .= qx{$header} . "\n";
+    }
+
+    $errors .= join("\n\n", @{$git->{_plugin_githooks}{errors}});
+
+    if ($git->{_plugin_githooks}{hookname} =~ /^commit-msg|pre-commit$/
+            && ! $git->get_config(githooks => 'abort-commit')) {
+        $errors .= <<"EOF";
+
+ATTENTION: To fix the problems in this commit, please consider amending it:
+
+        git commit --amend
+EOF
+    }
+
+    if (my $footer = $git->get_config(githooks => 'error-footer')) {
+        $errors .= "\n" . qx{$footer} . "\n";
+    }
+
+    return $errors;
 }
 
 sub undef_commit {
@@ -1281,8 +1302,8 @@ doesn't die.
 
 =head2 get_errors
 
-This method returns a list of all error messages recorded with the C<error>
-method.
+This method returns a string specially formatted with all error messages
+recorded with the C<error> method, a header, and a footer, if requested.
 
 =head2 undef_commit
 
