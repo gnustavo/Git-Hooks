@@ -379,3 +379,9 @@ repositories inherit their ancestor's configuration. Git's own configuration
 mechanism has no such notion, but you can fake it using the same L<include
 mechanism discussed above|/Distributed configuration>. But you have to do it
 manually, though.
+
+=head1 DEVELOPER TUTORIAL
+
+If you want to develop your own hooks or plugins, please read the
+L<Git::Hooks/Implementing Hooks> and the L<Git::Hooks/Implementing Plugins>
+sections of the L<Git::Hooks> documentation.

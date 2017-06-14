@@ -280,13 +280,13 @@ For example:
 
         my $errors = 0;
 
-        foreach ($git->run('ls-files' => '-s', @changed)) {
-            chomp;
+        foreach ($git->run(qw/ls-files -s/, @changed)) {
             my ($mode, $sha, $n, $name) = split / /;
             my $size = $git->file_size(":0:$name");
-            $size <= $LIMIT
-                or $git->error('CheckSize', "File '$name' has $size bytes, more than our limit of $LIMIT"
-                    and ++$errors;
+            if ($size > $LIMIT) {
+                $git->error('CheckSize', "File '$name' has $size bytes, more than our limit of $LIMIT");
+                ++$errors;
+            }
         }
 
         return $errors == 0;
@@ -301,12 +301,11 @@ For example:
 
         my @changed = grep {/\.p[lm]$/} $git->filter_files_in_index('AM');
 
-        foreach ($git->run('ls-files' => '-s', @changed)) {
-            chomp;
+        foreach ($git->run(qw/ls-files -s/, @changed)) {
             my ($mode, $sha, $n, $name) = split / /;
             require Perl::Critic;
             state $critic = Perl::Critic->new(-severity => 'stern', -top => 10);
-            my $contents = $git->run('cat-file' => $sha);
+            my $contents = $git->run('cat-file', $sha);
             my @violations = $critic->critique(\$contents);
             $violations{$name} = \@violations if @violations;
         }
@@ -396,6 +395,146 @@ configuration option.
 
 The CONFIGURATION section below explains this in more detail.
 
+=head2 Implementing Plugins
+
+Plugins are simply Perl modules inside the Git::Hooks namespace. Choose a
+descriptive name for it so that it can be installed by means of the
+C<githooks.plugin> configuration option. The only requirement of a plugin is
+that it record one of more functions as hooks using the HOOK DIRECTIVES
+described above.
+
+As an example of a bare-bones plugin we could transform the pre-commit hook
+checking for file sizes that we implemented above into a proper plugin
+simply by putting it inside a package and using the Git::Hooks module to
+import the PRE_COMMIT directive, like this:
+
+    package Git::Hooks::CheckFileSize;
+    # ABSTRACT: Git::Hooks plugin for checking file sizes
+
+    use Git::Hooks;
+
+    # Check if every added/updated file is smaller than a fixed limit.
+
+    my $LIMIT = 10 * 1024 * 1024; # 10MB
+
+    PRE_COMMIT {
+        my ($git) = @_;
+
+        my @changed = $git->filter_files_in_index('AM');
+
+        my $errors = 0;
+
+        foreach ($git->run(qw/ls-files -s/, @changed)) {
+            my ($mode, $sha, $n, $name) = split / /;
+            my $size = $git->file_size(":0:$name");
+            if ($size > $LIMIT) {
+                $git->error('CheckSize', "File '$name' has $size bytes, more than our limit of $LIMIT");
+                ++$errors;
+            }
+        }
+
+        return $errors == 0;
+    };
+
+After having it intalled where Perl can find it you can enable it by putting
+this into your global or local Git config file:
+
+  [githooks]
+	plugin = CheckFileSize
+
+By using some of the L<Git::Repository::Plugin::GitHooks> methods we can
+make this check work for other hooks as well:
+
+    package Git::Hooks::CheckFileSize;
+    # ABSTRACT: Git::Hooks plugin for checking file sizes
+
+    use Git::Hooks;
+
+    # Check if every added/updated file is smaller than a fixed limit.
+
+    my $LIMIT = 10 * 1024 * 1024; # 10MB
+
+    sub check_new_files {
+        my ($git, $commit, @files) = @_;
+
+        my $errors = 0;
+
+        foreach ($git->run(qw/ls-files -s/, @files)) {
+            my ($mode, $sha, $n, $name) = split / /;
+            my $size = $git->file_size(":0:$name");
+            if ($size > $LIMIT) {
+                $git->error('CheckSize', "File '$name' has $size bytes, more than our limit of $LIMIT");
+                ++$errors;
+            }
+        }
+
+        return $errors == 0;
+    }
+
+    sub check_commit {
+        my ($git) = @_;
+
+        return check_new_files($git, ':0', $git->filter_files_in_index('AM'));
+    }
+
+    # This routine can act both as an update or a pre-receive hook.
+    sub check_affected_refs {
+        my ($git) = @_;
+
+        return 1 if $git->im_admin();
+
+        my $errors = 0;
+
+        foreach my $ref ($git->get_affected_refs()) {
+            my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
+            check_new_files($git, $new_commit, $git->filter_files_in_range('AM', $old_commit, $new_commit))
+                or ++$errors;
+        }
+
+        return $errors == 0;
+    }
+
+    # Install hooks
+    PRE_COMMIT       \&check_commit;
+    UPDATE           \&check_affected_refs;
+    PRE_RECEIVE      \&check_affected_refs;
+
+Now it can check file sizes on the Git server, when the user pushes commits
+to it.
+
+Plugins usually can be configured in their own configuration section. For
+instance, we could allow the user to configure the size limit by putting
+this on her configuration file:
+
+    [githooks "checkfilesize"]
+	limit = 10485760
+
+We just have to change the check_new_files function:
+
+    sub check_new_files {
+        my ($git, $commit, @files) = @_;
+
+        my $limit = $git->get_config('githooks.checkfilesize', 'limit');
+
+        return 1 unless defined $limit;   # By default there is no limit
+
+        my $errors = 0;
+
+        foreach ($git->run(qw/ls-files -s/, @files)) {
+            my ($mode, $sha, $n, $name) = split / /;
+            my $size = $git->file_size(":0:$name");
+            if ($size > $limit) {
+                $git->error('CheckSize', "File '$name' has $size bytes, more than our limit of $limit");
+                ++$errors;
+            }
+        }
+
+        return $errors == 0;
+    }
+
+Please, look at the implementation of the native Git::Hooks plugins for more
+examples.
+
 =head2 Invoking external hooks
 
 Since the default Git hook scripts are taken by the symbolic links to
@@ -443,13 +582,15 @@ L<special
 hooks|https://gerrit-review.googlesource.com/Documentation/config-hooks.html>.
 B<Git::Hooks> currently supports only three of Gerrit hooks:
 
-=head3 ref-update
+=over
+
+=item * ref-update
 
 The B<ref-update> hook is executed synchronously when a user performs
 a push to a branch. It's purpose is the same as Git's B<update> hook
 and Git::Hooks's plugins usually support them both together.
 
-=head3 patchset-created
+=item * patchset-created
 
 The B<patchset-created> hook is executed asynchronously when a user
 performs a push to one of Gerrit's virtual branches (refs/for/*) in
@@ -472,13 +613,15 @@ B<patchset-created> hook is unusable because it uses a fixed user to
 authenticate. So, Git::Hooks exit prematurely when invoked as the
 B<patchset-created> hook for a draft change.
 
-=head3 draft-published
+=item * draft-published
 
 The B<draft-published> hook is executed when the user publishes a draft
 change, making it visible to other users. Since the B<patchset-created> hook
 doesn't work for draft changes, the B<draft-published> hook is a good time
 to work on them. All plugins that work on the B<patchset-created> also work
 on the B<draft-published> hook to cast a vote when drafts are published.
+
+=back
 
 =head1 CONFIGURATION
 
@@ -747,7 +890,9 @@ So, for server hooks you may want to set this configuration variable to 1 to
 strip those suffixes from the error messages.
 
 =head2 githooks.gerrit.url URL
+
 =head2 githooks.gerrit.username USERNAME
+
 =head2 githooks.gerrit.password PASSWORD
 
 These three options are required if you enable Gerrit hooks. They are
@@ -989,25 +1134,6 @@ server.  For more information, please, read the L</Gerrit Hooks>
 section.
 
 =back
-
-=head1 METHODS FOR PLUGIN DEVELOPERS
-
-Plugins usually begin with the following incantation:
-
-    package Git::Hooks::MyPlugin;
-    use Git::Hooks;
-
-Usually at the end, the plugin should use one or more of the hook directives
-defined above to install its hook routines in the appropriate hooks.
-
-Every hook routine receives a Git::Repository object (with the
-Git::Repository::Plugin::GitHooks and the Git::Repository::Plugin::Log
-plugins enabled) as its first argument. You should use it to infer all
-needed information from the Git repository.
-
-Please, take a look at the code of the plugins under the Git::Hooks::
-namespace in order to get a better understanding about this. Hopefully it's
-not that hard.
 
 =head1 TO DO
 

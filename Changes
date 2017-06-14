@@ -42,6 +42,9 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
   - CheckFile: New configuration option: 'basename.sizelimit'.
 
+  - The Git::Hooks documentation now contains a section for plugin
+    developers.
+
 1.16.0    2017-05-20 18:48:38-03:00 America/Sao_Paulo
 
   [New features]

@@ -20,8 +20,6 @@ We need:
 
 =over
 
-=item * A plugin developer tutorial
-
 =item * Revise documentation and make it more uniform
 
 =item * Follow the advice in L<13 Things People Hate about Your Open Source
