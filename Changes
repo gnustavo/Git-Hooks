@@ -2,48 +2,73 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+  This is a major new version of Git::Hooks and there is a few incompatible
+  changes mentioned below. Most of them affect only hook and plugin
+  developers, but not users. As a user you'll be affected only if you use
+  the CheckStructure plugin, which was removed from the distribution. If you
+  depend on it, you may reimplement its checks using the CheckFile and the
+  CheckReference plugins.
+
   [Incompatible changes]
 
-  - Substitute Git::Repository for Git as the underlying git wrapper.
+  - Replace the Git module by the Git::Repository module as the underlying
+    git wrapper. This means that hooks now receive a Git::Repository object
+    as their first argument instead of a Git::More object, which may affect
+    the code of hooks and plugins.
 
-  - Substitute Git::Repository::Plugin::GitHooks for the Git::More module,
-    to take advantage of Git::Repository's plugin architecture.
+  - The Git::More module was transformed into the
+    Git::Repository::Plugin::GitHooks module to take advantage of
+    Git::Repository's plugin architecture. This means that the
+    Git::Repository object passed to hooks will have the
+    Git::Repository::Plugin::GitHooks plugin enabled, which brings most of
+    the methods previously provided by Git::More.
 
-  - Move all the functions that were defined on Git::Hooks to
-    Git::Repository::Plugin::GitHooks, leaving only the ones directly used
-    either by Git::Hooks or by one of its plugins "exported".
+  - Git::Hooks now only exports the hook directives and the 'run_hook'
+    function. All the other functions previously implemented by it are now
+    provided by Git::Repository::Plugin::GitHooks.
 
-  - The get_commit, get_commits, and get_affected_ref_commits methods now
-    return Git::Repository::Log objects instead of naked hashes to represent
-    commits.
+  - Git::Repository::Plugin::GitHooks's methods 'get_commit', 'get_commits',
+    and 'get_affected_ref_commits' now return Git::Repository::Log objects
+    instead of naked hashes to represent commits.
 
-  - Remove the CheckStructure plugin.
+  - The CheckStructure plugin was removed from the distribution. Its
+    funcionality is provided by the CheckFile and the new CheckReference
+    plugins.
+
+  [New features]
+
+  - New options for the 'githooks' section: 'error-header' and
+    'error-footer'. These allow for the injection of a header and/or a
+    footer along with Git::Hooks's error messages.
+
+  - CheckReference: new plugin for checking branch names.
+
+  - CheckJira: new options: 'jql', 'ref-jql'. These allow one to use JIRA's
+    JQL expressions to impose restrictions on the JIRA issues cited on
+    commit messages.
+
+  - CheckJira: new option 'skip-merges' to avoid checking merge commits.
+
+  - CheckCommit: new configuration option 'merger' to define the users
+    allowed to push merge commits.
+
+  - CheckCommit: new configuration option 'push-limit' to specify the
+    maximum number of commits that may be pushed at once over a branch.
+
+  - CheckFile: New configuration option 'basename.sizelimit' to specify size
+    limits per file name.
+
+  - The Git::Hooks documentation now contains a section for plugin
+    developers.
 
   [Deprecations]
 
   - Remove the deprecated configuration options
-    githooks.gerrit.review-label, githooks.gerrit.vote-ok, and
-    githooks.gerrit.vote-nok.
+    'githooks.gerrit.review-label', 'githooks.gerrit.vote-ok', and
+    'githooks.gerrit.vote-nok'.
 
-  - CheckJira: Deprecates the configuration options 'project', 'status', and
-    'issuetype'.
-
-  [New features]
-
-  - New configuration options for the 'githooks' section: 'error-header' and
-    'error-footer'.
-
-  - CheckReference: New plugin.
-
-  - CheckJira: New configuration options: 'jql', 'ref-jql', and
-    'skip-merges'.
-
-  - CheckCommit: New configuration options: 'merger' and 'push-limit'.
-
-  - CheckFile: New configuration option: 'basename.sizelimit'.
-
-  - The Git::Hooks documentation now contains a section for plugin
-    developers.
+  - CheckJira: deprecates the configuration options 'project', 'status', and
+    'issuetype'. They're better implemented by the new 'jql' option.
 
 1.16.0    2017-05-20 18:48:38-03:00 America/Sao_Paulo
 
