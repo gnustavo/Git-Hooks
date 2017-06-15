@@ -2,6 +2,8 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.0.0     2017-06-15 20:42:17-03:00 America/Sao_Paulo (TRIAL RELEASE)
+
   This is a major new version of Git::Hooks and there is a few incompatible
   changes mentioned below. Most of them affect only hook and plugin
   developers, but not users. As a user you'll be affected only if you use
