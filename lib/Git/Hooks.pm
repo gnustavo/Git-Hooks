@@ -4,6 +4,7 @@ package Git::Hooks;
 use 5.010;
 use strict;
 use warnings;
+use Carp;
 use Exporter qw/import/;
 use Sub::Util qw/subname/;
 use Git::Repository qw/GitHooks Log/;
@@ -82,9 +83,9 @@ sub run_hook {
     if (my $errors = $git->get_errors()) {
         if (($hook_basename eq 'commit-msg' or $hook_basename eq 'pre-commit')
                 and not $git->get_config(githooks => 'abort-commit')) {
-            warn $errors;
+            carp $errors;
         } else {
-            die $errors;
+            croak $errors;
         }
     }
 

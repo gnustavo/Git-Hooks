@@ -190,10 +190,11 @@ sub new_repos {
                 qw/clone -q --bare --no-hardlinks/, "--template=$tmpldir", $repodir, $clonedir,
             );
 
-            my $stderr = $cmd->stderr;
+            my $my_stderr = $cmd->stderr;
 
-            open my $err_h, '>', $T->child('stderr');
-            while (<$stderr>) {
+            open my $err_h, '>', $T->child('stderr')
+                or die "Can't open '@{[$T->child('stderr')]}' for writing: $!\n";
+            while (<$my_stderr>) {
                 $err_h->print($_);
             }
             close $err_h;
@@ -211,7 +212,8 @@ sub new_repos {
         my $E = $_;
         my $exception = "$E";   # stringify it
         if (-s $stderr) {
-            open my $err_h, '<', $stderr;
+            open my $err_h, '<', $stderr
+                or die "Can't open '$stderr' for reading: $!\n";
             local $/ = undef;   # slurp mode
             $exception .= 'STDERR=';
             $exception .= <$err_h>;

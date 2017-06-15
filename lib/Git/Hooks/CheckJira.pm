@@ -410,7 +410,7 @@ sub notify_commit_msg {
     my $show = $git->run(show => '--stat', $commit->commit);
 
     my %comment = (
-        body => <<EOF,
+        body => <<"EOF",
 [$PKG] commit refers to this issue:
 
 {noformat}

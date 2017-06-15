@@ -1,13 +1,14 @@
 package Git::Repository::Plugin::GitHooks;
 # ABSTRACT: A Git::Repository plugin with some goodies for hook developers
 
+use parent qw/Git::Repository::Plugin/;
+
 use strict;
 use warnings;
+use Carp;
+use Path::Tiny;
 
-use Git::Repository::Plugin;
-our @ISA = qw/Git::Repository::Plugin/;
-
-sub _keywords {
+sub _keywords {                 ## no critic (ProhibitUnusedPrivateSubroutines)
 
     return
     qw/
@@ -38,9 +39,6 @@ sub _keywords {
           is_ref_enabled match_user im_admin
       /;
 }
-
-use Carp;
-use Path::Tiny;
 
 # This package variable tells get_config which character encoding is used in
 # the output of the git-config command. Usually none, and decoding isn't
@@ -362,6 +360,7 @@ sub load_plugins {
                 # It must be a module name
                 ## no critic (ProhibitStringyEval, RequireCheckingReturnValueOfEval)
                 eval "require $prefix$basename";
+                ## use critic
             } else {
                 # Otherwise, it's a basename we must look for in @plugin_dirs
                 $basename .= '.pm' unless $basename =~ /\.p[lm]$/i;
@@ -381,10 +380,7 @@ sub load_plugins {
     return;
 }
 
-# This is an internal routine used by the method invoke_external_hook
-# below.
-
-sub _invoke_external_hook {
+sub _invoke_external_hook {     ## no critic (ProhibitExcessComplexity)
     my ($git, $file, $hook, @args) = @_;
 
     my $prefix  = '[' . __PACKAGE__ . '(' . path($file)->basename . ')]';
@@ -632,7 +628,7 @@ sub get_errors {
     my $errors = '';
 
     if (my $header = $git->get_config(githooks => 'error-header')) {
-        $errors .= qx{$header} . "\n";
+        $errors .= qx{$header} . "\n"; ## no critic (ProhibitBacktickOperators)
     }
 
     $errors .= join("\n\n", @{$git->{_plugin_githooks}{errors}});
@@ -648,7 +644,7 @@ EOF
     }
 
     if (my $footer = $git->get_config(githooks => 'error-footer')) {
-        $errors .= "\n" . qx{$footer} . "\n";
+        $errors .= "\n" . qx{$footer} . "\n"; ## no critic (ProhibitBacktickOperators)
     }
 
     return $errors;
@@ -948,7 +944,7 @@ sub blob {
 
         # Create temporary file and copy contents to it
         open my $tmp, '>:', $filepath ## no critic (RequireBriefOpen)
-            or die "Internal error: can't create file '$filepath': $!";
+            or croak "Internal error: can't create file '$filepath': $!";
 
         my $cmd = $git->command(qw/cat-file blob/, $blob);
         my $stdout = $cmd->stdout;
@@ -959,13 +955,13 @@ sub blob {
             while ($length) {
                 my $written = syswrite $tmp, $buffer, $length, $offset;
                 defined $written
-                    or die "Internal error: can't write to '$filepath': $!";
+                    or croak "Internal error: can't write to '$filepath': $!";
                 $length -= $written;
                 $offset += $written;
             }
         }
         defined $read
-            or die "Internal error: can't read from git cat-file pipe: $!";
+            or croak "Internal error: can't read from git cat-file pipe: $!";
         $cmd->close;
 
         $tmp->close;
