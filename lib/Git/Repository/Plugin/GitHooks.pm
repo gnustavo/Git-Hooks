@@ -908,7 +908,7 @@ sub get_current_branch {
     my ($git) = @_;
     my $cmd = $git->command(qw/symbolic-ref HEAD/);
 
-    # Return undef if we're in dettached head state
+    # Return undef if we're in detached head state
     return eval { $cmd->final_output } || undef;
 }
 
@@ -1376,7 +1376,7 @@ in a single newline.
 =back
 
 All this cleanup is performed to make it easier for different plugins to
-analyse the commit message using a canonical base.
+analyze the commit message using a canonical base.
 
 =head2 write_commit_msg_file FILENAME, MSG, ...
 
@@ -1473,7 +1473,7 @@ access control check plugins.
 Returns the repository's current branch name, as indicated by the C<git
 symbolic-ref HEAD> command.
 
-If the repository is in a dettached head state, i.e., if HEAD points
+If the repository is in a detached head state, i.e., if HEAD points
 to a commit instead of to a branch, the method returns undef.
 
 =head2 get_sha1 REV
@@ -1516,7 +1516,7 @@ fetch its contents the method dies.
 =head2 file_size REV FILE
 
 Returns the size (in bytes) of FILE (a path relative to the repository root)
-in reVision REV.
+in revision REV.
 
 =head2 is_ref_enabled REF, SPECs...
 

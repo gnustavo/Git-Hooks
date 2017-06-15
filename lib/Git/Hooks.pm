@@ -264,7 +264,7 @@ string (B<$@>) is showed to the user.
 
 The best way to produce an error message is to invoke the
 B<Git::Repository::Plugin::GitHooks::error> method passing a prefix and a
-message for uniform formating. Note that any hook invokes this method it
+message for uniform formatting. Note that any hook invokes this method it
 counts as a failure, even if it ultimately returns true!
 
 For example:
@@ -436,8 +436,8 @@ import the PRE_COMMIT directive, like this:
         return $errors == 0;
     };
 
-After having it intalled where Perl can find it you can enable it by putting
-this into your global or local Git config file:
+After having it installed where Perl can find it you can enable it by
+putting this into your global or local Git config file:
 
   [githooks]
 	plugin = CheckFileSize
@@ -647,7 +647,7 @@ Gerrit keeps its repositories in a hierarchy and its specific configuration
 mechanism takes advantage of that to allow a configuration definition in a
 parent repository to trickle down to its children repositories. Git::Hooks
 uses Git's native configuration mechanisms and doesn't support Gerrit's
-mechanism, which is based on configuration files kept in a dettached
+mechanism, which is based on configuration files kept in a detached
 C<refs/meta/config> branch. But you can implement a hierarchy of
 configuration files by using Git's inclusion mechanism. Please, read the
 "Includes" section of C<git help config> to know how.
@@ -1116,7 +1116,7 @@ with lines of the form:
 
     <old sha1> SP <new sha1> SP <extra info> LF
 
-The C<extra info> and the preceeding SP are optional.
+The C<extra info> and the preceding SP are optional.
 
 The information from these lines is read and can be fetched by the
 hooks using the C<Git::Hooks::get_input_data> method.

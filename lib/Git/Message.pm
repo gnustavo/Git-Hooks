@@ -18,8 +18,8 @@ sub new {
 
     my @blocks = split /(?<=\n)\n+/, $msg;
 
-    # The message blocks are agregated in three components: title,
-    # body, and footer.
+    # The message blocks are aggregated in three components: title, body,
+    # and footer.
 
     # The title is the first block, but only if it has a single line.
     # The footer is the last block, but only if it complies with a
@@ -213,10 +213,10 @@ community came up with a few conventions for how to best format a
 message and this class embraces those conventions making it easier for
 you to validate and change a commit message structure.
 
-A conventional Git commit message consists of a sequence of
-non-blank-line blocks, or paragraphs, separated by one of more blank
-lines. Let's call them blocks, for short. These blocks are agregated
-in three components: the C<title>, the C<body>, and the C<footer>.
+A conventional Git commit message consists of a sequence of non-blank-line
+blocks, or paragraphs, separated by one of more blank lines. Let's call them
+blocks, for short. These blocks are aggregated in three components: the
+C<title>, the C<body>, and the C<footer>.
 
 =over
 
@@ -252,7 +252,7 @@ hackers. Well, they must know what they're doing. ;-)
 
 The specific syntax we parse is the one implemented by L<Gerrit's
 standard Git commit-msg hook|http://goo.gl/tyjri>. After the parsing,
-which ocurrs during construction, we aggregate, for each key, all the
+which occurs during construction, we aggregate, for each key, all the
 values and comments associated with it in the footer. Since a key may
 appear multiple times with different letter case, we use their
 lowercased form as the aggregation keys to avoid spurious
@@ -284,7 +284,7 @@ This way we can reconstruct the footer in string form preserving the
 letter case of its keys and the order of the values and comments
 inside each key. Note, however, that we do not preserve the exact
 order of each line in the footer, which isn't relevant normally. The
-footer stringification outputs the keys in lexicographycal order with
+footer stringification outputs the keys in lexicographical order with
 the exception of the C<Signed-off-by> key, which, if present, is
 always output last.
 
@@ -319,7 +319,7 @@ This returns the message footer or undef it there is none.
 
 Note that the result string may be different from the original footer
 in the message, because the lines may be reordered as we told
-L<above|/Footer syntax>.
+L<above/Footer syntax>.
 
 =head2 get_footer_keys
 
@@ -328,7 +328,7 @@ once in the list, in lower case.
 
 =head2 delete_footer_key KEY
 
-This deletes KEY from the footer, alond with all of its values.
+This deletes KEY from the footer, along with all of its values.
 
 =head2 get_footer_values KEY
 
@@ -356,9 +356,8 @@ A Git::Repository plugin with some goodies for hook developers.
 =item * B<git-commit(1) Manual Page>
 
 This L<Git manual
-page|<http://www.kernel.org/pub/software/scm/git/docs/git-commit.html>
-has a section called DISCUSSION which discusses some common log
-message policies.
+page|http://www.kernel.org/pub/software/scm/git/docs/git-commit.html> has a
+section called DISCUSSION which discusses some common log message policies.
 
 =item * B<MediaWiki Git/Commit message guidelines>
 

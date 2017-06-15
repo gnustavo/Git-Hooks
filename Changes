@@ -91,7 +91,7 @@ Revision history for perl module Git-Hooks. -*- text -*-
   [Fixes]
 
   - Gerrit 2.13 slightly changed how it passes information to the hooks and
-    we had to make some changes to accomodate it.
+    we had to make some changes to accommodate it.
 
 1.14.1    2016-11-06 17:02:19-02:00 America/Sao_Paulo
 
@@ -695,7 +695,7 @@ Revision history for perl module Git-Hooks. -*- text -*-
   [Fixes]
 
   - Suppress spurious error message (fatal: ref HEAD is not a symbolic ref)
-  when pushing a commit while in a dettached head state.
+  when pushing a commit while in a detached head state.
 
 0.047     2014-01-29 12:21:18 America/Sao_Paulo
 
@@ -832,7 +832,7 @@ Revision history for perl module Git-Hooks. -*- text -*-
   [Changes]
   - Git::More::get_current_branch previously returned the branch
     short-name. Now it returns the branch full name. Moreover, when in
-    dettached mode it returns undef.
+    detached mode it returns undef.
 
   [Fixes]
   - The exit code of external pre-receive hooks weren't being dealt
@@ -842,7 +842,7 @@ Revision history for perl module Git-Hooks. -*- text -*-
     with correctly when new branches were being pushed or branches
     were being deteled on a push.
 
-  - Fix Git::More::is_ref_enabled for when in dettached head state. It
+  - Fix Git::More::is_ref_enabled for when in detached head state. It
     returns true in this case.
 
   [Cleanup]

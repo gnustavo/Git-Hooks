@@ -626,9 +626,9 @@ Wikimedia.
 =back
 
 This is a multi-valued option. You may specify it more than once. All
-regexes are tried and JIRA keys are looked for in all of them. This
-allows you to more easily accomodate more than one way of specifying
-JIRA keys if you wish.
+regexes are tried and JIRA keys are looked for in all of them. This allows
+you to more easily accommodate more than one way of specifying JIRA keys if
+you wish.
 
 =head2 githooks.checkjira.jql JQL
 
@@ -774,7 +774,7 @@ to have failed and a proper message is produced to the user.
 If this option is set and the C<post-receive> hook is enabled, for every
 pushed commit, every cited JIRA issue receives a comment showing the result
 of the C<git show --stat COMMIT> command. This is meant to notify the issue
-assignee of commits refering to the issue.
+assignee of commits referring to the issue.
 
 Note that the user with which C<Git::Hooks> authenticates to JIRA must have
 permission to add comments to the issues or an error will be
@@ -802,7 +802,7 @@ In this case, the visibility isn't restricted at all.
 
 =head2 githooks.checkjira.skip-merges [01]
 
-By default, all commits are checkes. You can exempt merge commits from being
+By default, all commits are checked. You can exempt merge commits from being
 checked by setting this option to 0.
 
 =head2 githooks.checkjira.project KEY

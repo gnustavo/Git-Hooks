@@ -501,9 +501,8 @@ arguments passed to the hook by Gerrit.
 =item * B<git-commit(1) Manual Page>
 
 This L<Git manual
-page|<http://www.kernel.org/pub/software/scm/git/docs/git-commit.html>
-has a section called DISCUSSION which discusses some common log
-message policies.
+page|http://www.kernel.org/pub/software/scm/git/docs/git-commit.html> has a
+section called DISCUSSION which discusses some common log message policies.
 
 =item * B<Linus Torvalds GitHub rant>
 

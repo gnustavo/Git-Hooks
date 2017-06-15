@@ -465,7 +465,7 @@ This check is performed by the C<pre-commit> local hook.
 
 =head2 githooks.checkcommit.email-valid [01]
 
-This option uses the L<Email::Valid> module' C<address> method to validade
+This option uses the L<Email::Valid> module' C<address> method to validate
 author and committer email addresses.
 
 These checks are performed by the C<pre-commit> local hook.
@@ -512,7 +512,8 @@ command. This means that if an unknown email is used it won't be considered
 an error.
 
 Note that the C<git-check-mailmap> command is available since Git
-1.8.4. Older Gits don't have it and Git::Hooks will complain accordingly.
+1.8.4. Older versions of Git don't have it and Git::Hooks will complain
+accordingly.
 
 Note that you should not have Git configured to use a default mailmap file,
 either by placing one named F<.mailmap> at the top level of the repository
