@@ -6,6 +6,7 @@ package Git::Hooks::Test;
 use 5.010;
 use strict;
 use warnings;
+use Carp;
 use Config;
 use Exporter qw/import/;
 use Path::Tiny;
@@ -47,7 +48,7 @@ my $T = Path::Tiny->tempdir(
     CLEANUP  => exists $ENV{REPO_CLEANUP} ? $ENV{REPO_CLEANUP} : 1,
 );
 
-chdir $T or die "Can't chdir $T: $!";
+chdir $T or croak "Can't chdir $T: $!";
 END { chdir '/' }
 
 my $tmpldir = $T->child('templates');
@@ -160,7 +161,7 @@ sub new_repos {
 
     mkdir $repodir, 0777 or BAIL_OUT("can't mkdir $repodir: $!");
     {
-        open my $fh, '>', $filename or die BAIL_OUT("can't open $filename: $!");
+        open my $fh, '>', $filename or croak BAIL_OUT("can't open $filename: $!");
         say $fh "first line";
         close $fh;
     }
@@ -193,14 +194,14 @@ sub new_repos {
             my $my_stderr = $cmd->stderr;
 
             open my $err_h, '>', $T->child('stderr')
-                or die "Can't open '@{[$T->child('stderr')]}' for writing: $!\n";
+                or croak "Can't open '@{[$T->child('stderr')]}' for writing: $!\n";
             while (<$my_stderr>) {
                 $err_h->print($_);
             }
             close $err_h;
 
             $cmd->close();
-            die "Can't git-clone $repodir into $clonedir" unless $cmd->exit() == 0;
+            croak "Can't git-clone $repodir into $clonedir" unless $cmd->exit() == 0;
         }
 
         $clone = Git::Repository->new(git_dir => $clonedir);
@@ -213,7 +214,7 @@ sub new_repos {
         my $exception = "$E";   # stringify it
         if (-s $stderr) {
             open my $err_h, '<', $stderr
-                or die "Can't open '$stderr' for reading: $!\n";
+                or croak "Can't open '$stderr' for reading: $!\n";
             local $/ = undef;   # slurp mode
             $exception .= 'STDERR=';
             $exception .= <$err_h>;

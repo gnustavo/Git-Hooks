@@ -7,6 +7,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
+use Carp;
 use Git::Hooks;
 use Text::Glob qw/glob_to_regex/;
 use Path::Tiny;
@@ -30,18 +31,18 @@ sub check_command {
         my $tempfile = Path::Tiny->tempfile(UNLINK => 1);
 
         ## no critic (RequireBriefOpen, RequireCarping)
-        open(my $oldout, '>&', \*STDOUT)  or die "Can't dup STDOUT: $!";
-        open(STDOUT    , '>' , $tempfile) or die "Can't redirect STDOUT to \$tempfile: $!";
-        open(my $olderr, '>&', \*STDERR)  or die "Can't dup STDERR: $!";
-        open(STDERR    , '>&', \*STDOUT)  or die "Can't dup STDOUT for STDERR: $!";
+        open(my $oldout, '>&', \*STDOUT)  or croak "Can't dup STDOUT: $!";
+        open(STDOUT    , '>' , $tempfile) or croak "Can't redirect STDOUT to \$tempfile: $!";
+        open(my $olderr, '>&', \*STDERR)  or croak "Can't dup STDERR: $!";
+        open(STDERR    , '>&', \*STDOUT)  or croak "Can't dup STDOUT for STDERR: $!";
 
         # Let the external command know the commit that's being checked in
         # case it needs to grok something from Git.
         local $ENV{GIT_COMMIT} = $commit;
         $exit = system $cmd;
 
-        open(STDOUT, '>&', $oldout) or die "Can't dup \$oldout: $!";
-        open(STDERR, '>&', $olderr) or die "Can't dup \$olderr: $!";
+        open(STDOUT, '>&', $oldout) or croak "Can't dup \$oldout: $!";
+        open(STDERR, '>&', $olderr) or croak "Can't dup \$olderr: $!";
         ## use critic
 
         $output = $tempfile->slurp;

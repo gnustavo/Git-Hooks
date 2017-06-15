@@ -137,13 +137,13 @@ sub _prepare_gerrit_args {
     # used if one sets up Gerrit hooks, which may not be the most
     # common usage of Git::Hooks.
     eval {require Gerrit::REST}
-        or die __PACKAGE__, ": Please, install the Gerrit::REST module to use Gerrit hooks.\n";
+        or croak __PACKAGE__, ": Please, install the Gerrit::REST module to use Gerrit hooks.\n";
 
     $opt{gerrit} = do {
         my %info;
         foreach my $arg (qw/url username password/) {
             $info{$arg} = $git->get_config('githooks.gerrit' => $arg)
-                or die __PACKAGE__, ": Missing githooks.gerrit.$arg configuration variable.\n";
+                or croak __PACKAGE__, ": Missing githooks.gerrit.$arg configuration variable.\n";
         }
 
         Gerrit::REST->new(@info{qw/url username password/});
@@ -188,7 +188,7 @@ sub _gerrit_patchset_post_hook {
 
     for my $arg (qw/project branch change patchset/) {
         exists $args->{"--$arg"}
-            or die __PACKAGE__, ": Missing --$arg argument to Gerrit's $hook_name hook.\n";
+            or croak __PACKAGE__, ": Missing --$arg argument to Gerrit's $hook_name hook.\n";
     }
 
     # We have to use the most complete form of Gerrit change ids because
@@ -240,12 +240,12 @@ sub _gerrit_patchset_post_hook {
 
     # Cast review
     eval { $args->{gerrit}->POST("/changes/$id/revisions/$patchset/review", \%review_input) }
-        or die __PACKAGE__ . ": error in Gerrit::REST::POST(/changes/$id/revisions/$patchset/review): $@\n";
+        or croak __PACKAGE__ . ": error in Gerrit::REST::POST(/changes/$id/revisions/$patchset/review): $@\n";
 
     # Auto submit if requested and passed verification
     if ($auto_submit) {
         eval { $args->{gerrit}->POST("/changes/$id/submit", {wait_for_merge => 'true'}) }
-            or die __PACKAGE__ . ": I couldn't submit the change. Perhaps you have to rebase it manually to resolve a conflict. Please go to its web page to check it out. The error message follows: $@\n";
+            or croak __PACKAGE__ . ": I couldn't submit the change. Perhaps you have to rebase it manually to resolve a conflict. Please go to its web page to check it out. The error message follows: $@\n";
     }
 
     return;
@@ -366,14 +366,14 @@ sub load_plugins {
                 $basename .= '.pm' unless $basename =~ /\.p[lm]$/i;
                 my @scripts = grep {!-d} map {path($_)->child($basename)} @plugin_dirs;
                 $basename = shift @scripts
-                    or die __PACKAGE__, ": can't find enabled hook $basename.\n";
+                    or croak __PACKAGE__, ": can't find enabled hook $basename.\n";
                 do $basename;
             }
         };
         unless ($exit) {
-            die __PACKAGE__, ": couldn't parse $basename: $@\n" if $@;
-            die __PACKAGE__, ": couldn't do $basename: $!\n"    unless defined $exit;
-            die __PACKAGE__, ": couldn't run $basename\n";
+            croak __PACKAGE__, ": couldn't parse $basename: $@\n" if $@;
+            croak __PACKAGE__, ": couldn't do $basename: $!\n"    unless defined $exit;
+            croak __PACKAGE__, ": couldn't run $basename\n";
         }
     }
 
@@ -388,10 +388,10 @@ sub _invoke_external_hook {     ## no critic (ProhibitExcessComplexity)
     my $tempfile = Path::Tiny->tempfile(UNLINK => 1);
 
     ## no critic (RequireBriefOpen, RequireCarping)
-    open(my $oldout, '>&', \*STDOUT)  or die "Can't dup STDOUT: $!";
-    open(STDOUT    , '>' , $tempfile) or die "Can't redirect STDOUT to \$tempfile: $!";
-    open(my $olderr, '>&', \*STDERR)  or die "Can't dup STDERR: $!";
-    open(STDERR    , '>&', \*STDOUT)  or die "Can't dup STDOUT for STDERR: $!";
+    open(my $oldout, '>&', \*STDOUT)  or croak "Can't dup STDOUT: $!";
+    open(STDOUT    , '>' , $tempfile) or croak "Can't redirect STDOUT to \$tempfile: $!";
+    open(my $olderr, '>&', \*STDERR)  or croak "Can't dup STDERR: $!";
+    open(STDERR    , '>&', \*STDOUT)  or croak "Can't dup STDOUT for STDERR: $!";
     ## use critic
 
     if ($hook =~ /^(?:pre-receive|post-receive|pre-push|post-rewrite)$/) {
@@ -410,13 +410,13 @@ sub _invoke_external_hook {     ## no critic (ProhibitExcessComplexity)
             my $exit = $pipe->close;
 
             ## no critic (RequireBriefOpen, RequireCarping)
-            open(STDOUT, '>&', $oldout) or die "Can't dup \$oldout: $!";
-            open(STDERR, '>&', $olderr) or die "Can't dup \$olderr: $!";
+            open(STDOUT, '>&', $oldout) or croak "Can't dup \$oldout: $!";
+            open(STDERR, '>&', $olderr) or croak "Can't dup \$olderr: $!";
             ## use critic
 
             my $output = $tempfile->slurp;
             if ($exit) {
-                warn $output, "\n" if length $output;
+                print STDERR $output, "\n" if length $output;
                 return 1;
             } elsif ($!) {
                 $git->error($prefix, "Error closing pipe to external hook: $!", $output);
@@ -428,11 +428,11 @@ sub _invoke_external_hook {     ## no critic (ProhibitExcessComplexity)
             { exec {$file} ($hook, @args) }
 
             ## no critic (RequireBriefOpen, RequireCarping)
-            open(STDOUT, '>&', $oldout) or die "Can't dup \$oldout: $!";
-            open(STDERR, '>&', $olderr) or die "Can't dup \$olderr: $!";
+            open(STDOUT, '>&', $oldout) or croak "Can't dup \$oldout: $!";
+            open(STDERR, '>&', $olderr) or croak "Can't dup \$olderr: $!";
             ## use critic
 
-            die "$prefix: can't exec: $!\n";
+            croak "$prefix: can't exec: $!\n";
         }
 
     } else {
@@ -445,14 +445,14 @@ sub _invoke_external_hook {     ## no critic (ProhibitExcessComplexity)
         my $exit = system {$file} ($hook, @args);
 
         ## no critic (RequireBriefOpen, RequireCarping)
-        open(STDOUT, '>&', $oldout) or die "Can't dup \$oldout: $!";
-        open(STDERR, '>&', $olderr) or die "Can't dup \$olderr: $!";
+        open(STDOUT, '>&', $oldout) or croak "Can't dup \$oldout: $!";
+        open(STDERR, '>&', $olderr) or croak "Can't dup \$olderr: $!";
         ## use critic
 
         my $output = $tempfile->slurp;
 
         if ($exit == 0) {
-            warn $output, "\n" if length $output;
+            print STDERR $output, "\n" if length $output;
             return 1;
         } else {
             my $message = do {
@@ -532,7 +532,7 @@ sub get_config {
         my %config;
 
         exists $ENV{HOME}
-            or die __PACKAGE__, <<'EOT';
+            or croak __PACKAGE__, <<'EOT';
 The HOME environment variable is undefined.
 
 We need it to read Git's global configuration from $HOME/.gitconfig.
@@ -567,7 +567,7 @@ EOT
                 if ($option =~ /(.+)\.(.+)/) {
                     push @{$config{lc $1}{lc $2}}, $value;
                 } else {
-                    die __PACKAGE__, ": Cannot grok config variable name '$option'.\n";
+                    croak __PACKAGE__, ": Cannot grok config variable name '$option'.\n";
                 }
             }
         }
@@ -804,7 +804,7 @@ sub _get_affected_refs_hash {
     my ($git) = @_;
 
     $git->{_plugin_githooks}{affected_refs}
-        or die __PACKAGE__, ": get_affected_refs(): no affected refs set\n";
+        or croak __PACKAGE__, ": get_affected_refs(): no affected refs set\n";
 
     return $git->{_plugin_githooks}{affected_refs};
 }
@@ -821,7 +821,7 @@ sub get_affected_ref_range {
     my $affected = _get_affected_refs_hash($git);
 
     exists $affected->{$ref}{range}
-        or die __PACKAGE__, ": get_affected_ref_range($ref): no such affected ref\n";
+        or croak __PACKAGE__, ": get_affected_ref_range($ref): no such affected ref\n";
 
     return @{$affected->{$ref}{range}};
 }
@@ -832,7 +832,7 @@ sub get_affected_ref_commits {
     my $affected = _get_affected_refs_hash($git);
 
     exists $affected->{$ref}
-        or die __PACKAGE__, ": get_affected_ref_commits($ref): no such affected ref\n";
+        or croak __PACKAGE__, ": get_affected_ref_commits($ref): no such affected ref\n";
 
     unless (exists $affected->{$ref}{commits}) {
         $affected->{$ref}{commits} = [$git->get_commits($git->get_affected_ref_range($ref))];
@@ -885,12 +885,12 @@ sub authenticated_user {
         if (my $userenv = $git->get_config(githooks => 'userenv')) {
             if ($userenv =~ /^eval:(.*)/) {
                 $git->{_plugin_githooks}{authenticated_user} = eval $1; ## no critic (BuiltinFunctions::ProhibitStringyEval)
-                die __PACKAGE__, ": error evaluating userenv value ($userenv): $@\n"
+                croak __PACKAGE__, ": error evaluating userenv value ($userenv): $@\n"
                     if $@;
             } elsif (exists $ENV{$userenv}) {
                 $git->{_plugin_githooks}{authenticated_user} = $ENV{$userenv};
             } else {
-                die __PACKAGE__, ": option userenv environment variable ($userenv) is not defined.\n";
+                croak __PACKAGE__, ": option userenv environment variable ($userenv) is not defined.\n";
             }
         } else {
             $git->{_plugin_githooks}{authenticated_user} = $ENV{GERRIT_USER_EMAIL} || $ENV{USER} || undef;
@@ -1002,15 +1002,15 @@ sub _grok_groups_spec {
         s/\#.*//;               # strip comments
         next unless /\S/;       # skip blank lines
         /^\s*(\w+)\s*=\s*(.+?)\s*$/
-            or die __PACKAGE__, ": invalid line in '$source': $_\n";
+            or croak __PACKAGE__, ": invalid line in '$source': $_\n";
         my ($groupname, $members) = ($1, $2);
         exists $groups->{"\@$groupname"}
-            and die __PACKAGE__, ": redefinition of group ($groupname) in '$source': $_\n";
+            and croak __PACKAGE__, ": redefinition of group ($groupname) in '$source': $_\n";
         foreach my $member (split / /, $members) {
             if ($member =~ /^\@/) {
                 # group member
                 $groups->{"\@$groupname"}{$member} = $groups->{$member}
-                    or die __PACKAGE__, ": unknown group ($member) cited in '$source': $_\n";
+                    or croak __PACKAGE__, ": unknown group ($member) cited in '$source': $_\n";
             } else {
                 # user member
                 $groups->{"\@$groupname"}{$member} = undef;
@@ -1027,14 +1027,14 @@ sub _grok_groups {
 
     unless (exists $cache->{groups}) {
         my @groups = $git->get_config(githooks => 'groups')
-            or die __PACKAGE__, ": you have to define the githooks.groups option to use groups.\n";
+            or croak __PACKAGE__, ": you have to define the githooks.groups option to use groups.\n";
 
         my $groups = {};
         foreach my $spec (@groups) {
             if (my ($groupfile) = ($spec =~ /^file:(.*)/)) {
                 my @groupspecs = path($groupfile)->lines;
                 defined $groupspecs[0]
-                    or die __PACKAGE__, ": can't open groups file ($groupfile): $!\n";
+                    or croak __PACKAGE__, ": can't open groups file ($groupfile): $!\n";
                 _grok_groups_spec($groups, \@groupspecs, $groupfile);
             } else {
                 my @groupspecs = split /\n/, $spec;
@@ -1053,7 +1053,7 @@ sub _im_memberof {
     my $groups = _grok_groups($git);
 
     exists $groups->{$groupname}
-        or die __PACKAGE__, ": group $groupname is not defined.\n";
+        or croak __PACKAGE__, ": group $groupname is not defined.\n";
 
     my $group = $groups->{$groupname};
     return 1 if exists $group->{$myself};
