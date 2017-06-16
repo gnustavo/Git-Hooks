@@ -187,38 +187,6 @@ option:
 
 There's no configuration needed or provided.
 
-=head1 EXPORTS
-
-This module exports the following routines that can be used directly
-without using all of Git::Hooks infrastructure.
-
-=head2 record_commit_parents GIT
-
-This is the routine used to implement the C<pre-commit> hook. It needs a
-C<Git::Repository> object. It simply record the original commit id and its
-parents in a file called C<GITHOOKS_CHECKREWRITE> inside the git repository
-directory
-
-=head2 check_commit_amend GIT
-
-This is the routine used to implement the C<post-commit> hook. It
-needs a C<Git::Repository> object. It reads the original commit id and its
-parents from a file called C<GITHOOKS_CHECKREWRITE> inside the git
-repository directory, which must have been created by the
-C<record_commit_parents> routine during the C<pre-commit> hook. Using
-this information it detects if this was an unsafe amend and tells the
-user so.
-
-=head2 check_rebase GIT, UPSTREAM [, BRANCH]
-
-This is the routine used to implement the C<pre-rebase> hook. It needs
-a B<Git::Repository> object, the name of the upstream branch onto which
-we're rebasing and the name of the branch being rebased. (If BRANCH is
-undefined it means that we're rebasing the current branch.
-
-The routine dies with a suitable message if it detects that it will be
-an unsafe rebase.
-
 =head1 REFERENCES
 
 Here are some references about what it means for a rewrite to be

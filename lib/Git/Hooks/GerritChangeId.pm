@@ -153,17 +153,6 @@ configuration option:
 
 There's no configuration needed or provided.
 
-=head1 EXPORTS
-
-This module exports one routine that can be used directly without
-using all of Git::Hooks infrastructure.
-
-=head2 rewrite_message GIT, MSGFILE
-
-This is the routine used to implement the C<commit-msg> hook. It needs a
-C<Git::Repository> object and the name of a file containing the commit
-message.
-
 =head1 REFERENCES
 
 =over

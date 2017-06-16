@@ -472,28 +472,6 @@ language passing its ISO code to this option.
 This option requires the commit to have at least one C<Signed-off-by>
 footer.
 
-=head1 EXPORTS
-
-This module exports the following routines that can be used directly
-without using all of Git::Hooks infrastructure.
-
-=head2 check_message_file GIT, MSGFILE
-
-This is the routine used to implement the C<commit-msg> hook. It needs
-a C<Git::Repository> object and the name of a file containing the commit
-message.
-
-=head2 check_affected_refs GIT
-
-This is the routing used to implement the C<update> and the
-C<pre-receive> hooks. It needs a C<Git::Repository> object.
-
-=head2 check_patchset GIT, HASH
-
-This is the routine used to implement the C<patchset-created> Gerrit
-hook. It needs a C<Git::Repository> object and the hash containing the
-arguments passed to the hook by Gerrit.
-
 =head1 REFERENCES
 
 =over

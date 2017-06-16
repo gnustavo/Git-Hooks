@@ -234,16 +234,6 @@ branches below "refs/heads/{USER}". Supposing the environment variable
 USER contains the user's login name during a "pre-receive" hook. For
 all other branches (^refs/heads) the users have only update (U) rights.
 
-=head1 EXPORTS
-
-This module exports two routines that can be used directly without
-using all of Git::Hooks infrastructure.
-
-=head2 check_affected_refs GIT
-
-This is the routine used to implement the C<update> and the
-C<pre-receive> hooks. It needs a C<Git::Repository> object.
-
 =head1 REFERENCES
 
 =over

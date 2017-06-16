@@ -840,33 +840,6 @@ following to restrict by issue type:
 By default, it doesn't matter what type of JIRA issues are cited. By setting
 this multi-valued option you can restrict the valid issue types.
 
-=head1 EXPORTS
-
-This module exports two routines that can be used directly without
-using all of Git::Hooks infrastructure.
-
-=head2 check_affected_refs GIT
-
-This is the routine used to implement the C<update> and the
-C<pre-receive> hooks. It needs a C<Git::Repository> object.
-
-=head2 check_message_file GIT, MSGFILE
-
-This is the routine used to implement the C<commit-msg> hook. It needs
-a C<Git::Repository> object and the name of a file containing the commit
-message.
-
-=head2 check_patchset GIT, HASH
-
-This is the routine used to implement the C<patchset-created> Gerrit
-hook. It needs a C<Git::Repository> object and the hash containing the
-arguments passed to the hook by Gerrit.
-
-=head2 notify_affected_refs GIT
-
-This is the routine used to implement the C<post-receive> hook. It needs a
-C<Git::Repository> object.
-
 =head1 SEE ALSO
 
 =over
