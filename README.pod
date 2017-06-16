@@ -9,4 +9,4 @@
 
 =head2 Framework for implementing Git (and Gerrit) hooks
 
-Please, head to the project's L<GitHub Page|http://gnustavo.github.io/Git-Hooks/>.
+Please, see the L<project's wiki at GitHub|https://github.com/gnustavo/Git-Hooks/wiki>.
