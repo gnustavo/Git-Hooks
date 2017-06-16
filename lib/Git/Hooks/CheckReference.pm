@@ -62,8 +62,8 @@ CheckReference - Git::Hooks plugin for checking references
 
 =head1 DESCRIPTION
 
-This Git::Hooks plugin hooks itself to the hooks below to check if the names
-of references added to or renamed in the repository meet specified
+This L<Git::Hooks> plugin hooks itself to the hooks below to check if the
+names of references added to or renamed in the repository meet specified
 constraints. If they don't, the commit/push is aborted.
 
 =over

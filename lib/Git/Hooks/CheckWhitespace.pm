@@ -88,7 +88,7 @@ CheckWhitespace - Git::Hooks plugin for checking whitespace errors
 
 =head1 DESCRIPTION
 
-This Git::Hooks plugin hooks itself to the hooks below to check if the
+This L<Git::Hooks> plugin hooks itself to the hooks below to check if the
 contents of files added to or modified in the repository have whitespace
 errors as detected by C<git diff --check> command. If they don't, the
 commit/push is aborted.

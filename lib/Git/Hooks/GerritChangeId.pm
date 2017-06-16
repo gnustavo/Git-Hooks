@@ -94,15 +94,16 @@ __END__
 
 =head1 NAME
 
-Git::Hooks::GerritChangeId - Git::Hooks plugin to insert a Change-Id in a commit message.
+Git::Hooks::GerritChangeId - Git::Hooks plugin to insert Change-Ids in
+commit messages
 
 =head1 DESCRIPTION
 
-This Git::Hooks plugin hooks itself to the C<commit-msg> hook. It is a
+This L<Git::Hooks> plugin hooks itself to the C<commit-msg> hook. It is a
 reimplementation of Gerrit's official commit-msg hook for inserting
 change-ids in git commit messages.  It's does not produce the same
-C<Change-Id> for the same message, but this is not really necessary,
-since it keeps existing Change-Id footers unmodified.
+C<Change-Id> for the same message, but this is not really necessary, since
+it keeps existing Change-Id footers unmodified.
 
 (What follows is a partial copy of that document's DESCRIPTION
 section.)

@@ -624,6 +624,137 @@ on the B<draft-published> hook to cast a vote when drafts are published.
 
 =back
 
+=head1 MAIN FUNCTION
+
+=head2 run_hook(NAME, ARGS...)
+
+This is the main routine responsible to invoke the right hooks
+depending on the context in which it was called.
+
+Its first argument must be the name of the hook that was
+called. Usually you just pass C<$0> to it, since it knows to extract
+the basename of the parameter.
+
+The remaining arguments depend on the hook for which it's being
+called. Usually you just pass C<@ARGV> to it. And that's it. Mostly.
+
+        run_hook($0, @ARGV);
+
+=head1 HOOK DIRECTIVES
+
+Hook directives are routines you use to register routines as hooks.
+Each one of the hook directives gets a routine-ref or a single block
+(anonymous routine) as argument. The routine/block will be called by
+C<run_hook> with proper arguments, as indicated below. These arguments
+are the ones gotten from @ARGV, with the exception of the ones
+identified by 'GIT' which are C<Git::Repository> objects that can be used to
+grok detailed information about the repository and the current
+transaction. (Please, refer to C<Git::Repository> specific documentation to
+know how to use them.)
+
+Note that the hook directives resemble function definitions but they
+aren't. They are function calls, and as such must end with a
+semicolon.
+
+Some hooks are invoked before an action (e.g., C<pre-commit>) so that
+one can check some condition. If the condition holds, they must simply
+end without returning anything. Otherwise, they should invoke the
+C<error> method on the GIT object passing a suitable error message. On
+some hooks, this will prevent Git from finishing its operation.
+
+Other hooks are invoked after the action (e.g., C<post-commit>) so
+that its outcome cannot affect the action. Those are usually used to
+send notifications or to signal the completion of the action someway.
+
+You may learn about every Git hook by invoking the command C<git help
+hooks>. Gerrit hooks are documented in the L<project
+site|https://gerrit-review.googlesource.com/Documentation/config-hooks.html>.
+
+Also note that each hook directive can be called more than once if you
+need to implement more than one specific hook.
+
+=head2 APPLYPATCH_MSG(GIT, commit-msg-file)
+
+=head2 PRE_APPLYPATCH(GIT)
+
+=head2 POST_APPLYPATCH(GIT)
+
+=head2 PRE_COMMIT(GIT)
+
+=head2 PREPARE_COMMIT_MSG(GIT, commit-msg-file [, msg-src [, SHA1]])
+
+=head2 COMMIT_MSG(GIT, commit-msg-file)
+
+=head2 POST_COMMIT(GIT)
+
+=head2 PRE_REBASE(GIT, upstream [, branch])
+
+=head2 POST_CHECKOUT(GIT, prev-head-ref, new-head-ref, is-branch-checkout)
+
+=head2 POST_MERGE(GIT, is-squash-merge)
+
+=head2 PRE_PUSH(GIT, remote-name, remote-url)
+
+The C<pre-push> hook was introduced in Git 1.8.2. The default hook
+gets two arguments: the name and the URL of the remote which is being
+pushed to. It also gets a variable number of arguments via STDIN with
+lines of the form:
+
+    <local ref> SP <local sha1> SP <remote ref> SP <remote sha1> LF
+
+The information from these lines is read and can be fetched by the
+hooks using the C<Git::Hooks::get_input_data> method.
+
+=head2 PRE_RECEIVE(GIT)
+
+The C<pre-receive> hook gets a variable number of arguments via STDIN
+with lines of the form:
+
+    <old-value> SP <new-value> SP <ref-name> LF
+
+The information from these lines is read and can be fetched by the hooks
+using the C<Git::Hooks::get_input_data> method or, perhaps more easily, by
+using the C<Git::Repository::Plugin::GitHooks::get_affected_refs> and the
+C<Git::Repository::Plugin::GitHooks::get_affected_ref_range> methods.
+
+=head2 UPDATE(GIT, updated-ref-name, old-object-name, new-object-name)
+
+=head2 POST_RECEIVE(GIT)
+
+=head2 POST_UPDATE(GIT, updated-ref-name, ...)
+
+=head2 PUSH_TO_CHECKOUT(GIT, SHA1)
+
+The C<push-to-checkout> hook was introduced in Git 2.4.
+
+=head2 PRE_AUTO_GC(GIT)
+
+=head2 POST_REWRITE(GIT, command)
+
+The C<post-rewrite> hook gets a variable number of arguments via STDIN
+with lines of the form:
+
+    <old sha1> SP <new sha1> SP <extra info> LF
+
+The C<extra info> and the preceding SP are optional.
+
+The information from these lines is read and can be fetched by the
+hooks using the C<Git::Hooks::get_input_data> method.
+
+=head2 REF_UPDATE(GIT, OPTS)
+
+=head2 PATCHSET_CREATED(GIT, OPTS)
+
+=head2 DRAFT_PUBLISHED(GIT, OPTS)
+
+These are Gerrit-specific hooks. Gerrit invokes them passing a list of
+option/value pairs which are converted into a hash, which is passed by
+reference as the OPTS argument. In addition to the option/value pairs,
+a C<Gerrit::REST> object is created and inserted in the OPTS hash with
+the key 'gerrit'. This object can be used to interact with the Gerrit
+server.  For more information, please, read the L</Gerrit Hooks>
+section.
+
 =head1 CONFIGURATION
 
 Git::Hooks is configured via Git's own configuration
@@ -1003,142 +1134,7 @@ users about how to get help from your site's Git gurus.
 
 You can also provide helpful messages specific to each enabled PLUGIN.
 
-=head1 MAIN FUNCTION
-
-=head2 run_hook(NAME, ARGS...)
-
-This is the main routine responsible to invoke the right hooks
-depending on the context in which it was called.
-
-Its first argument must be the name of the hook that was
-called. Usually you just pass C<$0> to it, since it knows to extract
-the basename of the parameter.
-
-The remaining arguments depend on the hook for which it's being
-called. Usually you just pass C<@ARGV> to it. And that's it. Mostly.
-
-        run_hook($0, @ARGV);
-
-=head1 HOOK DIRECTIVES
-
-Hook directives are routines you use to register routines as hooks.
-Each one of the hook directives gets a routine-ref or a single block
-(anonymous routine) as argument. The routine/block will be called by
-C<run_hook> with proper arguments, as indicated below. These arguments
-are the ones gotten from @ARGV, with the exception of the ones
-identified by 'GIT' which are C<Git::Repository> objects that can be used to
-grok detailed information about the repository and the current
-transaction. (Please, refer to C<Git::Repository> specific documentation to
-know how to use them.)
-
-Note that the hook directives resemble function definitions but they
-aren't. They are function calls, and as such must end with a
-semicolon.
-
-Some hooks are invoked before an action (e.g., C<pre-commit>) so that
-one can check some condition. If the condition holds, they must simply
-end without returning anything. Otherwise, they should invoke the
-C<error> method on the GIT object passing a suitable error message. On
-some hooks, this will prevent Git from finishing its operation.
-
-Other hooks are invoked after the action (e.g., C<post-commit>) so
-that its outcome cannot affect the action. Those are usually used to
-send notifications or to signal the completion of the action someway.
-
-You may learn about every Git hook by invoking the command C<git help
-hooks>. Gerrit hooks are documented in the L<project
-site|https://gerrit-review.googlesource.com/Documentation/config-hooks.html>.
-
-Also note that each hook directive can be called more than once if you
-need to implement more than one specific hook.
-
-=over
-
-=item * APPLYPATCH_MSG(GIT, commit-msg-file)
-
-=item * PRE_APPLYPATCH(GIT)
-
-=item * POST_APPLYPATCH(GIT)
-
-=item * PRE_COMMIT(GIT)
-
-=item * PREPARE_COMMIT_MSG(GIT, commit-msg-file [, msg-src [, SHA1]])
-
-=item * COMMIT_MSG(GIT, commit-msg-file)
-
-=item * POST_COMMIT(GIT)
-
-=item * PRE_REBASE(GIT, upstream [, branch])
-
-=item * POST_CHECKOUT(GIT, prev-head-ref, new-head-ref, is-branch-checkout)
-
-=item * POST_MERGE(GIT, is-squash-merge)
-
-=item * PRE_PUSH(GIT, remote-name, remote-url)
-
-The C<pre-push> hook was introduced in Git 1.8.2. The default hook
-gets two arguments: the name and the URL of the remote which is being
-pushed to. It also gets a variable number of arguments via STDIN with
-lines of the form:
-
-    <local ref> SP <local sha1> SP <remote ref> SP <remote sha1> LF
-
-The information from these lines is read and can be fetched by the
-hooks using the C<Git::Hooks::get_input_data> method.
-
-=item * PRE_RECEIVE(GIT)
-
-The C<pre-receive> hook gets a variable number of arguments via STDIN
-with lines of the form:
-
-    <old-value> SP <new-value> SP <ref-name> LF
-
-The information from these lines is read and can be fetched by the hooks
-using the C<Git::Hooks::get_input_data> method or, perhaps more easily, by
-using the C<Git::Repository::Plugin::GitHooks::get_affected_refs> and the
-C<Git::Repository::Plugin::GitHooks::get_affected_ref_range> methods.
-
-=item * UPDATE(GIT, updated-ref-name, old-object-name, new-object-name)
-
-=item * POST_RECEIVE(GIT)
-
-=item * POST_UPDATE(GIT, updated-ref-name, ...)
-
-=item * PUSH_TO_CHECKOUT(GIT, SHA1)
-
-The C<push-to-checkout> hook was introduced in Git 2.4.
-
-=item * PRE_AUTO_GC(GIT)
-
-=item * POST_REWRITE(GIT, command)
-
-The C<post-rewrite> hook gets a variable number of arguments via STDIN
-with lines of the form:
-
-    <old sha1> SP <new sha1> SP <extra info> LF
-
-The C<extra info> and the preceding SP are optional.
-
-The information from these lines is read and can be fetched by the
-hooks using the C<Git::Hooks::get_input_data> method.
-
-=item * REF_UPDATE(GIT, OPTS)
-
-=item * PATCHSET_CREATED(GIT, OPTS)
-
-=item * DRAFT_PUBLISHED(GIT, OPTS)
-
-These are Gerrit-specific hooks. Gerrit invokes them passing a list of
-option/value pairs which are converted into a hash, which is passed by
-reference as the OPTS argument. In addition to the option/value pairs,
-a C<Gerrit::REST> object is created and inserted in the OPTS hash with
-the key 'gerrit'. This object can be used to interact with the Gerrit
-server.  For more information, please, read the L</Gerrit Hooks>
-section.
-
-=back
-
-=head1 TO-DO list of niceties for the future of Git::Hooks.
+=head1 TO-DO list
 
 The following list is no order whatsoever. Any comments or other suggestion
 are welcome.

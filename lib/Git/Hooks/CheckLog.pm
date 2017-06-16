@@ -320,11 +320,11 @@ __END__
 
 =head1 NAME
 
-Git::Hooks::CheckLog - Git::Hooks plugin to enforce commit log policies.
+Git::Hooks::CheckLog - Git::Hooks plugin to enforce commit log policies
 
 =head1 DESCRIPTION
 
-This Git::Hooks plugin hooks itself to the hooks below to enforce
+This L<Git::Hooks> plugin hooks itself to the hooks below to enforce
 policies on the commit log messages.
 
 =over

@@ -120,13 +120,12 @@ __END__
 
 =head1 NAME
 
-Git::Hooks::CheckAcls - Git::Hooks plugin for branch/tag access control.
+Git::Hooks::CheckAcls - Git::Hooks plugin for branch/tag access control
 
 =head1 DESCRIPTION
 
-This Git::Hooks plugin hooks itself to the hooks below to guarantee
-that only allowed users can push commits and tags to specific
-branches.
+This L<Git::Hooks> plugin hooks itself to the hooks below to guarantee that
+only allowed users can push commits and tags to specific branches.
 
 =over
 

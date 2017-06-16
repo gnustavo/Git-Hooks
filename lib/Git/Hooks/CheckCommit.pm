@@ -383,12 +383,12 @@ __END__
 
 =head1 NAME
 
-Git::Hooks::CheckCommit - Git::Hooks plugin to enforce commit policies.
+Git::Hooks::CheckCommit - Git::Hooks plugin to enforce commit policies
 
 =head1 DESCRIPTION
 
-This Git::Hooks plugin hooks itself to the hooks below to enforce
-commit policies.
+This L<Git::Hooks> plugin hooks itself to the hooks below to enforce commit
+policies.
 
 =over
 

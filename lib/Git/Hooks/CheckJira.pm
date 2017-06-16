@@ -493,15 +493,14 @@ __END__
 
 =head1 NAME
 
-CheckJira - Git::Hooks plugin which requires citation of JIRA
-issues in commit messages.
+CheckJira - Git::Hooks plugin to implement JIRA checks
 
 =head1 DESCRIPTION
 
-This Git::Hooks plugin hooks itself to the hooks below to guarantee
-that every commit message cites at least one valid JIRA issue key in
-its log message, so that you can be certain that every change has a
-proper change request (a.k.a. ticket) open.
+This L<Git::Hooks> plugin hooks itself to the hooks below to guarantee that
+every commit message cites at least one valid JIRA issue key in its log
+message, so that you can be certain that every change has a proper change
+request (a.k.a. ticket) open.
 
 =over
 

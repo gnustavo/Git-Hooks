@@ -168,9 +168,9 @@ Git::Hooks::CheckRewrite - Git::Hooks plugin for checking against unsafe rewrite
 
 =head1 DESCRIPTION
 
-This Git::Hooks plugin hooks itself to the B<pre-rebase> hook to
-guarantee that it is safe in the sense that no rewritten commit is
-reachable by other branch than the one being rebased.
+This L<Git::Hooks> plugin hooks itself to the B<pre-rebase> hook to
+guarantee that it is safe in the sense that no rewritten commit is reachable
+by other branch than the one being rebased.
 
 It also hooks itself to the B<pre-commit> and the B<post-commit> hooks
 to detect unsafe B<git commit --amend> commands after the fact. An
