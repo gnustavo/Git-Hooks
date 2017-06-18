@@ -192,10 +192,10 @@ sub signature_errors {
         if ($status eq 'B') {
             $git->error($PKG, "commit @{[$commit->commit]} has a BAD signature");
             ++$errors;
-        } elsif ($signature ne 'optional' && $status eq 'N') {
+        } elsif ($status eq 'N' && $signature ne 'optional') {
             $git->error($PKG, "commit @{[$commit->commit]} has NO signature");
             ++$errors;
-        } elsif ($signature eq 'trusted' && $status eq 'U') {
+        } elsif ($status eq 'U' && $signature eq 'trusted') {
             $git->error($PKG, "commit @{[$commit->commit]} has an UNTRUSTED signature");
             ++$errors;
         }
