@@ -3,6 +3,7 @@ package Git::Repository::Plugin::GitHooks;
 
 use parent qw/Git::Repository::Plugin/;
 
+use 5.010;
 use strict;
 use warnings;
 use Carp;
@@ -416,7 +417,7 @@ sub _invoke_external_hook {     ## no critic (ProhibitExcessComplexity)
 
             my $output = $tempfile->slurp;
             if ($exit) {
-                print STDERR $output, "\n" if length $output;
+                say STDERR $output if length $output;
                 return 1;
             } elsif ($!) {
                 $git->error($prefix, "Error closing pipe to external hook: $!", $output);
@@ -452,7 +453,7 @@ sub _invoke_external_hook {     ## no critic (ProhibitExcessComplexity)
         my $output = $tempfile->slurp;
 
         if ($exit == 0) {
-            print STDERR $output, "\n" if length $output;
+            say STDERR $output if length $output;
             return 1;
         } else {
             my $message = do {
