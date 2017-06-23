@@ -25,6 +25,9 @@ Revision history for perl module Git-Hooks. -*- text -*-
     Git::Repository::Plugin::GitHooks plugin enabled, which brings most of
     the methods previously provided by Git::More.
 
+  - The Git::Hooks::nocarp method was removed. The 'nocarp' function is
+    meant to be enabled via the githooks.nocarp configuration option only.
+
   - Git::Hooks now only exports the hook directives and the 'run_hook'
     function. All the other functions previously implemented by it are now
     provided by Git::Repository::Plugin::GitHooks.
