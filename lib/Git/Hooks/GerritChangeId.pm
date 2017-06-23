@@ -90,7 +90,7 @@ COMMIT_MSG \&rewrite_message;
 
 
 __END__
-=for Pod::Coverage gen_change_id insert_change_id
+=for Pod::Coverage gen_change_id insert_change_id rewrite_message
 
 =head1 NAME
 

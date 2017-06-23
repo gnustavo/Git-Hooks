@@ -489,7 +489,7 @@ DRAFT_PUBLISHED  \&check_patchset;
 
 
 __END__
-=for Pod::Coverage check_codes check_commit_msg check_ref notify_commit_msg notify_ref grok_msg_jiras
+=for Pod::Coverage check_codes check_commit_msg check_ref notify_commit_msg notify_ref grok_msg_jiras check_affected_refs check_message_file check_patchset notify_affected_refs
 
 =head1 NAME
 

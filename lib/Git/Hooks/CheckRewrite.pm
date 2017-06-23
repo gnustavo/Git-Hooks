@@ -162,6 +162,8 @@ PRE_REBASE  \&check_rebase;
 
 
 __END__
+=for Pod::Coverage check_commit_amend check_rebase record_commit_parents
+
 =head1 NAME
 
 Git::Hooks::CheckRewrite - Git::Hooks plugin for checking against unsafe rewrites

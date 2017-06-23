@@ -316,7 +316,7 @@ DRAFT_PUBLISHED  \&check_patchset;
 
 
 __END__
-=for Pod::Coverage spelling_errors pattern_errors title_errors body_errors footer_errors message_errors check_ref
+=for Pod::Coverage spelling_errors pattern_errors title_errors body_errors footer_errors message_errors check_ref check_affected_refs check_message_file check_patchset
 
 =head1 NAME
 

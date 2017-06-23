@@ -116,7 +116,7 @@ REF_UPDATE  \&check_affected_refs;
 
 
 __END__
-=for Pod::Coverage check_ref grok_acls match_ref
+=for Pod::Coverage check_ref grok_acls match_ref check_affected_refs
 
 =head1 NAME
 
