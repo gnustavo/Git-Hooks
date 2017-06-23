@@ -2,6 +2,20 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.0.1     2017-06-23 10:53:06-03:00 America/Sao_Paulo
+
+  - Official release of version 2.0.
+
+  [Documentation]
+
+  - The TUTORIAL.pod file was removed and its contents were moved to the
+    projects wiki at https://github.com/gnustavo/Git-Hooks/wiki.
+
+  [Internal changes]
+
+  - Substituted Dist::Zilla::Plugin::MakeMaker::Awesome for
+    Dist::Zilla::Plugin::MakeMaker::Custom as a Dist::Zilla dependency.
+
 2.0.0     2017-06-15 20:42:17-03:00 America/Sao_Paulo (TRIAL RELEASE)
 
   This is a major new version of Git::Hooks and there is a few incompatible
