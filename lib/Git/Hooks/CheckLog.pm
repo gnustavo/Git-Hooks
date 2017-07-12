@@ -238,7 +238,12 @@ sub check_message_file {
     _setup_config($git);
 
     my $current_branch = $git->get_current_branch();
-    return 1 unless $git->is_ref_enabled($current_branch, $git->get_config($CFG => 'ref'));
+    if (my @ref = $git->get_config($CFG => 'ref')) {
+        return 1 unless $git->is_ref_enabled($current_branch, @ref);
+    }
+    if (my @noref = $git->get_config($CFG => 'noref')) {
+        return 0 if $git->is_ref_enabled($current_branch, @noref);
+    }
 
     my $msg = eval {$git->read_commit_msg_file($commit_msg_file)};
 
@@ -253,7 +258,12 @@ sub check_message_file {
 sub check_ref {
     my ($git, $ref) = @_;
 
-    return 1 unless $git->is_ref_enabled($ref, $git->get_config($CFG => 'ref'));
+    if (my @ref = $git->get_config($CFG => 'ref')) {
+        return 1 unless $git->is_ref_enabled($ref, @ref);
+    }
+    if (my @noref = $git->get_config($CFG => 'noref')) {
+        return 0 if $git->is_ref_enabled($ref, @noref);
+    }
 
     my $errors = 0;
 
@@ -299,7 +309,12 @@ sub check_patchset {
     $branch = "refs/heads/$branch"
         unless $branch =~ m:^refs/:;
 
-    return 1 unless $git->is_ref_enabled($branch, $git->get_config($CFG => 'ref'));
+    if (my @ref = $git->get_config($CFG => 'ref')) {
+        return 1 unless $git->is_ref_enabled($branch, @ref);
+    }
+    if (my @noref = $git->get_config($CFG => 'noref')) {
+        return 0 if $git->is_ref_enabled($branch, @noref);
+    }
 
     return message_errors($git, $commit, $commit->message) == 0;
 }
@@ -388,6 +403,17 @@ The refs can be specified as a complete ref name
 (e.g. "refs/heads/master") or by a regular expression starting with a
 caret (C<^>), which is kept as part of the regexp
 (e.g. "^refs/heads/(master|fix)").
+
+=head2 githooks.checklog.noref REFSPEC
+
+By default, the message of every commit is checked. If you want to exclude
+some refs (usually some branch under refs/heads/), you may specify them with
+one or more instances of this option.
+
+The refs can be specified as in the same way as to the C<ref> option above.
+
+Note that the C<ref> option has precedence over the C<noref> option, i.e.,
+if a reference matches both options it will be checked.
 
 =head2 githooks.checklog.title-required [01]
 

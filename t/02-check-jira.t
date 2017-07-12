@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
-use Test::More tests => 36;
+use Test::More tests => 37;
 use Path::Tiny;
 
 my ($repo, $file, $clone, $T);
@@ -162,12 +162,16 @@ setup_repos_for(\$repo);
 check_cannot_commit('deny commit by default without JIRAs');
 
 $repo->run(qw{config githooks.checkjira.ref refs/heads/fix});
-check_can_commit('allow commit on disabled ref even without JIRAs');
+check_can_commit('allow commit on non-enabled ref even without JIRAs');
 
 $repo->run(qw/checkout -q -b fix/);
 check_cannot_commit('deny commit on enabled ref without JIRAs', qr/must cite a JIRA/);
 
 $repo->run(qw/config --unset githooks.checkjira.ref/);
+$repo->run(qw{config githooks.checkjira.noref refs/heads/fix});
+check_can_commit('allow commit on disabled ref even without JIRAs');
+
+$repo->run(qw/config --unset-all githooks.checkjira.noref/);
 $repo->run(qw/checkout -q master/);
 
 $repo->run(qw/config githooks.checkjira.project OTHER/);

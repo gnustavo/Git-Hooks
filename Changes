@@ -2,6 +2,12 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+  [New features]
+
+  - CheckJira and CheckLog now admit a new option called 'noref' allowing
+    one to explicitly exclude some references from the checks performed by
+    these plugins.
+
   [Fixes]
 
   - The githooks.checkcommit.check-code directive now works when one pushes

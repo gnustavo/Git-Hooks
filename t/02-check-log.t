@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
-use Test::More tests => 31;
+use Test::More tests => 33;
 use Path::Tiny;
 
 my ($repo, $file, $clone, $T) = new_repos();
@@ -57,17 +57,27 @@ $repo->run(qw/config githooks.plugin CheckLog/);
 
 # title-required
 
-check_cannot_commit('deny an empty message', qr/log needs a title line/, '');
-
-$repo->run(qw{config githooks.checklog.ref refs/heads/nobranch});
-check_can_commit( 'allow commit on disabled ref even when commit message is faulty', <<'EOF');
-No
+check_can_commit('allow normally', <<'EOF');
 Title
+
+Body
 EOF
 
+$repo->run(qw{config githooks.checklog.title-period deny});
+check_cannot_commit('deny an invalid message', qr/SHOULD NOT end in a period/, 'Invalid.');
+
+$repo->run(qw{config githooks.checklog.ref refs/heads/nobranch});
+check_can_commit('allow commit on non-enabled ref even when commit message is faulty', 'Invalid.');
+
 $repo->run(qw/config --remove-section githooks.checklog/);
+$repo->run(qw{config githooks.checklog.title-period deny});
+$repo->run(qw{config githooks.checklog.noref refs/heads/master});
+check_can_commit('allow commit on disabled ref even when commit message is faulty', 'Invalid.');
+
+$repo->run(qw/config --remove-section githooks.checklog/);
+$repo->run(qw{config githooks.checklog.title-period deny});
 $repo->run(qw{config githooks.checklog.ref refs/heads/master});
-check_cannot_commit('deny commit on abled ref when commit message is faulty', qr/log needs a title line/, '');
+check_cannot_commit('deny commit on enabled ref when commit message is faulty', qr/SHOULD NOT end in a period/, 'Invalid.');
 
 $repo->run(qw/config --remove-section githooks.checklog/);
 
