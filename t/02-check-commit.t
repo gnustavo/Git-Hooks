@@ -254,7 +254,7 @@ check_can_push_merge('allow merges by default');
 $clone->run(qw/config githooks.checkcommit.merger merger/);
 
 $ENV{GITMERGER} = 'user';
-check_cannot_push_merge('deny merges by non-mergers', qr/are not allowed to do merges/);
+check_cannot_push_merge('deny merges by non-mergers', qr/are not allowed to perform merges/);
 
 $ENV{GITMERGER} = 'merger';
 check_can_push_merge('allow merges by merger');

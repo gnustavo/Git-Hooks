@@ -77,7 +77,7 @@ sub merge_errors {
     if ($commit->parent() > 1) { # it's a merge commit
         if (my @mergers = $git->get_config($CFG => 'merger')) {
             if (none {$git->match_user($_)} @mergers) {
-                $git->error($PKG, "commit @{[$commit->commit]} is a merge but you (@{[$git->authenticated_user]}) are not allowed to do merges");
+                $git->error($PKG, "commit @{[$commit->commit]} is a merge but you (@{[$git->authenticated_user]}) are not allowed to perform merges");
                 return 1;
             }
         }
