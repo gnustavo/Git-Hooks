@@ -209,10 +209,10 @@ sub code_errors {
 
     my $errors = 0;
 
-    state $codes;
+    my $cache = $git->cache($PKG);
 
-    unless (ref $codes) {
-        $codes = [];
+    unless (exists $cache->{codes}) {
+        $cache->{codes} = [];
       CODE:
         foreach my $check ($git->get_config($CFG => 'check-code')) {
             my $code;
@@ -238,7 +238,7 @@ sub code_errors {
                 }
             }
             if (defined $code && ref $code && ref $code eq 'CODE') {
-                push @$codes, $code;
+                push @{$cache->{codes}}, $code;
             } else {
                 $git->error($PKG, "option check-code must end with a code ref");
                 ++$errors;
@@ -246,7 +246,7 @@ sub code_errors {
         }
     }
 
-    foreach my $code (@$codes) {
+    foreach my $code (@{$cache->{codes}}) {
         my $ok = eval { $code->($git, $commit, $ref) };
         if (defined $ok) {
             unless ($ok) {
