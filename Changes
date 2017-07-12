@@ -2,6 +2,8 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.1.0     2017-07-12 15:06:42-03:00 America/Sao_Paulo
+
   [New features]
 
   - CheckJira and CheckLog now admit a new option called 'noref' allowing
