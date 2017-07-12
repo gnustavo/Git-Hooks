@@ -805,7 +805,7 @@ In this case, the visibility isn't restricted at all.
 =head2 githooks.checkjira.skip-merges [01]
 
 By default, all commits are checked. You can exempt merge commits from being
-checked by setting this option to 0.
+checked by setting this option to 1.
 
 =head2 githooks.checkjira.project KEY
 
