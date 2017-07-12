@@ -2,6 +2,11 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+  [Fixes]
+
+  - The githooks.checkcommit.check-code directive now works when one pushes
+    more than one commit.
+
 2.0.1     2017-06-23 10:53:06-03:00 America/Sao_Paulo
 
   - Official release of version 2.0.

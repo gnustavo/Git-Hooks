@@ -119,36 +119,39 @@ sub _disconnect_jira {
 sub check_codes {
     my ($git) = @_;
 
-    my @codes;
+    my $cache = $git->cache($PKG);
 
-  CODE:
-    foreach my $check ($git->get_config($CFG => 'check-code')) {
-        my $code;
-        if ($check =~ s/^file://) {
-            $code = do $check;
-            unless ($code) {
-                if (length $@) {
-                    $git->error($PKG, "couldn't parse option check-code ($check)", $@);
-                } elsif (! defined $code) {
-                    $git->error($PKG, "couldn't do option check-code ($check)", $!);
-                } else {
-                    $git->error($PKG, "couldn't run option check-code ($check)");
+    unless (exists $cache->{codes}) {
+        $cache->{codes} = [];
+      CODE:
+        foreach my $check ($git->get_config($CFG => 'check-code')) {
+            my $code;
+            if ($check =~ s/^file://) {
+                $code = do $check;
+                unless ($code) {
+                    if (length $@) {
+                        $git->error($PKG, "couldn't parse option check-code ($check)", $@);
+                    } elsif (! defined $code) {
+                        $git->error($PKG, "couldn't do option check-code ($check)", $!);
+                    } else {
+                        $git->error($PKG, "couldn't run option check-code ($check)");
+                    }
+                    next CODE;
                 }
-                next CODE;
-            }
-        } else {
-            $code = eval $check; ## no critic (BuiltinFunctions::ProhibitStringyEval)
-            length $@
-                and $git->error($PKG, "couldn't parse option check-code value", $@)
+            } else {
+                $code = eval $check; ## no critic (BuiltinFunctions::ProhibitStringyEval)
+                length $@
+                    and $git->error($PKG, "couldn't parse option check-code value", $@)
                     and next CODE;
-        }
-        defined $code and ref $code and ref $code eq 'CODE'
-            or $git->error($PKG, "option check-code must end with a code ref")
+            }
+            defined $code and ref $code and ref $code eq 'CODE'
+                or $git->error($PKG, "option check-code must end with a code ref")
                 and next CODE;
-        push @codes, $code;
+            push @{$cache->{codes}}, $code;
+        }
     }
 
-    return @codes;
+    return @{$cache->{codes}};
 }
 
 sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
