@@ -102,7 +102,7 @@ branches with names prefixed by F<feature/>, F<release/>, and F<hotfix/>,
 denying all others.
 
     [githooks "checkreference"]
-        deny  ^refs/heads/
-        allow ^refs/heads/(?:feature|release|hotfix)/
+        deny  = ^refs/heads/
+        allow = ^refs/heads/(?:feature|release|hotfix)/
 
 Note that the order of the directives is irrelevant.
