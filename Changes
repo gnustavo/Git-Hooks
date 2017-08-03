@@ -2,6 +2,8 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.1.1     2017-08-02 23:34:44-03:00 America/Sao_Paulo
+
   [Fixes]
 
   - CheckLog was considering every file in the repository when a new branch
