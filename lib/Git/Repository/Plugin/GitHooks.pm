@@ -854,6 +854,11 @@ sub filter_files_in_index {
 sub filter_files_in_range {
     my ($git, $filter, $from, $to) = @_;
 
+    # If $to is he undefined commit this means that a branch or tag is being
+    # removed. In this situation we return the empty list, bacause no file
+    # has been affected.
+    return if $to eq $git->undef_commit;
+
     if ($from eq $git->undef_commit) {
         # If $from is the undefined commit we get the list of commits
         # reachable from $to and not reachable from $from and all other
