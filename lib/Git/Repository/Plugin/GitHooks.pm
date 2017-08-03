@@ -853,11 +853,36 @@ sub filter_files_in_index {
 
 sub filter_files_in_range {
     my ($git, $filter, $from, $to) = @_;
-    $from = $git->empty_tree if $from eq $git->undef_commit;
+
+    if ($from eq $git->undef_commit) {
+        # If $from is the undefined commit we get the list of commits
+        # reachable from $to and not reachable from $from and all other
+        # references. This list is in chronological order. We want to grok
+        # the files changed from the list's first commit's PARENT commit to
+        # the list's last commit.
+
+        if (my @commits = $git->get_commits($from, $to)) {
+            if (my @parents = $commits[0]->parent()) {
+                $from = $parents[0];
+            } else {
+                # If the list's first commit has no parent (i.e., it's a
+                # root commit) then we return the empty list because
+                # git-diff-tree cannot compare the undefined commit with a
+                # commit.
+                return;
+            }
+        } else {
+            # If @commits is empty we return an empty list because no new
+            # commit was pushed.
+            return;
+        }
+    }
+
     my $output = $git->run(
         qw/diff-tree --name-only --ignore-submodules --no-commit-id -r -z/,
-        "--diff-filter=$filter", $from, $to,
+        "--diff-filter=$filter", $from, $to, '--',
     );
+
     return split /\0/, $output;
 }
 
@@ -1435,8 +1460,16 @@ FILTER specifies in which kind of changes you're interested in. Please, read
 about the C<filter_files_in_index> method above.
 
 FROM and TO are revision parameters (see C<git help revisions>) specifying
-two commits. They're passed as arguments to C<git diff-tree> in order to
-compare them and grok the files that differ between them.
+two commits. They're passed as arguments to the C<git diff-tree> command in
+order to compare them and grok the files that differ between them.
+
+A special case occurs when FROM is the undefined commit, which happens when
+we're calculating the commit range in a pre-receive or update hook and a new
+branch or tag has been pushed. In this case we pass FROM and TO to the
+C<get_commits> method to find the list of new commits being pushed and
+calculate the difference between the first commit's parent and TO. When the
+first commit has no parent (in case it's a root commit) we return an empty
+list.
 
 =head2 filter_files_in_commit FILTER, COMMIT
 

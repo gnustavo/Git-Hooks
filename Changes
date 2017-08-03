@@ -2,6 +2,13 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+  [Fixes]
+
+  - CheckLog was considering every file in the repository when a new branch
+    or tag was pushed, during the pre-receive and the update hooks. Now it
+    can calculate correctly the files affected by the new commits pushed
+    along with the new commit.
+
 2.1.0     2017-07-12 15:06:42-03:00 America/Sao_Paulo
 
   [New features]
