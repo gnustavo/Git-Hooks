@@ -44,7 +44,7 @@ sub run_hook {
 
     my $git = Git::Repository->new();
 
-    my $hook_basename = $git->prepare_hook($hook_name, @args);
+    my $hook_basename = $git->prepare_hook($hook_name, \@args);
 
     $git->load_plugins();
 

@@ -304,16 +304,15 @@ my %prepare_hook = (
 );
 
 sub prepare_hook {
-    my ($git, @args) = @_;
+    my ($git, $hook_name, $args) = @_;
 
-    $git->{_plugin_githooks}{arguments} = \@args; # for debugging purposes
-    my $hook_name = shift @args;
+    $git->{_plugin_githooks}{arguments} = $args;
     my $basename  = path($hook_name)->basename;
     $git->{_plugin_githooks}{hookname} = $basename;
 
     # Some hooks need some argument munging before we invoke them
     if (my $prepare = $prepare_hook{$basename}) {
-        $prepare->($git, \@args);
+        $prepare->($git, $args);
     }
 
     return $basename;
@@ -1169,10 +1168,13 @@ The following methods are used by the Git::Hooks framework and are not
 intended to be useful for hook developers. They're described here for
 completeness.
 
-=head2 prepare_hook NAME, ARGS...
+=head2 prepare_hook NAME, ARGS
 
 This is used by Git::Hooks::run_hooks to prepare the environment for
-specific Git hooks before invoking the associated plugins.
+specific Git hooks before invoking the associated plugins. It's invoked with
+the arguments passed by Git to the hook script. NAME is the script name
+(usually the variable $0) and ARGS is a reference to an array containing the
+script positional arguments.
 
 =head2 load_plugins
 
