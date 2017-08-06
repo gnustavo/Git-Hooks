@@ -128,10 +128,19 @@ options. (More on this later.)
 
 =head1 INTRODUCTION
 
+=over
+
 "Git is a fast, scalable, distributed revision control system with an
 unusually rich command set that provides both high-level operations
 and full access to
 internals. (L<Git README|https://github.com/gitster/git#readme>)"
+
+=back
+
+If you already know about L<Git|http://git-scm.org/> and hooks and simply
+want to get on with business go straight to our
+L<wiki|https://github.com/gnustavo/Git-Hooks/wiki> and read the relevant
+tutorials.
 
 In order to really understand what this is all about you need to
 understand L<Git|http://git-scm.org/> and its hooks. You can read
@@ -1199,6 +1208,10 @@ though.
 =head1 SEE ALSO
 
 =over
+
+=item * L<Git::Hooks wiki|https://github.com/gnustavo/Git-Hooks/wiki>
+
+Tutorials for Git users and administrators.
 
 =item * L<Git::Repository>
 
