@@ -2,6 +2,15 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.1.3     2017-08-05 23:55:55-03:00 America/Sao_Paulo
+
+  [Fixes]
+
+  - Git::Hooks was broken for Gerrit since v2.0.0.
+
+  - CheckJira's deprecated options (issuetype and status) were broken if
+    their values contained whitespace.
+
 2.1.2     2017-08-03 09:58:07-03:00 America/Sao_Paulo
 
   [Fix]
