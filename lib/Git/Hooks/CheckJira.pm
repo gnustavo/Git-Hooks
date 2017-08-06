@@ -188,7 +188,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
             my @deprecated;
             foreach my $option (qw/project issuetype status/) {
                 if (my @values = $git->get_config($CFG => $option)) {
-                    push @deprecated, "$option IN (@{[join(',', @values)]})";
+                    push @deprecated, "$option IN ('" . join("','", @values) . "')";
                 }
             }
             push @jqls, join(' AND ', @deprecated) if @deprecated;
