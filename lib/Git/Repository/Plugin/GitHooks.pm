@@ -941,7 +941,7 @@ sub get_current_branch {
 sub get_sha1 {
     my ($git, $rev) = @_;
 
-    return $git->run(qw/rev-parse --verify/, $rev)->final_output;
+    return $git->run(qw/rev-parse --verify/, $rev);
 }
 
 sub get_head_or_empty_tree {
