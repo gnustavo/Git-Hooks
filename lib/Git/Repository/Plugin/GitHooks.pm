@@ -932,10 +932,10 @@ sub authenticated_user {
 
 sub get_current_branch {
     my ($git) = @_;
-    my $cmd = $git->command(qw/symbolic-ref HEAD/);
+    my $branch = $git->run({fatal => [-129, -128]}, qw/symbolic-ref HEAD/);
 
     # Return undef if we're in detached head state
-    return eval { $cmd->final_output } || undef;
+    return $? == 0 ? $branch : undef;
 }
 
 sub get_sha1 {
@@ -947,10 +947,10 @@ sub get_sha1 {
 sub get_head_or_empty_tree {
     my ($git) = @_;
 
-    my $cmd = $git->command(qw/rev-parse --verify HEAD/);
+    my $head = $git->run({fatal => [-129, -128]}, qw/rev-parse --verify HEAD/);
 
     # Return the empty tree object if in the initial commit
-    return eval { $cmd->final_output } || $git->empty_tree;
+    return $? == 0 ? $head : $git->empty_tree;
 }
 
 sub blob {

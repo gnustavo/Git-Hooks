@@ -23,14 +23,12 @@ sub check_affected_refs {
 
     foreach my $ref ($git->get_affected_refs()) {
         my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
-        my $cmd = $git->command(
+        my $output = $git->run(
+            {fatal => [-129, -128]},
             qw/diff-tree -r --check/,
             $old_commit eq $git->undef_commit ? $git->empty_tree : $old_commit,
-            $new_commit,
-        );
-        my $output = do { local $/ = undef; readline($cmd->stdout)};
-        $cmd->close;
-        if ($cmd->exit() != 0) {
+            $new_commit);
+        if ($? != 0) {
             $git->error($PKG, "whitespace errors in the changed files in $ref", $output);
             ++$errors;
         };
@@ -42,10 +40,10 @@ sub check_affected_refs {
 sub check_commit {
     my ($git) = @_;
 
-    my $cmd = $git->command(qw/diff-index --check --cached/, $git->get_head_or_empty_tree());
-    my $output = do { local $/ = undef; readline($cmd->stdout)};
-    $cmd->close;
-    if ($cmd->exit() == 0) {
+    my $output = $git->run(
+        {fatal => [-129, -128]},
+        qw/diff-index --check --cached/, $git->get_head_or_empty_tree());
+    if ($? == 0) {
         return 1;
     } else {
         $git->error($PKG, 'whitespace errors in the changed files', $output);
@@ -58,10 +56,10 @@ sub check_patchset {
 
     return 1 if $git->im_admin();
 
-    my $cmd = $git->command(qw/diff-tree -r -m --check/, $opts->{'--commit'});
-    my $output = do { local $/ = undef; readline($cmd->stdout)};
-    $cmd->close;
-    if ($cmd->exit() == 0) {
+    my $output = $git->run(
+        {fatal => [-129, -128]},
+        qw/diff-tree -r -m --check/, $opts->{'--commit'});
+    if ($? == 0) {
         return 1;
     } else {
         $git->error($PKG, 'whitespace errors in the changed files', $output);
