@@ -224,6 +224,13 @@ sub _gerrit_patchset_post_hook {
 
     if (my $errors = $git->get_errors()) {
         $review_input{labels}  = $cfg{'votes-to-reject'} || 'Code-Review-1';
+
+        # We have to truncate $errors down to a little less than 64kB because up
+        # to at least Gerrit 2.14.4 messages are saved in a MySQL column of type
+        # 'text', which has this limit.
+        if (length $errors > 65000) {
+            $errors = substr($errors, 0, 65000) . "...\n<truncated>\n";
+        }
         $review_input{message} = $errors;
     } else {
         $review_input{labels}  = $cfg{'votes-to-approve'} || 'Code-Review+1';
