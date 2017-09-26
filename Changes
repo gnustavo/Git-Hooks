@@ -2,6 +2,12 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.1.6     2017-09-26 18:31:44-03:00 America/Sao_Paulo
+
+  [Fix]
+
+  - Fix the githooks.nocarp directive which was broken since v2.0.1.
+
 2.1.5     2017-09-21 22:32:00-03:00 America/Sao_Paulo
 
   [Fixes]
