@@ -83,9 +83,9 @@ sub run_hook {
     if (my $errors = $git->get_errors()) {
         if (($hook_basename eq 'commit-msg' or $hook_basename eq 'pre-commit')
                 and not $git->get_config(githooks => 'abort-commit')) {
-            carp $errors;
+            warn $errors;
         } else {
-            croak $errors;
+            die $errors;
         }
     }
 
