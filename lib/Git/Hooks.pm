@@ -81,6 +81,7 @@ sub run_hook {
     }
 
     if (my $errors = $git->get_errors()) {
+        $errors .= "\n" unless $errors =~ /\n$/;
         if (($hook_basename eq 'commit-msg' or $hook_basename eq 'pre-commit')
                 and not $git->get_config(githooks => 'abort-commit')) {
             warn $errors;
@@ -1019,16 +1020,6 @@ Setting this to false (0) makes these hooks simply warn the user via
 STDERR but let the commit succeed. This way, the user can correct any
 mistake with a simple C<git commit --amend> and doesn't run the risk
 of losing the commit message.
-
-=head2 githooks.nocarp [01]
-
-By default all errors produced by Git::Hooks use L<Carp::croak>, so that
-they contain a suffix telling where the error occurred. Sometimes you may
-not want this. For instance, if you receive the error message produced by a
-server hook you won't be able to use that information.
-
-So, for server hooks you may want to set this configuration variable to 1 to
-strip those suffixes from the error messages.
 
 =head2 githooks.gerrit.url URL
 
