@@ -2,6 +2,19 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.1.7     2017-10-21 23:27:42-02:00 America/Sao_Paulo
+
+  [Fix]
+
+  - Remove directive githooks.nocarp which had no meaning since v2.0.0.
+
+  - Fix CheckWhitespace::check_affected_refs so that it works with newly created
+    or just deleted branches.
+
+  [Thanks]
+
+  - Thanks to @boudekerk for referring me to both problems.
+
 2.1.6     2017-09-26 18:31:44-03:00 America/Sao_Paulo
 
   [Fix]
