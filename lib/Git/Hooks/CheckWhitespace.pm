@@ -23,6 +23,36 @@ sub check_affected_refs {
 
     foreach my $ref ($git->get_affected_refs()) {
         my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
+
+        # If the referece is being deleted we have nothing to check
+        next if $new_commit eq $git->undef_commit;
+
+        # If the reference is being created we have to calculate a proper
+        # $old_commit to diff against.
+        if ($old_commit eq $git->undef_commit) {
+            my $last_log;
+            my $log_iterator = $git->log($new_commit, qw/--not --all/);
+            while (my $log = $log_iterator->next()) {
+                $last_log = $log;
+            }
+            next unless $last_log;
+            my @parents = $last_log->parent;
+            if (@parents == 0) {
+                # We reached the repository root. Hence, let's consider
+                # $old_commit to be the empty tree.
+                $old_commit = $git->empty_tree;
+            } elsif (@parents == 1) {
+                # We reached the first new commit and it's a normal commit. So,
+                # let's consider $old_commit to be its parent.
+                $old_commit = $parents[0];
+            } else {
+                # We reached the first new commit and it's a merge commit. So,
+                # let's consider $old_commit to be this commit, disregarding
+                # only the eventual conflict resolutions.
+                $old_commit = $last_log->commit;
+            }
+        }
+
         my $output = $git->run(
             {fatal => [-129, -128]},
             qw/diff-tree -r --check/,
