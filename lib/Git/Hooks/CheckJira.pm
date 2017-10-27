@@ -174,47 +174,45 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
     # JQL checks
 
     {
-        # global JQLs
-        my @jqls = $git->get_config($CFG => 'jql');
+        # Build a list of JQL terms
 
-        # ref-specific JQLs
-        foreach ($git->get_config($CFG => 'ref-jql')) {
-            my ($match_ref, $jql) = split ' ', $_, 2;
-            push @jqls, $jql if $ref =~ $match_ref;
+        # Starting with a check to see if all JIRA keys exist
+        my @jqls = ("key IN (@{[join(',', @keys)]})");
+
+        # global JQL
+        if (my $jql = $git->get_config($CFG => 'jql')) {
+            push @jqls, $jql;
         }
 
-        # Construct a JQL based on the deprecated configuration options
-        {
-            my @deprecated;
-            foreach my $option (qw/project issuetype status/) {
-                if (my @values = $git->get_config($CFG => $option)) {
-                    push @deprecated, "$option IN ('" . join("','", @values) . "')";
-                }
+        # ref-specific JQL
+        foreach my $refjql (reverse $git->get_config($CFG => 'ref-jql')) {
+            my ($match_ref, $jql) = split ' ', $refjql, 2;
+            if ($ref =~ $match_ref) {
+                push @jqls, $jql;
+                last;
             }
-            push @jqls, join(' AND ', @deprecated) if @deprecated;
         }
 
-        my $match_keys = "key IN (@{[join(',', @keys)]})";
-        my $cited_set  = Set::Scalar->new(@keys);
-
-        # Conjunct $match_keys with each JQL expression to match only the
-        # cited issues.
-        @jqls = map {"$match_keys AND $_"} @jqls;
-
-        # If there is no JQL expression used to restrict the search we
-        # inject an expression to search for the cited issues.
-        @jqls = ($match_keys) unless @jqls;
-
-        foreach my $jql (@jqls) {
-            my $issues = _jql_query($git, $jql);
-
-            @issues{keys %$issues} = values %$issues; # cache all matched issues
-
-            my $matched_set = Set::Scalar->new(keys %$issues);
-            if (my $missed_set = $cited_set - $matched_set) {
-                $git->error($PKG, "the JIRA issue(s) @{[$missed_set]} do(es) not match the expression '$jql'");
-                ++$errors;
+        # JQL terms for the deprecated configuration options
+        foreach my $option (qw/project issuetype status/) {
+            if (my @values = $git->get_config($CFG => $option)) {
+                push @jqls, "$option IN ('" . join("','", @values) . "')";
             }
+        }
+
+        # Conjunct all terms in a single JQL expression
+        my $JQL = '(' . join(') AND (', @jqls) . ')';
+
+        my $issues = _jql_query($git, $JQL);
+
+        @issues{keys %$issues} = values %$issues; # cache all matched issues
+
+        my $cited_set   = Set::Scalar->new(@keys);
+        my $matched_set = Set::Scalar->new(keys %$issues);
+
+        if (my $missed_set = $cited_set - $matched_set) {
+            $git->error($PKG, "the JIRA issue(s) @{[$missed_set]} do(es) not match the expression '$JQL'");
+            ++$errors;
         }
     }
 
@@ -685,6 +683,9 @@ which must match all cited issues. For example, you may want to:
 
 =back
 
+This is a scalar option. Only the last JQL expression will be used to check the
+issues.
+
 =head2 githooks.checkjira.ref-jql REF JQL
 
 You may impose restrictions on specific branches (or, more broadly, any
@@ -694,8 +695,15 @@ expression starting with a caret (C<^>), which is kept as part of the regexp
 (e.g. "^refs/heads/(master|fix)"). For instance:
 
   [githooks "checkjira"]
-    jql = refs/heads/master fixVersion = future
-    jql = ^refs/heads/release/ fixVersion IN releasedVersions()
+    ref-jql = refs/heads/master fixVersion = future
+    ref-jql = ^refs/heads/release/ fixVersion IN releasedVersions()
+
+This is a scalar option. Only the last JQL expression will be used to check the
+issues.
+
+Note, though, that if there is a global JQL specified by the
+B<githooks.checkjira.jql> option it will be checked separately and both
+expressions must validate the issues matching REF.
 
 =head2 githooks.checkjira.require [01]
 

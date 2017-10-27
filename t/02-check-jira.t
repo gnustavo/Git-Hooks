@@ -79,18 +79,18 @@ sub GET {
 }
 
 my %queries = (
-    'key IN (GIT-0) AND project IN (\'OTHER\')'                          => [],
-    'key IN (GIT-0) AND project IN (\'GIT\')'                            => [$issues{'GIT-0'}],
-    'key IN (GIT-1) AND project IN (\'GIT\')'                            => [$issues{'GIT-1'}],
-    'key IN (GIT-2) AND project IN (\'GIT\')'                            => [$issues{'GIT-2'}],
-    'key IN (GIT-2)'                                                     => [$issues{'GIT-2'}],
-    'key IN (GIT-3) AND project IN (\'GIT\')'                            => [$issues{'GIT-3'}],
-    'key IN (GIT-2,GIT-3) AND project IN (\'GIT\')'                      => [@issues{'GIT-2','GIT-3'}],
-    'key IN (GIT-4) AND project IN (\'GIT\')'                            => [$issues{'GIT-4'}],
-    'key IN (GIT-2) AND project IN (\'GIT\') AND status IN (\'Taken\')'  => [],
-    'key IN (GIT-3) AND project IN (\'GIT\') AND status IN (\'Taken\')'  => [$issues{'GIT-3'}],
-    'key IN (GIT-3) AND project IN (\'GIT\') AND issuetype IN (\'Bug\')' => [],
-    'key IN (GIT-2) AND project IN (\'GIT\') AND issuetype IN (\'Bug\')' => [$issues{'GIT-2'}],
+    '(key IN (GIT-0)) AND (project IN (\'OTHER\'))'     => [],
+    '(key IN (GIT-0)) AND (project IN (\'GIT\'))'       => [$issues{'GIT-0'}],
+    '(key IN (GIT-1)) AND (project IN (\'GIT\'))'       => [$issues{'GIT-1'}],
+    '(key IN (GIT-2)) AND (project IN (\'GIT\'))'       => [$issues{'GIT-2'}],
+    '(key IN (GIT-2))'                                  => [$issues{'GIT-2'}],
+    '(key IN (GIT-3)) AND (project IN (\'GIT\'))'       => [$issues{'GIT-3'}],
+    '(key IN (GIT-2,GIT-3)) AND (project IN (\'GIT\'))' => [@issues{'GIT-2','GIT-3'}],
+    '(key IN (GIT-4)) AND (project IN (\'GIT\'))'       => [$issues{'GIT-4'}],
+    '(key IN (GIT-2)) AND (project IN (\'GIT\')) AND (status IN (\'Taken\'))'  => [],
+    '(key IN (GIT-3)) AND (project IN (\'GIT\')) AND (status IN (\'Taken\'))'  => [$issues{'GIT-3'}],
+    '(key IN (GIT-3)) AND (project IN (\'GIT\')) AND (issuetype IN (\'Bug\'))' => [],
+    '(key IN (GIT-2)) AND (project IN (\'GIT\')) AND (issuetype IN (\'Bug\'))' => [$issues{'GIT-2'}],
 );
 
 sub set_search_iterator {
