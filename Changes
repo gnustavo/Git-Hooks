@@ -2,6 +2,15 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.1.8     2017-10-29 21:51:37-02:00 America/Sao_Paulo
+
+  [Fix]
+
+  - The githooks.checkjira.jql and githooks.checkjira.ref-jql options were being
+    used as multi-valued, but this was never the intention. The idea is to
+    evaluate only the most specific value of each option so that one can
+    specialize checks on specific repositories.
+
 2.1.7     2017-10-21 23:27:42-02:00 America/Sao_Paulo
 
   [Fix]
