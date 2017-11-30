@@ -390,6 +390,25 @@ angle-bracketed names with values appropriate to your context:
 
 =back
 
+=head1 TO DO
+
+These are just a few of the ideas for improving this plugin.
+
+=over
+
+=item * Send well-formatted HTML messages.
+
+=item * Generalize the C<commit-url> template.
+
+It should support other placeholders for the Git server's base URL, repository
+name, user name, etc. So that we could configure a single template for all
+repositories in a server. Currently one has to configure a different commit-url
+for each repository.
+
+=item * Send notifications on Gerrit's change-merged hook.
+
+=back
+
 =head1 SEE ALSO
 
 =over
