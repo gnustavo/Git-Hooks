@@ -12,6 +12,7 @@ use Git::Hooks;
 use Git::Repository::Log;
 use Set::Scalar;
 use List::MoreUtils qw/any/;
+use Try::Tiny;
 
 my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
@@ -111,7 +112,7 @@ sub notify {
 
     my $transport = get_transport($git);
 
-    return Email::Sender::Simple->try_to_send($email, $transport);
+    return Email::Sender::Simple->sendmail($email, $transport);
 }
 
 sub grok_include_rules {
@@ -181,7 +182,17 @@ EOF
         }
     }
 
-    return notify($git, $recipients, $body);
+    my $rc = 1;
+    try {
+        notify($git, $recipients, $body);
+    } catch {
+        my $error = $_;
+        $git->error($PKG, 'Could not send mail to the following recipients: '
+                    . join(", ", @{$error->recipients}) . "\n"
+                    . 'Error message: ' . $error->message . "\n");
+        $rc = 0;
+    };
+    return $rc;
 }
 
 # Install hooks
