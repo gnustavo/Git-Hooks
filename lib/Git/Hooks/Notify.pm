@@ -155,19 +155,19 @@ EOF
 
     my $recipients = Set::Scalar->new;
 
-    foreach my $ref ($git->get_affected_refs()) {
-        my ($diff, $files) = ref_changes($git, $ref);
+    foreach my $branch (grep {m:^refs/heads/:} $git->get_affected_refs()) {
+        my ($diff, $files) = ref_changes($git, $branch);
         next unless $diff;
         $body .= $diff;
 
       RULE:
         foreach my $rule (@rules) {
-            my ($match_ref, $match_file) = @{$rule->[0]};
-            if (defined $match_ref) {
-                if (ref $match_ref) {
-                    next RULE unless $ref =~ $match_ref;
+            my ($match_branch, $match_file) = @{$rule->[0]};
+            if (defined $match_branch) {
+                if (ref $match_branch) {
+                    next RULE unless $branch =~ $match_branch;
                 } else {
-                    next RULE unless $ref eq $match_ref;
+                    next RULE unless $branch eq $match_branch;
                 }
             }
             if (defined $match_file) {
@@ -217,7 +217,7 @@ option:
     git config --add githooks.plugin Notify
 
 The email notification is sent in text mode with configurable C<Subject> and
-C<From> headers. The body of the message contains a section for each reference
+C<From> headers. The body of the message contains a section for each branch
 affected by the git-push command. Each section contains the result of a C<git
 log> command showing the pushed commits and the list of files affected by
 them. For example:
@@ -299,13 +299,14 @@ The REF:FILE filters commits like this:
 
 If there is no REF:FILE filter, all pushes send notifications.
 
-=item * B<REF:>
+=item * B<BRANCH:>
 
-A reference can be specified as a complete ref name (e.g. "refs/heads/master")
-or by a regular expression starting with a caret (C<^>), which is kept as part
-of the regexp (e.g. "^refs/heads/(master|fix)").
+A branch can be specified by its name (e.g. "master") or by a regular expression
+starting with a caret (C<^>), which is kept as part of the regexp
+(e.g. "^(master|fix)"). Note that only branch changes are notified, i.e.,
+references under C<refs/heads/>. Tags and other references aren't considered.
 
-Only pushes affecting matching references are notified.
+Only pushes affecting matching branches are notified.
 
 =item * B<:FILE>
 
@@ -315,9 +316,9 @@ regexp (e.g. "^.*\.pm").
 
 Only pushes affecting matching files are notified.
 
-=item * B<REF:FILE>
+=item * B<BRANCH:FILE>
 
-You may filter by reference and by file simultaneously.
+You may filter by branch and by file simultaneously.
 
 =back
 
@@ -357,7 +358,7 @@ specified, the C<short> format is used.
 =head2 githooks.notify.max-count NUM
 
 This allows you to specify the limit of commits that should be shown for each
-changed reference. Read about the --max-count option in C<git help log>. If not
+changed branch. Read about the --max-count option in C<git help log>. If not
 specified, a limit of 10 is used.
 
 =head2 githooks.notify.commit-url URL_PATTERN
