@@ -28,25 +28,18 @@ sub ref_changes {
 
     my $max_count = $git->get_config($CFG, 'max-count') || '10';
 
-    my $log = <<"EOF";
-########################################
-# Changed: $ref
-# From:    ${old_commit}
-# To:      ${new_commit}
-
-EOF
-
     # Treat specially if the reference is new
     my $range = $old_commit eq $git->undef_commit
         ? $new_commit
         : "$old_commit..$new_commit";
 
-    $log .= $git->run(qw/log --numstat --first-parent/,
-                      "--format=$format",
-                      "--max-count=$max_count",
-                      $range);
+    my @cmd = ('log', '--numstat', '--first-parent', "--format=$format",
+               "--max-count=$max_count", $range);
 
-    $log .= "\n\n";
+    my $log =
+        "# Changed branch $ref\n\n" .
+        "# git " . join(' ', @cmd), "\n\n" .
+        $git->run(@cmd) . "\n\n";
 
     if (my $commit_url = $git->get_config($CFG, 'commit-url')) {
         my $replace_commit = sub {
@@ -89,11 +82,11 @@ sub get_transport {
 sub notify {
     my ($git, $recipients, $body) = @_;
 
-    return 1 if $recipients->is_empty;
+    return 1 unless @$recipients;
 
     my @headers = (
         'Subject'      => $git->get_config($CFG => 'subject') || '[Git::Hooks::Notify]',
-        'To'           => join(', ', $recipients->members),
+        'To'           => join(', ', @$recipients),
         'MIME-Version' => '1.0',
         'Content-Type' => 'text/plain',
     );
@@ -105,9 +98,15 @@ sub notify {
     require Email::Sender::Simple;
     require Email::Simple;
 
+    my $preamble = $git->get_config($CFG, 'preamble') || <<'EOF';
+You're receiving this automatic notification because commits were pushed to a
+Git repository you're watching.
+
+EOF
+
     my $email = Email::Simple->create(
         header => \@headers,
-        body   => $body,
+        body   => $preamble . $body,
     );
 
     my $transport = get_transport($git);
@@ -148,21 +147,16 @@ sub notify_affected_refs {
 
     return 1 unless @rules;
 
-    my $body = $git->get_config($CFG, 'preamble') || <<'EOF';
-You're receiving this automatic notification because commits were pushed to a
-Git repository you're watching.
-
-EOF
-
-    my $recipients = Set::Scalar->new;
+    my $errors = 0;
 
     foreach my $branch (grep {m:^refs/heads/:} $git->get_affected_refs()) {
-        my ($diff, $files) = ref_changes($git, $branch);
-        next unless $diff;
-        $body .= $diff;
+        my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
+        my @files = $git->filter_files_in_range('AM', $old_commit, $new_commit);
+        next unless @files;
 
       RULE:
         foreach my $rule (@rules) {
+            my $log;
             my ($match_branch, $match_file) = @{$rule->[0]};
             if (defined $match_branch) {
                 if (ref $match_branch) {
@@ -172,27 +166,28 @@ EOF
                 }
             }
             if (defined $match_file) {
+                my @matching_files = 
                 if (ref $match_file) {
                     next RULE unless any { $_ =~ $match_file } @$files;
                 } else {
                     next RULE unless any { $_ eq $match_file } @$files;
                 }
+                $log = gitlog($git, $ref, $old_commit, $new_commit, )
             }
-            $recipients->insert(@{$rule->[1]});
+
+            try {
+                notify($git, $rule->[1], $body);
+            } catch {
+                my $error = $_;
+                $git->error($PKG, 'Could not send mail to the following recipients: '
+                                . join(", ", @{$error->recipients}) . "\n"
+                                . 'Error message: ' . $error->message . "\n");
+                ++$errors;
+            };
         }
     }
 
-    my $rc = 1;
-    try {
-        notify($git, $recipients, $body);
-    } catch {
-        my $error = $_;
-        $git->error($PKG, 'Could not send mail to the following recipients: '
-                    . join(", ", @{$error->recipients}) . "\n"
-                    . 'Error message: ' . $error->message . "\n");
-        $rc = 0;
-    };
-    return $rc;
+    return $errors == 0;
 }
 
 # Install hooks
@@ -235,8 +230,9 @@ them. For example:
 
   Subject: [Git::Hooks::Notify]
 
-  ########################################
-  # refs/for/master c45feb16fe3e6fc105414e60e91ffb031c134cd4 -> 6eaa6a84fbd7e2a64e66664f3d58707618e20c72
+  Changed branch refs/heads/master
+
+  git log --numstat --first-parent --format=short --max-count=10 c45feb16fe3e6fc105414e60e91ffb031c134cd4..6eaa6a84fbd7e2a64e66664f3d58707618e20c72
 
   commit 6eaa6a84fbd7e2a64e66664f3d58707618e20c72 (HEAD -> notify)
   Author: Gustavo L. de M. Chaves <gnustavo@cpan.org>
