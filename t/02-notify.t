@@ -3,14 +3,19 @@
 use 5.010;
 use strict;
 use warnings;
+use Path::Tiny 0.060;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
-use Test::More tests => 4;
+use Test::More tests => 7;
 
-my ($repo, $file, $clone);
+my ($repo, $file, $clone, $T);
+
+my $mailbox;
 
 sub setup_repos {
-    ($repo, $file, $clone) = new_repos();
+    ($repo, $file, $clone, $T) = new_repos();
+
+    $mailbox = $T->child('mailbox');
 
     $file->append("First line.\n");
     $repo->run(add => $file);
@@ -20,48 +25,74 @@ sub setup_repos {
     install_hooks($clone, undef, qw/post-receive/);
 }
 
-sub check_can_push {
+sub do_push {
     my ($testname) = @_;
     $file->append("$testname\n");
     $repo->run(add => $file);
     $repo->run(commit => "-m${testname}");
-    test_ok($testname, $repo, 'push', $clone->git_dir());
+    unlink $mailbox if -e $mailbox;
+    my ($ok, $exit, $stdout, $stderr) = test_command($repo, 'push', $clone->git_dir());
+    diag(" exit=$exit\n stdout=$stdout\n stderr=$stderr\n\n") unless $ok;
+    return $ok;
 }
 
-sub check_cannot_push {
+sub check_push_notify {
+    my ($testname, $regex) = @_;
+    if (do_push($testname)) {
+        if (-e $mailbox) {
+            ok(scalar(grep {$_ =~ $regex} ($mailbox->lines)), $testname);
+        } else {
+            fail($testname);
+        }
+    } else {
+        fail($testname);
+    }
+    return;
+}
+
+sub check_push_dont_notify {
     my ($testname) = @_;
-    $file->append("$testname\n");
-    $repo->run(add => $file);
-    $repo->run(commit => "-m${testname}");
-    test_nok_match($testname, qr/not allowed/, $repo, 'push', $clone->git_dir());
+    if (do_push($testname)) {
+        ok(! -e $mailbox, $testname);
+    } else {
+        fail($testname);
+    }
+    return;
 }
 
 
 setup_repos();
 
+$clone->run(qw{config githooks.plugin Notify});
+$clone->run(qw{config githooks.notify.transport}, "Mbox filename=$mailbox");
+$clone->run(qw{config githooks.notify.from from@example.net});
+$clone->run(qw{config githooks.notify.rule to@example.net});
+
 SKIP: {
-    skip "Skipping non-implemented tests.", 4;
+    unless (eval { require Email::Sender::Transport::Mbox; }) {
+        skip "Module Email::Sender::Transport::Mbox is needed to test but not installed", 7;
+    }
 
-    $clone->run(qw/config githooks.plugin Notify/);
-    $clone->run(qw{config githooks.notify.from git-hooks-notify@example.net});
-    $clone->run(qw{config githooks.notify.include gustavo@cpan.org});
+    check_push_notify('default subject', qr/Subject: \[Git::Hooks::Notify\]/);
 
-    check_can_push('succeed by default');
+    check_push_notify('from header', qr/From: from\@example\.net/);
 
-    $clone->run(qw{config githooks.notify.subject [Git::Hooks::Notify]-SMTP});
-    $clone->run(qw{config githooks.notify.transport smtp});
-    $clone->run(qw{config githooks.notify.smtp-host smtp.example.net});
+    check_push_notify('to header', qr/To: to\@example\.net/);
 
-    check_can_push('succeed via smtp.cpqd.com.br');
+    $clone->run(qw{config githooks.notify.preamble}, "Custom preamble.");
 
-    $clone->run(qw{config githooks.notify.subject [Git::Hooks::Notify]-SMTPS});
-    $clone->run(qw{config githooks.notify.smtp-host smtp.gmail.com});
-    $clone->run(qw{config githooks.notify.smtp-ssl ssl});
+    check_push_notify('preamble', qr/Custom preamble\./);
 
-    check_can_push('succeed via smtp.gmail.com ssl');
+    $clone->run(qw{config githooks.notify.commit-url}, "https://example.net/%H");
 
-    $clone->run(qw{config githooks.notify.subject [Git::Hooks::Notify]-SMTPTLS});
-    $clone->run(qw{config githooks.notify.smtp-ssl starttls});
+    check_push_notify('commit-url', qr@https://example.net/[0-9a-f]{40}@);
 
-    check_can_push('succeed via smtp.gmail.com starttls');
-}
+    $clone->run(qw{config --replace-all githooks.notify.rule}, 'to@example.net -- nomatch');
+
+    check_push_dont_notify('do not notify if do not match pathspec');
+
+    my $basename = $file->basename;
+    $clone->run(qw{config --replace-all githooks.notify.rule}, "to\@example.net -- $basename");
+
+    check_push_notify('do notify if match pathspec', qr/$basename/);
+};

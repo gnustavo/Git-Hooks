@@ -17,41 +17,32 @@ use Try::Tiny;
 my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
-sub ref_changes {
-    my ($git, $ref) = @_;
+sub pretty_log {
+    my ($git, $branch, $options, $paths, $max_count, $commits) = @_;
 
-    my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
+    my $log = "Branch: $branch\n";
 
-    my @files = $git->filter_files_in_range('AM', $old_commit, $new_commit);
+    my $commit_url = $git->get_config($CFG, 'commit-url') || '%H';
 
-    my $format = $git->get_config($CFG, 'format') || 'short';
+    my $replace_commit = sub {
+        my ($sha1) = @_;
+        my $pattern = $commit_url;
+        $pattern =~ s/%H/$sha1/e;
+        return $pattern;
+    };
 
-    my $max_count = $git->get_config($CFG, 'max-count') || '10';
+    foreach my $commit (@$commits) {
+        $log .= <<EOF;
 
-    # Treat specially if the reference is new
-    my $range = $old_commit eq $git->undef_commit
-        ? $new_commit
-        : "$old_commit..$new_commit";
+commit @{[$replace_commit->($commit->commit)]}
+Author: @{[$commit->author]}
+Date:   @{[scalar(localtime($commit->author_localtime))]}
 
-    my @cmd = ('log', '--numstat', '--first-parent', "--format=$format",
-               "--max-count=$max_count", $range);
-
-    my $log =
-        "# Changed branch $ref\n\n" .
-        "# git " . join(' ', @cmd), "\n\n" .
-        $git->run(@cmd) . "\n\n";
-
-    if (my $commit_url = $git->get_config($CFG, 'commit-url')) {
-        my $replace_commit = sub {
-            my ($sha1) = @_;
-            my $pattern = $commit_url;
-            $pattern =~ s/%H/$sha1/e;
-            return $pattern;
-        };
-        $log =~ s/\b[0-9a-f]{40}\b/$replace_commit->($&)/eg;
+@{[$commit->raw_message]}@{[$commit->extra]}
+EOF
     }
 
-    return ($log, \@files);
+    return $log;
 }
 
 sub get_transport {
@@ -61,22 +52,20 @@ sub get_transport {
 
     return unless $transport;
 
-    croak "Unknown $PKG transport '$transport'" unless $transport eq 'smtp';
+    my @args = split / /, $transport;
+
+    $transport = shift @args;
 
     my %args;
 
-    for my $option (qw/host ssl port timeout sasl-username sasl-password debug/) {
-        if (my $value = $git->get_config($CFG, "smtp-$option")) {
-            # Replace hyphens by underslines on the two "sasl-" options
-            my $name = $option;
-            $name =~ s/sasl-/sasl_/;
-            $args{$name} = $value;
-        }
+    foreach (@args) {
+        my ($arg, $value) = split /=/;
+        $args{$arg} = $value;
     }
 
-    require Email::Sender::Transport::SMTP;
+    eval "require Email::Sender::Transport::$transport";
 
-    return { transport => Email::Sender::Transport::SMTP->new(\%args) };
+    return "Email::Sender::Transport::$transport"->new(\%args);
 }
 
 sub notify {
@@ -85,10 +74,8 @@ sub notify {
     return 1 unless @$recipients;
 
     my @headers = (
-        'Subject'      => $git->get_config($CFG => 'subject') || '[Git::Hooks::Notify]',
-        'To'           => join(', ', @$recipients),
-        'MIME-Version' => '1.0',
-        'Content-Type' => 'text/plain',
+        'Subject' => $git->get_config($CFG => 'subject') || '[Git::Hooks::Notify]',
+        'To'      => join(', ', @$recipients),
     );
 
     if (my $from = $git->get_config($CFG, 'from')) {
@@ -101,39 +88,33 @@ sub notify {
     my $preamble = $git->get_config($CFG, 'preamble') || <<'EOF';
 You're receiving this automatic notification because commits were pushed to a
 Git repository you're watching.
-
 EOF
+    chomp $preamble;
 
     my $email = Email::Simple->create(
         header => \@headers,
-        body   => $preamble . $body,
+        body   => "$preamble\n\n$body",
     );
 
-    my $transport = get_transport($git);
-
-    return Email::Sender::Simple->sendmail($email, $transport);
+    return Email::Sender::Simple->send(
+        $email,
+        {transport => get_transport($git) || Email::Sender::Simple->default_transport()},
+    );
 }
 
-sub grok_include_rules {
+sub grok_rules {
     my ($git) = @_;
 
-    my @includes = $git->get_config($CFG, 'include');
+    my @text_rules = $git->get_config($CFG, 'rule');
 
     my @rules;
-    foreach my $include (@includes) {
-        my @recipients = split / /, $include;
-        next unless @recipients;
-        my ($match_ref, $match_file);
-        if ($recipients[0] =~ /:/) {
-            my $match = shift @recipients;
-            next unless @recipients;
-            my @match = split /:/, $match;
-            $match_ref = qr/$match[0]/
-                if defined $match[0] && length $match[0] && $match[0] =~ /^^/;
-            $match_file = qr/$match[1]/
-                if defined $match[1] && length $match[1] && $match[1] =~ /^^/;
-        }
-        push @rules, [[$match_ref, $match_file], \@recipients];
+    foreach my $rule (@text_rules) {
+        my ($recipients, $paths) = split /\s*--\s*/, $rule;
+
+        push @rules, {
+            recipients => [split / /, $recipients],
+            paths      => [defined $paths ? split / /, $paths : ()],
+        };
     }
 
     return @rules;
@@ -143,45 +124,36 @@ sub grok_include_rules {
 sub notify_affected_refs {
     my ($git) = @_;
 
-    my @rules = grok_include_rules($git);
+    my @branches = grep {m:^refs/heads/:} $git->get_affected_refs();
+
+    return 1 unless @branches;
+
+    my @rules = grok_rules($git);
 
     return 1 unless @rules;
 
+    my $max_count = $git->get_config($CFG, 'max-count') || '10';
+
+    my @options = ('--numstat', '--first-parent', "--max-count=$max_count");
+
     my $errors = 0;
 
-    foreach my $branch (grep {m:^refs/heads/:} $git->get_affected_refs()) {
-        my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
-        my @files = $git->filter_files_in_range('AM', $old_commit, $new_commit);
-        next unless @files;
-
-      RULE:
+    foreach my $branch (@branches) {
         foreach my $rule (@rules) {
-            my $log;
-            my ($match_branch, $match_file) = @{$rule->[0]};
-            if (defined $match_branch) {
-                if (ref $match_branch) {
-                    next RULE unless $branch =~ $match_branch;
-                } else {
-                    next RULE unless $branch eq $match_branch;
-                }
-            }
-            if (defined $match_file) {
-                my @matching_files = 
-                if (ref $match_file) {
-                    next RULE unless any { $_ =~ $match_file } @$files;
-                } else {
-                    next RULE unless any { $_ eq $match_file } @$files;
-                }
-                $log = gitlog($git, $ref, $old_commit, $new_commit, )
-            }
+            my @commits = $git->get_affected_ref_commits($branch, \@options, $rule->{paths});
+
+            next unless @commits;
+
+            my $message = pretty_log($git, $branch, \@options, $rule->{paths}, $max_count, \@commits);
 
             try {
-                notify($git, $rule->[1], $body);
+                notify($git, $rule->{recipients}, $message);
             } catch {
                 my $error = $_;
                 $git->error($PKG, 'Could not send mail to the following recipients: '
-                                . join(", ", @{$error->recipients}) . "\n"
-                                . 'Error message: ' . $error->message . "\n");
+                                . join(", ", $error->recipients) . "\n"
+                                . 'Error message: ' . $error->message . "\n"
+                            );
                 ++$errors;
             };
         }
@@ -206,7 +178,7 @@ Notify - Git::Hooks plugin to notify users via email
 =head1 DESCRIPTION
 
 This L<Git::Hooks> plugin hooks itself to the hooks below to notify users via
-email about pushed commits affecting specific files and/or references.
+email about pushed commits affecting specific files in the repository.
 
 =over
 
@@ -230,12 +202,14 @@ them. For example:
 
   Subject: [Git::Hooks::Notify]
 
-  Changed branch refs/heads/master
+  You're receiving this automatic notification because commits were pushed to a
+  Git repository you're watching.
 
-  git log --numstat --first-parent --format=short --max-count=10 c45feb16fe3e6fc105414e60e91ffb031c134cd4..6eaa6a84fbd7e2a64e66664f3d58707618e20c72
+  Branch: refs/heads/master
 
-  commit 6eaa6a84fbd7e2a64e66664f3d58707618e20c72 (HEAD -> notify)
+  commit 6eaa6a84fbd7e2a64e66664f3d58707618e20c72
   Author: Gustavo L. de M. Chaves <gnustavo@cpan.org>
+  Date:   Mon Dec 4 21:41:19 2017 -0200
 
       Add plugin Git::Hooks::Notify
 
@@ -244,6 +218,7 @@ them. For example:
 
   commit b0a820600bb093afeafa547cbf39c468380e41af (tag: v2.1.8, origin/next, next)
   Author: Gustavo L. de M. Chaves <gnustavo@cpan.org>
+  Date:   Sat Nov 25 21:34:48 2017 -0200
 
       v2.1.8
 
@@ -251,6 +226,7 @@ them. For example:
 
   commit c45feb16fe3e6fc105414e60e91ffb031c134cd4
   Author: Gustavo L. de M. Chaves <gnustavo@cpan.org>
+  Date:   Sat Nov 25 19:13:42 2017 -0200
 
       CheckJira: JQL options are scalar, not multi-valued
 
@@ -264,72 +240,44 @@ the configuration options explained below.
 
 The plugin is configured by the following git options.
 
-=head2 githooks.notify.transport TRANSPORT
+=head2 githooks.notify.transport TRANSPORT [ARGS...]
 
 By default the messages are sent using L<Email::Simple>'s default transport. On
 Unix systems, it is usually the C<sendmail> command. You can specify another
-transport using this configuration. For now, the only explicitly supported
-transport is C<smtp>, which uses the L<Email::Sender::Transport::SMTP> module.
+transport using this configuration.
 
-=head2 githooks.notify.smtp-host HOST
+C<TRANSPORT> must be the basename of an available transport class, such as
+C<SMTP>, C<Maildir>, or C<Mbox>. The name is prefixed with
+C<Email::Sender::Transport::> and the complete name is required like this:
 
-Specify the name of the host to connect to; defaults to C<localhost>.
+  eval "require Email::Sender::Transport::$TRANSPORT";
 
-=head2 githooks.notify.smtp-ssl [starttls|ssl]
+So, you must make sure such a transport is installed in your server's Perl.
 
-If 'starttls', use STARTTLS; if 'ssl' (or 1), connect securely; otherwise, no
-security.
+C<ARGS> is a space-separated list of C<VAR=VALUE> pairs. All pairs will be
+tucked in a hash and passed to the transport's constructor. For example:
 
-=head2 githooks.notify.smtp-port PORT
+  [githooks "notify"]
+    transport = SMTP host=smtp.example.net ssl=starttls sasl_username=myself sasl_password=myword
+    transport = Mbox filename=/home/user/.mbox
+    transport = Maildir dir=/home/user/maildir
 
-Port to connect to; defaults to 25 for non-SSL, 465 for 'ssl', 587 for
-'starttls'.
+Please, read the transport's class documentation to know which arguments are
+available.
 
-=head2 githooks.notify.smtp-timeout NUM
+=head2 githooks.notify.rule RECIPIENTS [-- PATHS]
 
-Maximum time in seconds to wait for server; default is 120.
+The B<rule> directive adds a notification rule specifying which RECIPIENTS
+should be notified of pushed commits affecting the specified PATHS.
 
-=head2 githooks.notify.smtp-debug [01]
+If no path is specified, the recipients are notified about every push.
 
-If true, puts the L<Net::SMTP> object in debug mode.
+C<RECIPIENTS> is a space-separated list of email addresses.
 
-=head2 githooks.notify.include [[REF]:[FILE]] RECIPIENTS
-
-The B<include> directive includes a notification rule specifying which
-RECIPIENTS should be notified of pushed commits affecting the REF:FILE filter.
-
-The REF:FILE filters commits like this:
-
-=over
-
-=item * I<empty>
-
-If there is no REF:FILE filter, all pushes send notifications.
-
-=item * B<BRANCH:>
-
-A branch can be specified by its name (e.g. "master") or by a regular expression
-starting with a caret (C<^>), which is kept as part of the regexp
-(e.g. "^(master|fix)"). Note that only branch changes are notified, i.e.,
-references under C<refs/heads/>. Tags and other references aren't considered.
-
-Only pushes affecting matching branches are notified.
-
-=item * B<:FILE>
-
-A file can be specified as a complete file name (e.g. "lib/Hooks.pm") or by a
-regular expression starting with a caret (C<^>), which is kept as part of the
-regexp (e.g. "^.*\.pm").
-
-Only pushes affecting matching files are notified.
-
-=item * B<BRANCH:FILE>
-
-You may filter by branch and by file simultaneously.
-
-=back
-
-The RECIPIENTS is a comma-separated list of email addresses.
+C<PATHS> is a space-separated list of pathspecs, used to restrict notifications
+to commits affecting particular paths in the repository. Note that the list of
+paths starts after a double-dash (--). Please, read about pathspecs in the C<git
+help glossary>.
 
 =head2 githooks.notify.from SENDER
 
@@ -355,12 +303,6 @@ specify it, the default is like this:
 
   You're receiving this automatic notification because commits were pushed to a
   Git repository you're watching.
-
-=head2 githooks.notify.format [short|medium|full|fuller]
-
-This allows you to specify which git-log format you want to be shown in the
-notifications. Read about the --format option in C<git help log>. If not
-specified, the C<short> format is used.
 
 =head2 githooks.notify.max-count NUM
 

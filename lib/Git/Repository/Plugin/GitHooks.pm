@@ -845,12 +845,7 @@ sub get_affected_ref_commits {
     exists $affected->{$ref}
         or croak __PACKAGE__, ": get_affected_ref_commits($ref): no such affected ref\n";
 
-    unless (exists $affected->{$ref}{commits}) {
-        $affected->{$ref}{commits} =
-            [$git->get_commits($git->get_affected_ref_range($ref), $options, $paths)];
-    }
-
-    return @{$affected->{$ref}{commits}};
+    return $git->get_commits($git->get_affected_ref_range($ref), $options, $paths);
 }
 
 sub filter_files_in_index {
