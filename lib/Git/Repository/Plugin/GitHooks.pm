@@ -674,11 +674,17 @@ sub get_commit {
 }
 
 sub get_commits {
-    my ($git, $old_commit, $new_commit) = @_;
+    my ($git, $old_commit, $new_commit, $options, $paths) = @_;
 
     my $cache = $git->cache('ranges');
 
-    my $range = "$old_commit:$new_commit";
+    my $range = join(
+        ':',
+        $old_commit,
+        $new_commit,
+        defined $options ? join('', @$options) : '',
+        defined $paths   ? join('', @$paths)   : '',
+    );
 
     unless (exists $cache->{$range}) {
         # We're interested in all commits reachable from $new_commit but
@@ -732,7 +738,13 @@ sub get_commits {
 
         push @excludes, "^$old_commit" unless $old_commit eq $git->undef_commit;
 
-        $cache->{$range} = [$git->log($new_commit, @excludes)];
+        my @arguments;
+
+        push @arguments, @$options if defined $options;
+        push @arguments, $new_commit, @excludes;
+        push @arguments, '--', @$paths if defined $paths;
+
+        $cache->{$range} = [$git->log(@arguments)];
     }
 
     return @{$cache->{$range}};
@@ -826,7 +838,7 @@ sub get_affected_ref_range {
 }
 
 sub get_affected_ref_commits {
-    my ($git, $ref) = @_;
+    my ($git, $ref, $options, $paths) = @_;
 
     my $affected = _get_affected_refs_hash($git);
 
@@ -834,7 +846,8 @@ sub get_affected_ref_commits {
         or croak __PACKAGE__, ": get_affected_ref_commits($ref): no such affected ref\n";
 
     unless (exists $affected->{$ref}{commits}) {
-        $affected->{$ref}{commits} = [$git->get_commits($git->get_affected_ref_range($ref))];
+        $affected->{$ref}{commits} =
+            [$git->get_commits($git->get_affected_ref_range($ref), $options, $paths)];
     }
 
     return @{$affected->{$ref}{commits}};
@@ -850,7 +863,7 @@ sub filter_files_in_index {
 }
 
 sub filter_files_in_range {
-    my ($git, $filter, $from, $to) = @_;
+    my ($git, $filter, $from, $to, $options, $paths) = @_;
 
     # If $to is the undefined commit this means that a branch or tag is being
     # removed. In this situation we return the empty list, bacause no file
@@ -864,7 +877,7 @@ sub filter_files_in_range {
         # the files changed from the list's first commit's PARENT commit to
         # the list's last commit.
 
-        if (my @commits = $git->get_commits($from, $to)) {
+        if (my @commits = $git->get_commits($from, $to, $options, $paths)) {
             if (my @parents = $commits[0]->parent()) {
                 $from = $parents[0];
             } else {
@@ -1349,7 +1362,7 @@ Git|https://stackoverflow.com/questions/9765453/is-gits-semi-secret-empty-tree-o
 
 Returns a L<Git::Repository::Log> object representing COMMIT.
 
-=head2 get_commits OLDCOMMIT NEWCOMMIT
+=head2 get_commits OLDCOMMIT NEWCOMMIT [OPTIONS [PATHS]]
 
 Returns a list of L<Git::Repository::Log> objects representing every commit
 reachable from NEWCOMMIT but not from OLDCOMMIT.
@@ -1368,6 +1381,24 @@ is NEWCOMMIT ^B1 ^B2 ... ^Bn", i.e., NEWCOMMIT followed by every other
 branch name prefixed by carets. We can get at their names using the
 technique described in, e.g., L<this
 discussion|http://stackoverflow.com/questions/3511057/git-receive-update-hooks-and-new-branches>.
+
+The L<Git::Repository::Log> objects are constructed ultimately by invoking the
+C<git log> command like this:
+
+  git log [<options>] <revision range> [-- <paths>]
+
+The C<revision range> is usually just C<OLDCOMMIT..NEWCOMMIT>, but there are
+some special cases which require some calculating as discussed above.
+
+The C<OPTIONS> optional argument is an array-ref pointing to an array of
+strings, which will be passed as options to the git-log command. It may be
+useful to grok some extra information about each commit (e.g., using
+C<--name-status>).
+
+The C<PATHS> optional argument is an array-ref pointing to an array of strings,
+which will be passed as pathspecs to the git-log command. It may be useful to
+filter the list of commits, grokking only those affecting specific paths in the
+repository.
 
 =head2 read_commit_msg_file FILENAME
 
@@ -1427,11 +1458,14 @@ command. It's useful in the C<update> and the C<pre-receive> hooks.
 Returns the two-element list of commit ids representing the OLDCOMMIT and
 the NEWCOMMIT of the affected REF.
 
-=head2 get_affected_ref_commits REF
+=head2 get_affected_ref_commits REF [OPTIONS [PATHS]]
 
 Returns the list of commits leading from the affected REF's NEWCOMMIT to
 OLDCOMMIT. The commits are represented by L<Git::Repository::Log> objects,
 as returned by the C<get_commits> method.
+
+The optional arguments OPTIONS and PATHS are passed to the C<get_commits>
+method.
 
 =head2 filter_files_in_index FILTER
 
@@ -1455,7 +1489,7 @@ is documented like this:
     other criteria in the comparison; if there is no file that matches other
     criteria, nothing is selected.
 
-=head2 filter_files_in_range FILTER, FROM, TO
+=head2 filter_files_in_range FILTER FROM TO [OPTIONS [PATHS]]
 
 Returns a list of the names of the files that are changed between commits
 FROM and TO. It's useful in the C<update> and the C<pre-receive> hooks when
@@ -1476,6 +1510,9 @@ C<get_commits> method to find the list of new commits being pushed and
 calculate the difference between the first commit's parent and TO. When the
 first commit has no parent (in case it's a root commit) we return an empty
 list.
+
+The optional arguments OPTIONS and PATHS are passed to the C<get_commits>
+method.
 
 =head2 filter_files_in_commit FILTER, COMMIT
 
