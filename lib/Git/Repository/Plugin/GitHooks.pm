@@ -31,7 +31,7 @@ sub _keywords {                 ## no critic (ProhibitUnusedPrivateSubroutines)
 
           filter_files_in_index filter_files_in_range filter_files_in_commit
 
-          authenticated_user
+          authenticated_user repository_name
 
           get_current_branch get_sha1 get_head_or_empty_tree
 
@@ -151,6 +151,8 @@ sub _prepare_gerrit_args {
     };
 
     @$args = (\%opt);
+
+    $git->{_plugin_githooks}{gerrit_args} = \%opt;
 
     return;
 }
@@ -937,6 +939,30 @@ sub authenticated_user {
     return $git->{_plugin_githooks}{authenticated_user};
 }
 
+sub repository_name {
+    my ($git) = @_;
+
+    unless (exists $git->{_plugin_githooks}{repository_name}) {
+        if (my $gerrit_args = $git->{_plugin_githooks}{gerrit_args}) {
+            # Gerrit
+             $git->{_plugin_githooks}{repository_name} = $gerrit_args->{'--project'};
+        } elsif (exists $ENV{STASH_REPO_NAME}) {
+            # Bitbucket
+            $git->{_plugin_githooks}{repository_name} = "$ENV{STASH_PROJECT_KEY}/$ENV{STASH_REPO_NAME}";
+        } else {
+            # As a last resort, return GIT_DIR's basename
+            my $gitdir = path($git->git_dir());
+            my $basename = $gitdir->basename;
+            if ($basename eq '.git') {
+                $basename = $gitdir->parent->basename;
+            }
+            $git->{_plugin_githooks}{repository_name} = $basename;
+        }
+    }
+
+    return $git->{_plugin_githooks}{repository_name};
+}
+
 sub get_current_branch {
     my ($git) = @_;
     my $branch = $git->run({fatal => [-129, -128]}, qw/symbolic-ref HEAD/);
@@ -1535,6 +1561,12 @@ Returns the username of the authenticated user performing the Git action. It
 groks it from the C<githooks.userenv> configuration variable specification,
 which is described in the L<Git::Hooks> documentation. It's useful for most
 access control check plugins.
+
+=head2 repository_name
+
+Returns the repository name as a string. Currently it knows how to grok the name
+from Gerrit and Bitbucket servers. Otherwise it tries to grok it from the
+C<GIT_DIR> environment variable, which holds the path to the Git repository.
 
 =head2 get_current_branch
 
