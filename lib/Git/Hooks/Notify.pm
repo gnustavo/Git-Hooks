@@ -24,17 +24,13 @@ sub pretty_log {
 
     my $commit_url = $git->get_config($CFG, 'commit-url') || '%H';
 
-    my $replace_commit = sub {
-        my ($sha1) = @_;
-        my $pattern = $commit_url;
-        $pattern =~ s/%H/$sha1/e;
-        return $pattern;
-    };
-
     foreach my $commit (@$commits) {
+        my $sha1 = $commit_url;
+        $sha1 =~ s/%H/$commit->commit/eg;
+
         $log .= <<EOF;
 
-commit @{[$replace_commit->($commit->commit)]}
+commit $sha1
 Author: @{[$commit->author]}
 Date:   @{[scalar(localtime($commit->author_localtime))]}
 
@@ -69,12 +65,19 @@ sub get_transport {
 }
 
 sub notify {
-    my ($git, $recipients, $body) = @_;
+    my ($git, $branch, $recipients, $body) = @_;
 
     return 1 unless @$recipients;
 
+    my $subject = $git->get_config($CFG => 'subject')
+        || '[Git::Hooks::Notify] Repo "%R" changed "%B" by "%A"';
+
+    $subject =~ s/%R/$git->repository_name/eg;
+    $subject =~ s/%B/$branch/g;
+    $subject =~ s/%A/$git->authenticated_user/eg;
+
     my @headers = (
-        'Subject' => $git->get_config($CFG => 'subject') || '[Git::Hooks::Notify]',
+        'Subject' => $subject,
         'To'      => join(', ', @$recipients),
     );
 
@@ -98,7 +101,9 @@ EOF
 
     return Email::Sender::Simple->send(
         $email,
-        {transport => get_transport($git) || Email::Sender::Simple->default_transport()},
+        {
+            transport => get_transport($git) || Email::Sender::Simple->default_transport(),
+        },
     );
 }
 
@@ -147,7 +152,7 @@ sub notify_affected_refs {
             my $message = pretty_log($git, $branch, \@options, $rule->{paths}, $max_count, \@commits);
 
             try {
-                notify($git, $rule->{recipients}, $message);
+                notify($git, $branch, $rule->{recipients}, $message);
             } catch {
                 my $error = $_;
                 $git->error($PKG, 'Could not send mail to the following recipients: '
@@ -169,7 +174,7 @@ POST_RECEIVE \&notify_affected_refs;
 
 
 __END__
-=for Pod::Coverage get_transport grok_include_rules notify notify_affected_refs ref_changes
+=for Pod::Coverage get_transport grok_include_rules notify notify_affected_refs ref_changes grok_rules pretty_log
 
 =head1 NAME
 
@@ -294,7 +299,20 @@ with a valid email address that your users can reply to. Something like this:
 This allows you to specify the subject of the notification emails. If you don't
 specify it, the default is like this:
 
-  Subject: [Git::Hooks::Notify]
+  Subject: [Git::Hooks::Notify] Repo "%R" changed "%B" by "%A"
+
+The C<%letters> symbols are placeholders that are replaced automatically. The
+three placeholders defined are:
+
+=over
+
+=item * C<%R>: the repository name.
+
+=item * C<%B>: the branch name.
+
+=item * C<%A>: the username of the user who performed the git-push command.
+
+=back
 
 =head2 githooks.notify.preamble TEXT
 

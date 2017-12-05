@@ -6,7 +6,7 @@ use warnings;
 use Path::Tiny 0.060;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 my ($repo, $file, $clone, $T);
 
@@ -42,10 +42,10 @@ sub check_push_notify {
         if (-e $mailbox) {
             ok(scalar(grep {$_ =~ $regex} ($mailbox->lines)), $testname);
         } else {
-            fail($testname);
+            fail("$testname (no mailbox)");
         }
     } else {
-        fail($testname);
+        fail("$testname (push failed)");
     }
     return;
 }
@@ -55,7 +55,7 @@ sub check_push_dont_notify {
     if (do_push($testname)) {
         ok(! -e $mailbox, $testname);
     } else {
-        fail($testname);
+        fail("$testname (push failed)");
     }
     return;
 }
@@ -70,10 +70,14 @@ $clone->run(qw{config githooks.notify.rule to@example.net});
 
 SKIP: {
     unless (eval { require Email::Sender::Transport::Mbox; }) {
-        skip "Module Email::Sender::Transport::Mbox is needed to test but not installed", 7;
+        skip "Module Email::Sender::Transport::Mbox is needed to test but not installed", 8;
     }
 
     check_push_notify('default subject', qr/Subject: \[Git::Hooks::Notify\]/);
+
+    $clone->run(qw{config githooks.notify.subject}, '%R, %B, %A');
+
+    check_push_notify('subject replace all placeholders', qr@Subject: clone, refs/heads/master, $ENV{USER}@);
 
     check_push_notify('from header', qr/From: from\@example\.net/);
 
