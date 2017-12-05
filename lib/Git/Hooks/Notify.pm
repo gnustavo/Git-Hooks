@@ -20,7 +20,7 @@ my $PKG = __PACKAGE__;
 sub pretty_log {
     my ($git, $branch, $options, $paths, $max_count, $commits) = @_;
 
-    my $log = "Branch: $branch\n";
+    my @log;
 
     my $commit_url = $git->get_config($CFG, 'commit-url') || '%H';
 
@@ -28,7 +28,7 @@ sub pretty_log {
         my $sha1 = $commit_url;
         $sha1 =~ s/%H/$commit->commit/eg;
 
-        $log .= <<EOF;
+        push @log, <<EOF;
 
 commit $sha1
 Author: @{[$commit->author]}
@@ -38,7 +38,7 @@ Date:   @{[scalar(localtime($commit->author_localtime))]}
 EOF
     }
 
-    return $log;
+    return join('', @log);
 }
 
 sub get_transport {
