@@ -842,11 +842,6 @@ sub get_affected_ref_range {
 sub get_affected_ref_commits {
     my ($git, $ref, $options, $paths) = @_;
 
-    my $affected = _get_affected_refs_hash($git);
-
-    exists $affected->{$ref}
-        or croak __PACKAGE__, ": get_affected_ref_commits($ref): no such affected ref\n";
-
     return $git->get_commits($git->get_affected_ref_range($ref), $options, $paths);
 }
 

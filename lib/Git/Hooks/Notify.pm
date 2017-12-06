@@ -65,20 +65,23 @@ sub get_transport {
 }
 
 sub notify {
-    my ($git, $branch, $recipients, $body) = @_;
+    my ($git, $branch, $old_commit, $new_commit, $rule, $body) = @_;
 
-    return 1 unless @$recipients;
+    return 1 unless @{$rule->{recipients}};
+
+    my $repository_name = $git->repository_name;
+    my $pusher = $git->authenticated_user;
 
     my $subject = $git->get_config($CFG => 'subject')
-        || '[Git::Hooks::Notify] Repo "%R" changed "%B" by "%A"';
+        || '[Git::Hooks::Notify] Repo "%R" branch "%B" changed by "%A"';
 
-    $subject =~ s/%R/$git->repository_name/eg;
+    $subject =~ s/%R/$repository_name/g;
     $subject =~ s/%B/$branch/g;
-    $subject =~ s/%A/$git->authenticated_user/eg;
+    $subject =~ s/%A/$pusher/g;
 
     my @headers = (
         'Subject' => $subject,
-        'To'      => join(', ', @$recipients),
+        'To'      => join(', ', @{$rule->{recipients}}),
     );
 
     if (my $from = $git->get_config($CFG, 'from')) {
@@ -92,11 +95,22 @@ sub notify {
 You're receiving this automatic notification because commits were pushed to a
 Git repository you're watching.
 EOF
-    chomp $preamble;
+
+    my $info = <<"EOF";
+REPOSITORY: $repository_name
+BRANCH: $branch
+CHANGED BY: $pusher
+FROM: $old_commit
+TO:   $new_commit
+EOF
+
+    if (my @paths = @{$rule->{paths}}) {
+        $info .= join(' ', 'FILTER:', @paths) . "\n";
+    }
 
     my $email = Email::Simple->create(
         header => \@headers,
-        body   => "$preamble\n\n$body",
+        body   => "$preamble\n$info\n$body",
     );
 
     return Email::Sender::Simple->send(
@@ -144,15 +158,16 @@ sub notify_affected_refs {
     my $errors = 0;
 
     foreach my $branch (@branches) {
+        my ($old_commit, $new_commit) = $git->get_affected_ref_range($branch);
         foreach my $rule (@rules) {
-            my @commits = $git->get_affected_ref_commits($branch, \@options, $rule->{paths});
+            my @commits = $git->get_commits($old_commit, $new_commit, \@options, $rule->{paths});
 
             next unless @commits;
 
             my $message = pretty_log($git, $branch, \@options, $rule->{paths}, $max_count, \@commits);
 
             try {
-                notify($git, $branch, $rule->{recipients}, $message);
+                notify($git, $branch, $old_commit, $new_commit, $rule, $message);
             } catch {
                 my $error = $_;
                 $git->error($PKG, 'Could not send mail to the following recipients: '
@@ -199,18 +214,28 @@ option:
 
     git config --add githooks.plugin Notify
 
-The email notification is sent in text mode with configurable C<Subject> and
-C<From> headers. The body of the message contains a section for each branch
-affected by the git-push command. Each section contains the result of a C<git
-log> command showing the pushed commits and the list of files affected by
-them. For example:
+By default no notifications are sent. You have to specify rules tellins the
+plugin which email addresses should receive notifications about any change or
+changes in specific paths inside the repository. Each rule is checked for each
+branch affected by the git-push and each combination may produce a specific
+email notification, which is sent in text mode with configurable C<Subject> and
+C<From> headers.
 
-  Subject: [Git::Hooks::Notify]
+The body of the message contains information about the changes and the result of
+a C<git log> command showing the pushed commits and the list of files affected
+by them. For example:
+
+  Subject: [Git::Hooks::Notify] Repo "myproject" branch "refs/heads/master" changed by "username"
 
   You're receiving this automatic notification because commits were pushed to a
   Git repository you're watching.
 
-  Branch: refs/heads/master
+  REPOSITORY: myproject
+  BRANCH: refs/heads/master
+  CHANGED BY: username
+  FROM: 75550b66ab08536787487545904fb062c6e38a7f
+  TO:   6eaa6a84fbd7e2a64e66664f3d58707618e20c72
+  FILTER: lib/Git/Hooks/
 
   commit 6eaa6a84fbd7e2a64e66664f3d58707618e20c72
   Author: Gustavo L. de M. Chaves <gnustavo@cpan.org>
@@ -220,14 +245,6 @@ them. For example:
 
   305     0       lib/Git/Hooks/Notify.pm
   63      0       t/02-notify.t
-
-  commit b0a820600bb093afeafa547cbf39c468380e41af (tag: v2.1.8, origin/next, next)
-  Author: Gustavo L. de M. Chaves <gnustavo@cpan.org>
-  Date:   Sat Nov 25 21:34:48 2017 -0200
-
-      v2.1.8
-
-  9       0       Changes
 
   commit c45feb16fe3e6fc105414e60e91ffb031c134cd4
   Author: Gustavo L. de M. Chaves <gnustavo@cpan.org>
@@ -244,6 +261,38 @@ the configuration options explained below.
 =head1 CONFIGURATION
 
 The plugin is configured by the following git options.
+
+=head2 githooks.notify.rule RECIPIENTS [-- PATHSPECS]
+
+The B<rule> directive adds a notification rule specifying which RECIPIENTS
+should be notified of pushed commits affecting the specified PATHSPECS.
+
+If no pathspec is specified, the recipients are notified about every push.
+
+C<RECIPIENTS> is a space-separated list of email addresses.
+
+C<PATHSPECS> is a space-separated list of pathspecs, used to restrict
+notifications to commits affecting particular paths in the repository. Note that
+the list of paths starts after a double-dash (--).
+
+For example:
+
+  [githooks "notify"]
+    rule = gnustavo@cpan.org
+    rule = fred@example.net barney@example.net -- lib/Git/Hooks/Notify.pm
+    rule = batman@example.net robin@example.net -- Changes lib/
+
+The first rule above sends notifications to gnustavo@cpan.org about every change
+pushed to the repository.
+
+The second rule sends notifications to the Bedrock fellows just about changes in
+the F<lib/Git/Hooks/Notify.pm> file.
+
+The third rule sends notifications to the Dynamic Duo just about modifications
+in the F<Changes> file in the repository root and about modifications in any
+file under the F<lib/> directory.
+
+You can read all about I<pathspecs> in the C<git help glossary>.
 
 =head2 githooks.notify.transport TRANSPORT [ARGS...]
 
@@ -269,20 +318,6 @@ tucked in a hash and passed to the transport's constructor. For example:
 
 Please, read the transport's class documentation to know which arguments are
 available.
-
-=head2 githooks.notify.rule RECIPIENTS [-- PATHS]
-
-The B<rule> directive adds a notification rule specifying which RECIPIENTS
-should be notified of pushed commits affecting the specified PATHS.
-
-If no path is specified, the recipients are notified about every push.
-
-C<RECIPIENTS> is a space-separated list of email addresses.
-
-C<PATHS> is a space-separated list of pathspecs, used to restrict notifications
-to commits affecting particular paths in the repository. Note that the list of
-paths starts after a double-dash (--). Please, read about pathspecs in the C<git
-help glossary>.
 
 =head2 githooks.notify.from SENDER
 
@@ -381,8 +416,6 @@ for each repository.
 
 =over
 
-=item * L<Email::Sender::Simple>
-
-=item * L<Email::Sender::Transport::SMTP>
+=item * L<Email::Sender::Manual::QuickStart>
 
 =back
