@@ -279,6 +279,14 @@ by them. For example:
   40      32      lib/Git/Hooks/CheckJira.pm
   12      12      t/02-check-jira.t
 
+The C<FILTER:> line only appears if the rule specifies one or more I<pathspecs>
+to only show commits affecting matching files.
+
+Each commit shows the files it changes, perhaps filtered by the rule's
+I<pathspecs>. They're shown in the format produced by C<git-log>'s C<--numstat>
+option. Merge commits don't show changed files, though. Thery're marked with an
+additional C<Merge:> header.
+
 You can change the C<git log> format and a few other things in the message using
 the configuration options explained below.
 
