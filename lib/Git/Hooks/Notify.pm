@@ -109,11 +109,11 @@ sub notify {
     require Email::Sender::Simple;
     require Email::Simple;
 
-    my $preamble = $git->get_config($CFG, 'preamble') || <<'EOF';
-This is a notification about new commits affecting a repository you're watching.
-EOF
+    my $preamble = $git->get_config($CFG, 'preamble') || '';
 
-    my $info = <<"EOF";
+    $preamble .= "\n" if length $preamble;
+
+    $preamble .= <<"EOF";
 REPOSITORY: $repository_name
 BRANCH: $branch
 BY: $pusher
@@ -122,12 +122,12 @@ TO:   $new_commit
 EOF
 
     if (my @paths = @{$rule->{paths}}) {
-        $info .= join(' ', 'FILTER:', @paths) . "\n";
+        $preamble .= join(' ', 'FILTER:', @paths) . "\n";
     }
 
     my $email = Email::Simple->create(
         header => \@headers,
-        body   => "$preamble\n$info\n$body",
+        body   => "$preamble\n$body",
     );
 
     return Email::Sender::Simple->send(
@@ -375,11 +375,8 @@ three placeholders defined are:
 
 =head2 githooks.notify.preamble TEXT
 
-This allows you to specify a preamble for the notification emails. If you don't
-specify it, the default is like this:
-
-  You're receiving this automatic notification because commits were pushed to a
-  Git repository you're watching.
+This allows you to specify a preamble for the notification emails. There is no
+default preamble.
 
 =head2 githooks.notify.max-count NUM
 
