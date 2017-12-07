@@ -28,11 +28,20 @@ sub pretty_log {
         my $sha1 = $commit_url;
         $sha1 =~ s/%H/$commit->commit/eg;
 
+        # FIXME: The Git::Repository::Log's *_localtime and *_gmtime methods
+        # confuse me. From what I saw, the command "git log --pretty-raw" shows
+        # datetimes in localtime plus TZ. The *_gmtime methods return the values
+        # as is. But the *_localtime methods apply the TZ skew to them. So, in
+        # order to show localtimes it seems that I have either to call
+        # "localtime($c->author_gmtime)" or "gmtime($c->author_localtime)". I'll
+        # have to think a bit more about this later to convince myself that this
+        # is right.
+
         push @log, <<EOF;
 
 commit $sha1
-Author: @{[$commit->author]}
-Date:   @{[scalar(localtime($commit->author_localtime))]}
+Author: @{[$commit->author_name]} <@{[$commit->author_email]}>
+Date:   @{[scalar(localtime($commit->author_gmtime))]} @{[$commit->author_tz]}
 
 @{[$commit->raw_message]}@{[$commit->extra]}
 EOF
