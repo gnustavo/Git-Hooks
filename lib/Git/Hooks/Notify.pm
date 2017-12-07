@@ -18,15 +18,19 @@ my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
 sub pretty_log {
-    my ($git, $branch, $options, $paths, $max_count, $commits) = @_;
+    my ($git, $commits) = @_;
 
     my @log;
 
-    my $commit_url = $git->get_config($CFG, 'commit-url') || '%H';
-
     foreach my $commit (@$commits) {
-        my $sha1 = $commit_url;
-        $sha1 =~ s/%H/$commit->commit/eg;
+        my $sha1 = $commit->commit;
+
+        my $merge =
+            scalar($commit->parent()) < 2
+            ? ''
+            : "\nMerge: " . join(' ', $commit->parent);
+
+        my $author = $commit->author_name . ' <' . $commit->author_email . '>';
 
         # FIXME: The Git::Repository::Log's *_localtime and *_gmtime methods
         # confuse me. From what I saw, the command "git log --pretty-raw" shows
@@ -36,14 +40,17 @@ sub pretty_log {
         # "localtime($c->author_gmtime)" or "gmtime($c->author_localtime)". I'll
         # have to think a bit more about this later to convince myself that this
         # is right.
+        my $datetime = localtime($commit->author_gmtime) . ' ' . $commit->author_tz;
+
+        my $message = $commit->raw_message . $commit->extra;
 
         push @log, <<EOF;
 
-commit $sha1
-Author: @{[$commit->author_name]} <@{[$commit->author_email]}>
-Date:   @{[scalar(localtime($commit->author_gmtime))]} @{[$commit->author_tz]}
+commit $sha1$merge
+Author: $author
+Date:   $datetime
 
-@{[$commit->raw_message]}@{[$commit->extra]}
+$message
 EOF
     }
 
@@ -74,15 +81,17 @@ sub get_transport {
 }
 
 sub notify {
-    my ($git, $branch, $old_commit, $new_commit, $rule, $body) = @_;
+    my ($git, $ref, $old_commit, $new_commit, $rule, $body) = @_;
 
     return 1 unless @{$rule->{recipients}};
+
+    (my $branch = $ref) =~ s:refs/heads/::;
 
     my $repository_name = $git->repository_name;
     my $pusher = $git->authenticated_user;
 
     my $subject = $git->get_config($CFG => 'subject')
-        || '[Git::Hooks::Notify] Repo "%R" branch "%B" changed by "%A"';
+        || '[Git::Hooks::Notify] repo:%R branch:%B by:%A';
 
     $subject =~ s/%R/$repository_name/g;
     $subject =~ s/%B/$branch/g;
@@ -101,14 +110,13 @@ sub notify {
     require Email::Simple;
 
     my $preamble = $git->get_config($CFG, 'preamble') || <<'EOF';
-You're receiving this automatic notification because commits were pushed to a
-Git repository you're watching.
+This is a notification about new commits affecting a repository you're watching.
 EOF
 
     my $info = <<"EOF";
 REPOSITORY: $repository_name
 BRANCH: $branch
-CHANGED BY: $pusher
+BY: $pusher
 FROM: $old_commit
 TO:   $new_commit
 EOF
@@ -152,9 +160,10 @@ sub grok_rules {
 sub notify_affected_refs {
     my ($git) = @_;
 
-    my @branches = grep {m:^refs/heads/:} $git->get_affected_refs();
+    # We're only interested in branches
+    my @refs = grep {m:^refs/heads/:} $git->get_affected_refs();
 
-    return 1 unless @branches;
+    return 1 unless @refs;
 
     my @rules = grok_rules($git);
 
@@ -166,17 +175,17 @@ sub notify_affected_refs {
 
     my $errors = 0;
 
-    foreach my $branch (@branches) {
-        my ($old_commit, $new_commit) = $git->get_affected_ref_range($branch);
+    foreach my $ref (@refs) {
+        my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
         foreach my $rule (@rules) {
             my @commits = $git->get_commits($old_commit, $new_commit, \@options, $rule->{paths});
 
             next unless @commits;
 
-            my $message = pretty_log($git, $branch, \@options, $rule->{paths}, $max_count, \@commits);
+            my $message = pretty_log($git, \@commits);
 
             try {
-                notify($git, $branch, $old_commit, $new_commit, $rule, $message);
+                notify($git, $ref, $old_commit, $new_commit, $rule, $message);
             } catch {
                 my $error = $_;
                 $git->error($PKG, 'Could not send mail to the following recipients: '
@@ -241,14 +250,13 @@ The body of the message contains information about the changes and the result of
 a C<git log> command showing the pushed commits and the list of files affected
 by them. For example:
 
-  Subject: [Git::Hooks::Notify] Repo "myproject" branch "refs/heads/master" changed by "username"
+  Subject: [Git::Hooks::Notify] repo:myproject branch:master by:username
 
-  You're receiving this automatic notification because commits were pushed to a
-  Git repository you're watching.
+  This is a notification about new commits affecting a repository you're watching.
 
   REPOSITORY: myproject
-  BRANCH: refs/heads/master
-  CHANGED BY: username
+  BRANCH: master
+  BY: username
   FROM: 75550b66ab08536787487545904fb062c6e38a7f
   TO:   6eaa6a84fbd7e2a64e66664f3d58707618e20c72
   FILTER: lib/Git/Hooks/
