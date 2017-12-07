@@ -214,12 +214,19 @@ option:
 
     git config --add githooks.plugin Notify
 
-By default no notifications are sent. You have to specify rules tellins the
+By default no notifications are sent. You have to specify rules telling the
 plugin which email addresses should receive notifications about any change or
-changes in specific paths inside the repository. Each rule is checked for each
-branch affected by the git-push and each combination may produce a specific
+about changes in specific paths inside the repository. Each rule is checked for
+each branch affected by the git-push and each combination may produce a specific
 email notification, which is sent in text mode with configurable C<Subject> and
 C<From> headers.
+
+You should avoid configuring too many rules because each one of them will
+trigger a C<git-log> command and potentially send an email. All this processing
+will take place while the user is waiting for the command C<git-push> to
+finish. In order to minimize the delay you should try to configure a single
+global rule and a single rule for each path specification, grouping all email
+addresses interested in the same path in the same rule.
 
 The body of the message contains information about the changes and the result of
 a C<git log> command showing the pushed commits and the list of files affected

@@ -391,6 +391,11 @@ impose a strict structure to the repository's reference hierarchies.
 Inserts a C<Change-Id> line in the commit log message to allow
 integration with Gerrit's code review system.
 
+=item * Git::Hooks::Notify
+
+Sends email notifications to interested parties about pushed commits affecting
+specific files in the repository.
+
 =back
 
 Each plugin may be used in one or, sometimes, multiple hooks. Their
