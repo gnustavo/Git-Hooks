@@ -6,7 +6,7 @@ use warnings;
 use Path::Tiny 0.060;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 my ($repo, $file, $clone, $T);
 
@@ -70,7 +70,7 @@ $clone->run(qw{config githooks.notify.rule to@example.net});
 
 SKIP: {
     unless (eval { require Email::Sender::Transport::Mbox; }) {
-        skip "Module Email::Sender::Transport::Mbox is needed to test but not installed", 8;
+        skip "Module Email::Sender::Transport::Mbox is needed to test but not installed", 9;
     }
 
     check_push_notify('default subject', qr/Subject: \[Git::Hooks::Notify\]/);
@@ -99,4 +99,9 @@ SKIP: {
     $clone->run(qw{config --replace-all githooks.notify.rule}, "to\@example.net -- $basename");
 
     check_push_notify('do notify if match pathspec', qr/$basename/);
+
+    $clone->run(qw{config --replace-all githooks.notify.rule to@example.net});
+    $clone->run(qw{config githooks.notify.html 1});
+
+    check_push_notify('html', qr/href=/);
 };

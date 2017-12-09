@@ -80,8 +80,18 @@ sub get_transport {
     return "Email::Sender::Transport::$transport"->new(\%args);
 }
 
+sub sha1_link {
+    my ($git, $sha1, $html) = @_;
+    if (my $commit_url = $git->get_config($CFG, 'commit-url')) {
+        $commit_url =~ s/%H/$sha1/g;
+        return $html ? "<a href=\"$commit_url\">$sha1</a>" : $commit_url;
+    } else {
+        return $sha1;
+    }
+}
+
 sub notify {
-    my ($git, $ref, $old_commit, $new_commit, $rule, $body) = @_;
+    my ($git, $ref, $old_commit, $new_commit, $rule, $message) = @_;
 
     return 1 unless @{$rule->{recipients}};
 
@@ -109,11 +119,11 @@ sub notify {
     require Email::Sender::Simple;
     require Email::Simple;
 
-    my $preamble = $git->get_config($CFG, 'preamble') || '';
+    my $body = $git->get_config($CFG, 'preamble') || '';
 
-    $preamble .= "\n" if length $preamble;
+    $body .= "\n" if length $body;
 
-    $preamble .= <<"EOF";
+    $body .= <<"EOF";
 REPOSITORY: $repository_name
 BRANCH: $branch
 BY: $pusher
@@ -122,12 +132,49 @@ TO:   $new_commit
 EOF
 
     if (my @paths = @{$rule->{paths}}) {
-        $preamble .= join(' ', 'FILTER:', @paths) . "\n";
+        $body .= join(' ', 'FILTER:', @paths) . "\n";
+    }
+
+    $body .= $message;
+
+    if ($git->get_config($CFG, 'html')) {
+        push @headers, (
+            'MIME-Version' => '1.0',
+            'Content-Type' => 'text/html',
+        );
+
+        require HTML::Entities;
+        my $html = HTML::Entities::encode_entities($body);
+
+        # Replace all sha1's with HTML links
+        $html =~ s/\b([0-9a-f]{40})\b/sha1_link($git, $1, 'html')/eg;
+        # Force line breaks
+        $html =~ s:$:<br/>:gm;
+        # Force indentation of TO: header
+        $html =~ s/(?<=^TO:) {3}/\&nbsp;\&nbsp;\&nbsp;/m;
+        # Force indentation of commit message lines
+        $html =~ s:^( +):'&nbsp;' x length($1):egm;
+        # Force indentation of commit numstat lines
+        $html =~ s[^(\d+)\t(\d+)\t]
+            [$1 .
+            '&nbsp;' x (8 - length($1)) .
+            $2 .
+            '&nbsp;' x (8 - length($2))]egm;
+
+        $body = <<EOF;
+<html>
+<body style="font-family: monospace">
+$html
+</body>
+</html>
+EOF
+    } else {
+        $body =~ s/\b([0-9a-f]{40})\b/sha1_link($git, $1)/eg;
     }
 
     my $email = Email::Simple->create(
         header => \@headers,
-        body   => "$preamble\n$body",
+        body   => $body,
     );
 
     return Email::Sender::Simple->send(
@@ -207,7 +254,7 @@ POST_RECEIVE \&notify_affected_refs;
 
 
 __END__
-=for Pod::Coverage get_transport grok_include_rules notify notify_affected_refs ref_changes grok_rules pretty_log
+=for Pod::Coverage get_transport grok_include_rules notify notify_affected_refs ref_changes grok_rules pretty_log sha1_link
 
 =head1 NAME
 
@@ -236,8 +283,7 @@ By default no notifications are sent. You have to specify rules telling the
 plugin which email addresses should receive notifications about any change or
 about changes in specific paths inside the repository. Each rule is checked for
 each branch affected by the git-push and each combination may produce a specific
-email notification, which is sent in text mode with configurable C<Subject> and
-C<From> headers.
+email notification, with configurable C<Subject> and C<From> headers.
 
 You should avoid configuring too many rules because each one of them will
 trigger a C<git-log> command and potentially send an email. All this processing
@@ -422,13 +468,19 @@ angle-bracketed names with values appropriate to your context:
 
 =back
 
+=head2 githooks.notify.html [01]
+
+By default the email messages are sent in plain text. Enabling this option sends
+HTML-formatted messages, which look better on some email readers.
+
+Make sure you have the L<HTML::Entities> module installed, because it's needed
+to format the messages.
+
 =head1 TO DO
 
 These are just a few of the ideas for improving this plugin.
 
 =over
-
-=item * Send well-formatted HTML messages.
 
 =item * Generalize the C<commit-url> template.
 
