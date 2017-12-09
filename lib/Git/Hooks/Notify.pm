@@ -140,7 +140,7 @@ EOF
 
     $body .= $message;
 
-    if ($git->get_config($CFG, 'html')) {
+    if ($git->get_config_boolean($CFG, 'html')) {
         push @headers, (
             'MIME-Version' => '1.0',
             'Content-Type' => 'text/html',
@@ -471,7 +471,7 @@ angle-bracketed names with values appropriate to your context:
 
 =back
 
-=head2 githooks.notify.html [01]
+=head2 githooks.notify.html BOOL
 
 By default the email messages are sent in plain text. Enabling this option sends
 HTML-formatted messages, which look better on some email readers.

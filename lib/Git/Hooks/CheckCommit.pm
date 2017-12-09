@@ -93,14 +93,14 @@ sub email_valid_errors {
 
     my $cache = $git->cache($PKG);
 
-    if ($git->get_config($CFG => 'email-valid')) {
+    if ($git->get_config_boolean($CFG => 'email-valid')) {
         # Let's also cache the Email::Valid object
         unless (exists $cache->{email_valid}) {
             $cache->{email_valid} = undef;
             if (eval { require Email::Valid; }) {
                 my @checks;
                 foreach my $check (qw/mxcheck tldcheck fqdn allow_ip/) {
-                    if (my $value = $git->get_config($CFG => "email-valid.$check")) {
+                    if (my $value = $git->get_config_boolean($CFG => "email-valid.$check")) {
                         push @checks, "-$check" => $value;
                     }
                 }
@@ -463,7 +463,7 @@ negative regular expressions (the ones prefixed by "!").
 
 This check is performed by the C<pre-commit> local hook.
 
-=head2 githooks.checkcommit.email-valid [01]
+=head2 githooks.checkcommit.email-valid BOOL
 
 This option uses the L<Email::Valid> module' C<address> method to validate
 author and committer email addresses.
@@ -479,22 +479,22 @@ the boolean parameters to change their default values by means of the
 following sub-options. For more information, please consult the
 L<Email::Valid> documentation.
 
-=head3 githooks.checkcommit.email-valid.mxcheck [01]
+=head3 githooks.checkcommit.email-valid.mxcheck BOOL
 
 Specifies whether addresses should be checked for a valid DNS entry. The
 default is false.
 
-=head3 githooks.checkcommit.email-valid.tldcheck [01]
+=head3 githooks.checkcommit.email-valid.tldcheck BOOL
 
 Specifies whether addresses should be checked for valid top level
 domains. The default is false.
 
-=head3 githooks.checkcommit.email-valid.fqdn [01]
+=head3 githooks.checkcommit.email-valid.fqdn BOOL
 
 Species whether addresses must contain a fully qualified domain name
 (FQDN). The default is true.
 
-=head3 githooks.checkcommit.email-valid.allow_ip [01]
+=head3 githooks.checkcommit.email-valid.allow_ip BOOL
 
 Specifies whether a "domain literal" is acceptable as the domain part.  That
 means addresses like: C<rjbs@[1.2.3.4]>. The default is true.

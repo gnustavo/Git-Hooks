@@ -19,7 +19,7 @@ sub _keywords {                 ## no critic (ProhibitUnusedPrivateSubroutines)
 
           cache
 
-          get_config
+          get_config get_config_boolean
 
           error get_errors
 
@@ -217,8 +217,12 @@ sub _gerrit_patchset_post_hook {
     my $patchset = $args->{'--patchset'};
 
     # Grok all configuration options at once to make it easier to deal with them below.
-    my %cfg = map {$_ => $git->get_config('githooks.gerrit' => $_) || undef}
-        qw/votes-to-approve votes-to-reject comment-ok auto-submit/;
+    my %cfg = (
+        'votes-to-approve' => $git->get_config('githooks.gerrit' => 'votes-to-approve'),
+        'votes-to-reject'  => $git->get_config('githooks.gerrit' => 'votes-to-reject'),
+        'comment-ok'       => $git->get_config('githooks.gerrit' => 'comment-ok'),
+        'auto-submit'      => $git->get_config_boolean('githooks.gerrit' => 'auto-submit'),
+    );
 
     # https://gerrit-documentation.storage.googleapis.com/Documentation/2.13.1/rest-api-changes.html#set-review
     my %review_input;
@@ -484,7 +488,7 @@ sub _invoke_external_hook {     ## no critic (ProhibitExcessComplexity)
 sub invoke_external_hooks {
     my ($git, @args) = @_;
 
-    return if $^O eq 'MSWin32' || ! $git->get_config(githooks => 'externals');
+    return if $^O eq 'MSWin32' || ! $git->get_config_boolean(githooks => 'externals');
 
     my $hookname = $git->{_plugin_githooks}{hookname};
 
@@ -551,10 +555,22 @@ sub get_config {
         }
 
         if (defined $config) {
-            while ($config =~ /([^\cJ]+)\cJ([^\c@]*)\c@/sg) {
+            # The --null option to git-log makes it output a null character
+            # after each option/value. The option and value are separated by a
+            # newline, unless there is no value, in which case, there is no
+            # newline.
+            while ($config =~ /([^\cJ]+)(\cJ[^\c@]*|)\c@/sg) {
                 my ($option, $value) = ($1, $2);
                 if ($option =~ /(.+)\.(.+)/) {
-                    push @{$config{lc $1}{lc $2}}, $value;
+                    my ($section, $key) = (lc $1, lc $2);
+                    if ($value =~ s/^\cJ//) {
+                        push @{$config{$section}{$key}}, $value;
+                    } else {
+                        # An option without a value is considered a boolean
+                        # true. We mark it explicitly so instead of leaving it
+                        # undefined because Perl would consider it false.
+                        push @{$config{$section}{$key}}, 'true';
+                    }
                 } else {
                     croak __PACKAGE__, ": Cannot grok config variable name '$option'.\n";
                 }
@@ -583,6 +599,24 @@ sub get_config {
         return wantarray ? @{$config->{$section}{$var}} : $config->{$section}{$var}[-1];
     } else {
         return;
+    }
+}
+
+sub get_config_boolean {
+    my ($git, $section, $var) = @_;
+
+    my $bool = $git->get_config($section, $var);
+
+    if (! defined $bool) {
+        return;
+    } elsif (ref $bool) {
+        croak __PACKAGE__, ": get_bool_config method requires two arguments\n";
+    } elsif ($bool =~ /^(?:yes|on|true|1)$/i) {
+        return 1;
+    } elsif ($bool =~ /^(?:no|off|false|0|)$/i) {
+        return 0;
+    } else {
+        croak __PACKAGE__, ": get_config_boolean($section, $var) not a valid boolean: '$bool'\n";
     }
 }
 
@@ -616,7 +650,7 @@ sub get_errors {
     $errors .= join("\n\n", @{$git->{_plugin_githooks}{errors}});
 
     if ($git->{_plugin_githooks}{hookname} =~ /^commit-msg|pre-commit$/
-            && ! $git->get_config(githooks => 'abort-commit')) {
+            && ! $git->get_config_boolean(githooks => 'abort-commit')) {
         $errors .= <<"EOF";
 
 ATTENTION: To fix the problems in this commit, please consider amending it:
@@ -1269,7 +1303,7 @@ This groks the configuration options for the repository by invoking C<git
 config --list>. The configuration is cached during the first invocation in
 the object C<Git::Repository> object. So, if the configuration is changed
 afterwards, the method won't notice it. This is usually ok for hooks,
-though.
+though, which are short-lived.
 
 With no arguments, the options are returned as a hash-ref pointing to a
 two-level hash. For example, if the config options are these:
@@ -1334,6 +1368,24 @@ the configuration option C<SECTION.VARIABLE>. In list context the method
 returns the list of all values or the empty list, if the variable isn't
 defined. In scalar context, the method returns the variable's last value or
 C<undef>, if it's not defined.
+
+As a special case, options without values (i.e., with no equals sign after its
+name in the configuration file) are set to the string 'true' to force Perl
+recognize them as true booleans.
+
+=head2 get_config_boolean SECTION VARIABLE
+
+Git configuration variables may be grokked as booleans. (See C<git help
+config>.)  There are specific values meaning B<true> (viz. C<yes>, C<on>,
+C<true>, C<1>, and the absense of a value) and specific values meaning B<false>
+(viz. C<no>, C<off>, C<false>, C<0>, and the empty string).
+
+This method checks the variable's value and returns 1 or 0 representing boolean
+values in Perl. If the variable's value isn't recognized as a Git boolean the
+method croaks. If the variable isn't defined the method returns undef.
+
+In the L<Git::Hooks> documentation, all configuration variables mentioning a
+C<BOOL> value are grokked with this method.
 
 =head2 error PREFIX MESSAGE [DETAILS]
 

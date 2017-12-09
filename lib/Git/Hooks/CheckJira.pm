@@ -158,7 +158,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
     my ($git, $commit, $ref, @keys) = @_;
 
     unless (@keys) {
-        if ($git->get_config($CFG => 'require')) {
+        if ($git->get_config_boolean($CFG => 'require')) {
             $git->error($PKG, "commit @{[substr($commit->commit, 0, 10)]} must cite a JIRA in its message");
             return 0;
         } else {
@@ -219,8 +219,8 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
     ################
     # Non-JQL checks
     {
-        my $unresolved  = $git->get_config($CFG => 'unresolved');
-        my $by_assignee = $git->get_config($CFG => 'by-assignee');
+        my $unresolved  = $git->get_config_boolean($CFG => 'unresolved');
+        my $by_assignee = $git->get_config_boolean($CFG => 'by-assignee');
         my @versions;
         foreach ($git->get_config($CFG => 'fixversion')) {
             my ($branch, $version) = split ' ', $_, 2;
@@ -306,7 +306,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
 sub check_commit_msg {
     my ($git, $commit, $ref) = @_;
 
-    if ($commit->parent() > 1 && $git->get_config($CFG => 'skip-merges')) {
+    if ($commit->parent() > 1 && $git->get_config_boolean($CFG => 'skip-merges')) {
         return 1;
     } else {
         return _check_jira_keys($git, $commit, $ref, uniq(grok_msg_jiras($git, $commit->message)));
@@ -705,16 +705,16 @@ Note, though, that if there is a global JQL specified by the
 B<githooks.checkjira.jql> option it will be checked separately and both
 expressions must validate the issues matching REF.
 
-=head2 githooks.checkjira.require [01]
+=head2 githooks.checkjira.require BOOL
 
 By default, the log must reference at least one JIRA issue. You can
-make the reference optional by setting this option to 0.
+make the reference optional by setting this option to false.
 
-=head2 githooks.checkjira.unresolved [01]
+=head2 githooks.checkjira.unresolved BOOL
 
 By default, every issue referenced must be unresolved, i.e., it must
 not have a resolution. You can relax this requirement by setting this
-option to 0.
+option to false.
 
 =head2 githooks.checkjira.fixversion BRANCH FIXVERSION
 
@@ -752,10 +752,10 @@ the C<future> version. Also, commits affecting any branch which name begins
 with a version number (e.g. C<1.0.3>) be assigned to the corresponding JIRA
 version (e.g. C<1.0>).
 
-=head2 githooks.checkjira.by-assignee [01]
+=head2 githooks.checkjira.by-assignee BOOL
 
 By default, the committer can reference any valid JIRA issue. Setting
-this value 1 requires that the user doing the push/commit (as
+this value to true requires that the user doing the push/commit (as
 specified by the C<userenv> configuration variable) be the current
 issue's assignee.
 
@@ -841,10 +841,10 @@ In this case, the visibility isn't restricted at all.
 
 =back
 
-=head2 githooks.checkjira.skip-merges [01]
+=head2 githooks.checkjira.skip-merges BOOL
 
 By default, all commits are checked. You can exempt merge commits from being
-checked by setting this option to 1.
+checked by setting this option to true.
 
 =head2 githooks.checkjira.project KEY
 

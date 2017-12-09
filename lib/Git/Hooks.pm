@@ -83,7 +83,7 @@ sub run_hook {
     if (my $errors = $git->get_errors()) {
         $errors .= "\n" unless $errors =~ /\n$/;
         if (($hook_basename eq 'commit-msg' or $hook_basename eq 'pre-commit')
-                and not $git->get_config(githooks => 'abort-commit')) {
+                and not $git->get_config_boolean(githooks => 'abort-commit')) {
             warn $errors;
         } else {
             die $errors;
@@ -892,7 +892,7 @@ This option specify a list of directories where plugins are looked for
 besides the default locations, as explained in the C<githooks.plugin>
 option above.
 
-=head2 githooks.externals [01]
+=head2 githooks.externals BOOL
 
 By default the driver script will look for external hooks after
 executing every enabled plugins. You may disable external hooks
@@ -1012,16 +1012,16 @@ anchored at the start of the username.
 
 =back
 
-=head2 githooks.abort-commit [01]
+=head2 githooks.abort-commit BOOL
 
-This option is true (1) by default, meaning that the C<pre-commit> and
+This option is true by default, meaning that the C<pre-commit> and
 the C<commit-msg> hooks will abort the commit if they detect anything
 wrong in it. This may not be the best way to handle errors, because
 you must remember to retrieve your carefully worded commit message
 from the C<.git/COMMIT_EDITMSG> to try it again, and it is easy to
 forget about it and lose it.
 
-Setting this to false (0) makes these hooks simply warn the user via
+Setting this to false makes these hooks simply warn the user via
 STDERR but let the commit succeed. This way, the user can correct any
 mistake with a simple C<git commit --amend> and doesn't run the risk
 of losing the commit message.
@@ -1078,7 +1078,7 @@ a comment like this in addition to casting the vote:
 
 You may want to use a simple comment like 'OK'.
 
-=head2 githooks.gerrit.auto-submit [01]
+=head2 githooks.gerrit.auto-submit BOOL
 
 If this option is enabled, Git::Hooks will try to automatically submit a
 change if all verification hooks pass.

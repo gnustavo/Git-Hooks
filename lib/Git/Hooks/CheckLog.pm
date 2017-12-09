@@ -77,7 +77,7 @@ sub spelling_errors {
 
     return 0 unless $msg;
 
-    return 0 unless $git->get_config($CFG => 'spelling');
+    return 0 unless $git->get_config_boolean($CFG => 'spelling');
 
     # Check all words comprised of at least three Unicode letters
     my $checker = _spell_checker($git, join("\n", uniq($msg =~ /\b(\p{Cased_Letter}{3,})\b/gi)))
@@ -132,7 +132,7 @@ sub title_errors {
     my ($git, $id, $title) = @_;
 
     unless (defined $title and length $title) {
-        if ($git->get_config($CFG => 'title-required')) {
+        if ($git->get_config_boolean($CFG => 'title-required')) {
             $git->error($PKG, "commit $id log needs a title line");
             return 1;
         } else {
@@ -199,7 +199,7 @@ sub footer_errors {
 
     my $errors = 0;
 
-    if ($git->get_config($CFG => 'signed-off-by')) {
+    if ($git->get_config_boolean($CFG => 'signed-off-by')) {
         scalar($cmsg->get_footer_values('signed-off-by')) > 0
             or $git->error($PKG, "commit $id must have a Signed-off-by footer")
                 and ++$errors;
@@ -415,11 +415,11 @@ The refs can be specified as in the same way as to the C<ref> option above.
 Note that the C<ref> option has precedence over the C<noref> option, i.e.,
 if a reference matches both options it will be checked.
 
-=head2 githooks.checklog.title-required [01]
+=head2 githooks.checklog.title-required BOOL
 
 The first line of a Git commit log message is usually called the
 'title'. It must be separated by the rest of the message (it's 'body')
-by one empty line. This option, which is 1 by default, makes the
+by one empty line. This option, which is true by default, makes the
 plugin check if there is a proper title in the log message.
 
 =head2 githooks.checklog.title-max-width N
@@ -475,7 +475,7 @@ regular expressions that will be matched against the commit log
 messages. If the '!' prefix is used, the log must not match the
 REGEXP.
 
-=head2 githooks.checklog.spelling [01]
+=head2 githooks.checklog.spelling BOOL
 
 This option makes the plugin spell check the commit log message using
 C<Text::SpellChecker>. Any spelling error will cause the commit or push to
@@ -493,7 +493,7 @@ The Text::SpellChecker module uses defaults to infer which language it
 must use to spell check the message. You can make it use a particular
 language passing its ISO code to this option.
 
-=head2 githooks.checklog.signed-off-by [01]
+=head2 githooks.checklog.signed-off-by BOOL
 
 This option requires the commit to have at least one C<Signed-off-by>
 footer.
