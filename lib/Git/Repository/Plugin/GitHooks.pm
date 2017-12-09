@@ -540,26 +540,6 @@ sub get_config {
     unless (exists $git->{_plugin_githooks}{config}) {
         my %config;
 
-        exists $ENV{HOME}
-            or croak __PACKAGE__, <<'EOT';
-The HOME environment variable is undefined.
-
-We need it to read Git's global configuration from $HOME/.gitconfig.
-
-If you really don't want to read the global configuration, define HOME as an
-empty string in your hook script like this before invoking run_hook():
-
-  $ENV{HOME} = '';
-
-Note that if you're using Gerrit as a Git server it runs with HOME undefined
-by default when started by a boot script. In this case you should define
-HOME in your hook script to point to the directory holding your .gitconfig
-file. For example:
-
-  $ENV{HOME} = '/home/gerrit';
-
-EOT
-
         my $config = do {
            local $/ = "\c@";
            $git->run(qw/config --null --list/);
