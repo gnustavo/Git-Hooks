@@ -572,6 +572,7 @@ sub get_config {
     my $config = $git->{_plugin_githooks}{config};
 
     $section = lc $section if defined $section;
+    $var     = lc $var     if defined $var;
 
     if (! defined $section) {
         return $config;
