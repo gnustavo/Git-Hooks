@@ -91,7 +91,7 @@ sub notify {
     my $pusher = $git->authenticated_user;
 
     my $subject = $git->get_config($CFG => 'subject')
-        || '[Git::Hooks::Notify] repo:%R branch:%B by:%A';
+        || '[Git::Hooks::Notify] repo:%R branch:%B';
 
     $subject =~ s/%R/$repository_name/g;
     $subject =~ s/%B/$branch/g;
@@ -250,7 +250,7 @@ The body of the message contains information about the changes and the result of
 a C<git log> command showing the pushed commits and the list of files affected
 by them. For example:
 
-  Subject: [Git::Hooks::Notify] repo:myproject branch:master by:username
+  Subject: [Git::Hooks::Notify] repo:myproject branch:master
 
   This is a notification about new commits affecting a repository you're watching.
 
@@ -366,7 +366,7 @@ with a valid email address that your users can reply to. Something like this:
 This allows you to specify the subject of the notification emails. If you don't
 specify it, the default is like this:
 
-  Subject: [Git::Hooks::Notify] Repo "%R" changed "%B" by "%A"
+  Subject: [Git::Hooks::Notify] repo:%R branch:%B
 
 The C<%letters> symbols are placeholders that are replaced automatically. The
 three placeholders defined are:
