@@ -219,7 +219,7 @@ sub notify_affected_refs {
 
     return 1 unless @rules;
 
-    my $max_count = $git->get_config($CFG, 'max-count') || '10';
+    my $max_count = $git->get_config_integer($CFG, 'max-count') || '10';
 
     my @options = ('--numstat', '--first-parent', "--max-count=$max_count");
 
@@ -435,7 +435,7 @@ three placeholders defined are:
 This allows you to specify a preamble for the notification emails. There is no
 default preamble.
 
-=head2 githooks.notify.max-count NUM
+=head2 githooks.notify.max-count INT
 
 This allows you to specify the limit of commits that should be shown for each
 changed branch. Read about the --max-count option in C<git help log>. If not

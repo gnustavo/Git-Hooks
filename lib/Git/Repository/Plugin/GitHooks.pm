@@ -19,7 +19,7 @@ sub _keywords {                 ## no critic (ProhibitUnusedPrivateSubroutines)
 
           cache
 
-          get_config get_config_boolean
+          get_config get_config_boolean get_config_integer
 
           error get_errors
 
@@ -617,6 +617,35 @@ sub get_config_boolean {
         return 0;
     } else {
         croak __PACKAGE__, ": get_config_boolean($section, $var) not a valid boolean: '$bool'\n";
+    }
+}
+
+sub get_config_integer {
+    my ($git, $section, $var) = @_;
+
+    my $int = $git->get_config($section, $var);
+
+    if (! defined $int) {
+        return;
+    } elsif (ref $int) {
+        croak __PACKAGE__, ": get_config_integer() requires two arguments\n";
+    } elsif ($int =~ /^([+-]?)([0-9]+)([kmg]?)$/i) {
+        my ($signal, $num, $unit) = ($1, $2, lc $3);
+        if ($unit) {
+            if ($unit eq 'k') {
+                $num *= 1024;
+            } elsif ($unit eq 'm') {
+                $num *= 1024*1024;
+            } elsif ($unit eq 'g') {
+                $num *= 1024*1024*1024;
+            }
+        }
+        if ($signal eq '-') {
+            $num *= -1;
+        }
+        return $num;
+    } else {
+        croak __PACKAGE__, ": get_config_integer($section, $var) not a valid integer: '$int'\n";
     }
 }
 
@@ -1386,6 +1415,21 @@ method croaks. If the variable isn't defined the method returns undef.
 
 In the L<Git::Hooks> documentation, all configuration variables mentioning a
 C<BOOL> value are grokked with this method.
+
+=head2 get_config_integer SECTION VARIABLE
+
+Git configuration variables may be grokked as integers. (See C<git help
+config>.)  They may start with an optional signal (C<+> or C<->), followed by
+one or more decimal digits, and end with an optional scaling factor letter,
+viz. C<k> (1024), C<m> (1024*1024), or C<g> (1024*1024*1024). The scaling factor
+may be in lower or upper-case.
+
+This method checks the variable's value format and returns the corresponding
+Perl integer.  If the variable's value isn't recognized as a Git integer the
+method croaks. If the variable isn't defined the method returns undef.
+
+In the L<Git::Hooks> documentation, all configuration variables mentioning an
+C<INT> value are grokked with this method.
 
 =head2 error PREFIX MESSAGE [DETAILS]
 

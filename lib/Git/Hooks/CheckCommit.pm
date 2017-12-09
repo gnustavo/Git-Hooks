@@ -25,6 +25,10 @@ sub _setup_config {
 
     $config->{lc $CFG} //= {};
 
+    my $default = $config->{lc $CFG};
+
+    $default->{'push-limit'} //= [0];
+
     return;
 }
 
@@ -281,7 +285,7 @@ sub check_ref {
 
     my @commits = $git->get_affected_ref_commits($ref);
 
-    if (my $limit = $git->get_config($CFG => 'push-limit')) {
+    if (my $limit = $git->get_config_integer($CFG => 'push-limit')) {
         if (@commits > $limit) {
             $git->error($PKG, "you're pushing @{[scalar @commits]} commits to $ref, more than our current limit of $limit");
             ++$errors;
@@ -561,7 +565,7 @@ repository. WHO may be specified as a username, a groupname, or a regex,
 like the C<githooks.admin> option (see L<Git::Hooks/CONFIGURATION>) so that
 only users matching WHO may push merge commits.
 
-=head2 githooks.checkcommit.push-limit N
+=head2 githooks.checkcommit.push-limit INT
 
 This limits the number of commits that may be pushed at once on top of any
 reference. Set it to 1 to force developers to squash their commits before

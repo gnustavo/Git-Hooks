@@ -530,7 +530,7 @@ We just have to change the check_new_files function:
     sub check_new_files {
         my ($git, $commit, @files) = @_;
 
-        my $limit = $git->get_config('githooks.checkfilesize', 'limit');
+        my $limit = $git->get_config_integer('githooks.checkfilesize', 'limit');
 
         return 1 unless defined $limit;   # By default there is no limit
 

@@ -146,7 +146,7 @@ sub title_errors {
 
     my $errors = 0;
 
-    if (my $max_width = $git->get_config($CFG => 'title-max-width')) {
+    if (my $max_width = $git->get_config_integer($CFG => 'title-max-width')) {
         my $tlen = length($title) - 1; # discount the newline
         $tlen <= $max_width
             or $git->error($PKG, "commit $id log title should be at most $max_width characters wide, but it has $tlen")
@@ -180,7 +180,7 @@ sub body_errors {
 
     return 0 unless defined $body && length $body;
 
-    if (my $max_width = $git->get_config($CFG => 'body-max-width')) {
+    if (my $max_width = $git->get_config_integer($CFG => 'body-max-width')) {
         if (my @biggies = grep {/^\S/} grep {length > $max_width} split(/\n/, $body)) {
             my $theseare = @biggies == 1 ? "this is" : "these are";
             $git->error($PKG,
@@ -422,7 +422,7 @@ The first line of a Git commit log message is usually called the
 by one empty line. This option, which is true by default, makes the
 plugin check if there is a proper title in the log message.
 
-=head2 githooks.checklog.title-max-width N
+=head2 githooks.checklog.title-max-width INT
 
 This option specifies a limit to the width of the title's in
 characters. It's 50 by default. If you set it to 0 the plugin imposes
@@ -457,7 +457,7 @@ This option may be specified more than once. It defines a list of
 regular expressions that will be matched against the title.
 If the '!' prefix is used, the title must not match the REGEXP.
 
-=head2 githooks.checklog.body-max-width N
+=head2 githooks.checklog.body-max-width INT
 
 This option specifies a limit to the width of the commit log message's
 body lines, in characters. It's 72 by default. If you set it to 0 the
