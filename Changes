@@ -2,6 +2,17 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.2.0     2017-12-11 20:28:45-02:00 America/Sao_Paulo
+
+  [New features]
+
+  - Notify: a new plugin that can be configured to send email notifications to
+    specific addresses telling about new commits modifying specific paths inside
+    the repository.
+
+  - New method GitHooks::repository_name returns the name of the repository in
+    the server.
+
 2.1.8     2017-10-29 21:51:37-02:00 America/Sao_Paulo
 
   [Fix]
