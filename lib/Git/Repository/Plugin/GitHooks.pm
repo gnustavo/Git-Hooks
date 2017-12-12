@@ -773,7 +773,7 @@ sub get_commits {
 sub read_commit_msg_file {
     my ($git, $msgfile) = @_;
 
-    my $encoding = $git->get_config(i18n => 'commitencoding') || 'utf-8';
+    my $encoding = $git->get_config(i18n => 'commitEncoding') || 'utf-8';
 
     my $msg = path($msgfile)->slurp({binmode => ":encoding($encoding)"});
 
@@ -814,7 +814,7 @@ sub read_commit_msg_file {
 sub write_commit_msg_file {
     my ($git, $msgfile, @msg) = @_;
 
-    my $encoding = $git->get_config(i18n => 'commitencoding') || 'utf-8';
+    my $encoding = $git->get_config(i18n => 'commitEncoding') || 'utf-8';
 
     path($msgfile)->spew({binmode => ":encoding($encoding)"}, @msg);
 

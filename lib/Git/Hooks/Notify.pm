@@ -10,6 +10,7 @@ use warnings;
 use Carp;
 use Git::Hooks;
 use Git::Repository::Log;
+use Encode qw/decode/;
 use Set::Scalar;
 use List::MoreUtils qw/any/;
 use Try::Tiny;
@@ -22,6 +23,8 @@ sub pretty_log {
 
     my @log;
 
+    my $encoding = $git->get_config(i18n => 'commitEncoding') || 'utf-8';
+
     foreach my $commit (@$commits) {
         my $sha1 = $commit->commit;
 
@@ -30,7 +33,7 @@ sub pretty_log {
             ? ''
             : "\nMerge: " . join(' ', $commit->parent);
 
-        my $author = $commit->author_name . ' <' . $commit->author_email . '>';
+        my $author = decode($encoding, $commit->author_name . ' <' . $commit->author_email . '>');
 
         # FIXME: The Git::Repository::Log's *_localtime and *_gmtime methods
         # confuse me. From what I saw, the command "git log --pretty-raw" shows
@@ -42,7 +45,7 @@ sub pretty_log {
         # is right.
         my $datetime = localtime($commit->author_gmtime) . ' ' . $commit->author_tz;
 
-        my $message = $commit->raw_message . $commit->extra;
+        my $message = decode($encoding, $commit->raw_message . $commit->extra);
 
         push @log, <<EOF;
 
