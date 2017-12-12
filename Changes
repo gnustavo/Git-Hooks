@@ -2,6 +2,13 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.2.1     2017-12-12 14:36:38-02:00 America/Sao_Paulo
+
+  [Fix]
+
+  - The new Notify plugin unearthed an unintended dependency on Git 2.7.0. This
+    version fix it to make Git::Hooks work with at least Git 1.7.2.
+
 2.2.0     2017-12-11 20:28:45-02:00 America/Sao_Paulo
 
   [New features]
