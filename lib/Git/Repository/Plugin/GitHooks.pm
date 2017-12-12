@@ -726,11 +726,29 @@ sub get_commits {
             # reachable by a single reference, which must be the reference
             # being pushed.
 
-            my @new_commit_refs = $git->run(
-                qw/for-each-ref --format %(refname) --count 2 --points-at/, $new_commit,
-            );
-            if (@new_commit_refs == 1) {
-                @excludes = grep {$_ ne "^$new_commit"} @excludes;
+            if ($git->version_ge('2.7.0')) {
+                # The --points-at option was implemented in this version of Git
+                my @new_commit_refs = $git->run(
+                    qw/for-each-ref --format %(refname) --count 2 --points-at/, $new_commit,
+                );
+                if (@new_commit_refs == 1) {
+                    @excludes = grep {$_ ne "^$new_commit"} @excludes;
+                }
+            } else {
+                # I couldn't find a direct way to see how many refs point to
+                # $new_commit in older Gits. So, I use the porcelain git-log
+                # command with a format that shows the decoration for a single
+                # commit, which returns something like:
+                # (HEAD -> next, tag: v2.2.0, origin/next)
+                my $decoration = $git->run(qw/log -n1 --format=%d/, $new_commit);
+                $decoration =~ s/HEAD,\s*//;
+
+                # Now I simply count how many commas there are in the decoration
+                # to see if there is more than one reference.
+                my $commas = ($decoration =~ tr/,/,/);
+                if ($commas == 0) {
+                    @excludes = grep {$_ ne "^$new_commit"} @excludes;
+                }
             }
         }
 
