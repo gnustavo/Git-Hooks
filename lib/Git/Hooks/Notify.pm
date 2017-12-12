@@ -129,7 +129,7 @@ sub notify {
     $body .= <<"EOF";
 REPOSITORY: $repository_name
 BRANCH: $branch
-BY: $pusher
+PUSHED BY: $pusher
 FROM: $old_commit
 TO:   $new_commit
 EOF
@@ -305,7 +305,7 @@ by them. For example:
 
   REPOSITORY: myproject
   BRANCH: master
-  BY: username
+  PUSHED BY: username
   FROM: 75550b66ab08536787487545904fb062c6e38a7f
   TO:   6eaa6a84fbd7e2a64e66664f3d58707618e20c72
   FILTER: lib/Git/Hooks/
