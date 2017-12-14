@@ -2,6 +2,38 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.3.0     2017-12-14 11:34:40-02:00 America/Sao_Paulo
+
+  [New features]
+
+  - The GitHooks plugin implements two new methods: get_config_boolean and
+    get_config_integer. They're used whenever we want to get a configuration
+    value explicitly as a boolean or an integer, following git-config's
+    documentation about typed options. If the option's value doesn't comply with
+    git-config's syntax specification for booleans or integers the methods
+    croak, making clear to the user that she has a configuration
+    error. Moreover, this allows the user to specify booleans and integers in
+    whatever syntax they prefer, according to git-config's specification.
+
+  [Changes]
+
+  - Notify: in the notification headers, replace 'BY:' by 'PUSHED BY:' to make
+    it clear that we're talking about the user who pushed the commits being
+    notified about.
+
+  - Support Git 1.7.1, which is the version installed by default in CentOS
+    6. There was no code changes to make it so. We only changed the check make
+    during the building of the module to allow the use of version
+    1.7.1. Previously we supported from version 1.7.2 on.
+
+  [Fix]
+
+  - Notify: use the option i18n.commitEncoding to decode commit information
+    before inserting it into the notifications.
+
+  - The GitHooks::get_config method now treats the $var argument as
+    case-insensitive, following what the git-config documentation implies.
+
 2.2.1     2017-12-12 14:36:38-02:00 America/Sao_Paulo
 
   [Fix]
