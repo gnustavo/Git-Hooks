@@ -158,7 +158,7 @@ EOF
         # Force indentation of commit message lines
         $html =~ s:^( +):'&nbsp;' x length($1):egm;
         # Force indentation of commit numstat lines
-        $html =~ s[^(\d+)\t(\d+)\t]
+        $html =~ s[^(\d+|-)\t(\d+|-)\t]
             [$1 .
             '&nbsp;' x (8 - length($1)) .
             $2 .
