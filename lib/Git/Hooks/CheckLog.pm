@@ -128,6 +128,22 @@ sub pattern_errors {
     return $errors;
 }
 
+sub revert_errors {
+    my ($git, $id, $msg) = @_;
+
+    if ($git->get_config_boolean($CFG => 'deny-merge-revert')) {
+        if ($msg =~ /This reverts commit ([0-9a-f]{40})/s) {
+            my $reverted_commit = $git->get_commit($1);
+            if ($reverted_commit->parent() > 1) {
+                $git->error($PKG, "commit $id reverts a merge commit, which is not allowed");
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
 sub title_errors {
     my ($git, $id, $title) = @_;
 
@@ -220,6 +236,8 @@ sub message_errors {
     $errors += spelling_errors($git, $id, $msg);
 
     $errors += pattern_errors($git, $id, $msg);
+
+    $errors += revert_errors($git, $id, $msg);
 
     my $cmsg = Git::Message->new($msg);
 
@@ -331,7 +349,7 @@ DRAFT_PUBLISHED  \&check_patchset;
 
 
 __END__
-=for Pod::Coverage spelling_errors pattern_errors title_errors body_errors footer_errors message_errors check_ref check_affected_refs check_message_file check_patchset
+=for Pod::Coverage spelling_errors pattern_errors revert_errors title_errors body_errors footer_errors message_errors check_ref check_affected_refs check_message_file check_patchset
 
 =head1 NAME
 
@@ -498,6 +516,29 @@ language passing its ISO code to this option.
 This option requires the commit to have at least one C<Signed-off-by>
 footer.
 
+=head2 githooks.checklog.deny-merge-revert BOOL
+
+This boolean option allows you to deny commits that revert merge commits, since
+such beasts introduce complications in the repository which you may want to
+avoid. (To know more about this you should read Linus Torvald's L<How to revert
+a faulty
+merge|https://github.com/git/git/blob/master/Documentation/howto/revert-a-faulty-merge.txt>.)
+
+The option is false by default, allowing such reverts.
+
+Note that a revert is detected by the fact that Git introduces a standard
+sentence in the commit's message, like this:
+
+  This reverts commit 3114a008dc474f098babf2e22d444c82c6496c23.
+
+If the committer removes or changes this line during the commit the hook won't
+be able to detect it.
+
+Note also that the C<git-revert> command, which creates the reverting commits
+doesn't invoke the C<commit-msg> hook, so that this check can't be performed at
+commit time. The checking will be performed at push time by a C<pre-receive> or
+C<update> hook though.
+
 =head1 REFERENCES
 
 =over
@@ -550,5 +591,12 @@ has a good discussion about the topic.
 
 A blog post from Kohsuke Kawaguchi, Jenkins's author, explaining what
 information he usually includes in his commit messages and why.
+
+=item * B<How to revert a faulty merge>
+
+This
+L<message|https://github.com/git/git/blob/master/Documentation/howto/revert-a-faulty-merge.txt>,
+from Linus Torvald's himself, explains why reverting a merge commit is
+problematic and how to deal with it.
 
 =back
