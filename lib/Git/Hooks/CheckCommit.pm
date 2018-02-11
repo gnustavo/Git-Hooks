@@ -304,11 +304,19 @@ sub check_pre_commit {
 
     _setup_config($git);
 
+    # Grok author and committer information from git's envorinent variables, if
+    # they're defined. Sometimes they aren't...
+
+    my $author_name     = $ENV{GIT_AUTHOR_NAME}     || 'nobody';
+    my $author_email    = $ENV{GIT_AUTHOR_EMAIL}    || 'nobody@example.net';
+    my $committer_name  = $ENV{GIT_COMMITTER_NAME}  || $author_name;
+    my $committer_email = $ENV{GIT_COMMITTER_EMAIL} || $author_email;
+
     # Construct a fake commit object to pass to the error checking routines.
     my $commit = Git::Repository::Log->new(
         commit    => '<new>',
-        author    => "$ENV{GIT_AUTHOR_NAME} <$ENV{GIT_AUTHOR_EMAIL}> 1234567890 -0300",
-        committer => "$ENV{GIT_COMMITTER_NAME} <$ENV{GIT_COMMITTER_EMAIL}> 1234567890 -0300",
+        author    => "$author_name <$author_email> 1234567890 -0300",
+        committer => "$committer_name <$committer_email> 1234567890 -0300",
         message   => "Fake\n",
     );
 
