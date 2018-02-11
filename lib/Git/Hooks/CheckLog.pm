@@ -231,23 +231,15 @@ sub message_errors {
 
     my $id = defined $commit ? $commit->commit : '';
 
-    my $errors = 0;
-
-    $errors += spelling_errors($git, $id, $msg);
-
-    $errors += pattern_errors($git, $id, $msg);
-
-    $errors += revert_errors($git, $id, $msg);
-
     my $cmsg = Git::Message->new($msg);
 
-    $errors += title_errors($git, $id, $cmsg->title);
-
-    $errors += body_errors($git, $id, $cmsg->body);
-
-    $errors += footer_errors($git, $id, $cmsg);
-
-    return $errors;
+    return
+        spelling_errors($git, $id, $msg) +
+        pattern_errors($git, $id, $msg) +
+        revert_errors($git, $id, $msg) +
+        title_errors($git, $id, $cmsg->title) +
+        body_errors($git, $id, $cmsg->body) +
+        footer_errors($git, $id, $cmsg);
 }
 
 sub check_message_file {
