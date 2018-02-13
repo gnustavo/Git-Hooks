@@ -227,6 +227,46 @@ __END__
 
 CheckFile - Git::Hooks plugin for checking files
 
+=head1 SYNOPSIS
+
+As a C<Git::Hooks> plugin you don't use this Perl module directly. Instead, you
+may configure it in a Git configuration file like this:
+
+  [githooks]
+    plugin = CheckFile
+    admin = joe molly
+
+  [githooks "checkfile"]
+    name = *.p[lm] perlcritic --stern --verbose 10
+    name = *.pp    puppet parser validate --verbose --debug
+    name = *.pp    puppet-lint --no-variable_scope-check --no-documentation-check
+    name = *.sh    bash -n
+    name = *.sh    shellcheck --exclude=SC2046,SC2053,SC2086
+    name = *.yml   yamllint
+    name = *.js    eslint -c ~/.eslintrc.json
+
+    sizelimit = 1M
+
+    path.deny = ^.
+    path.allow = ^[a-zA-Z0-1/_.-]$
+
+The first section enables the plugin and defines the users C<joe> and C<molly>
+as administrators, effectivelly exempting them from any restrictions the plugin
+may impose.
+
+The second instance enables C<some> of the options specific to this plugin.
+
+The C<name> options associate filenames with commands so that any file added or
+modified in the commit which name maches the glob pattern is checked with the
+associated command. The commands usually check the files's syntax and style.
+
+The C<sizelimit> option denies the addition or modification of any file bigger
+than 1MiB, preventing careless users to commit huge binary files.
+
+The C<path.deny> and C<path.allow> options conspire to only allow the addition
+of files which names comprised of only a small set of characters, avoiding names
+which may cause problems.
+
 =head1 DESCRIPTION
 
 This L<Git::Hooks> plugin hooks itself to the hooks below to check if the

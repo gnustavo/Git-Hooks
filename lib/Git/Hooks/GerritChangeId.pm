@@ -97,6 +97,19 @@ __END__
 Git::Hooks::GerritChangeId - Git::Hooks plugin to insert Change-Ids in
 commit messages
 
+=head1 SYNOPSIS
+
+As a C<Git::Hooks> plugin you don't use this Perl module directly. Instead, you
+may configure it in a Git configuration file like this:
+
+  [githooks]
+    plugin = CheckGerritChangeId
+    admin = joe molly
+
+The first section enables the plugin and defines the users C<joe> and C<molly>
+as administrators, effectivelly exempting them from any restrictions the plugin
+may impose.
+
 =head1 DESCRIPTION
 
 This L<Git::Hooks> plugin hooks itself to the C<commit-msg> hook. It is a

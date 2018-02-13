@@ -122,6 +122,23 @@ __END__
 
 Git::Hooks::CheckAcls - Git::Hooks plugin for branch/tag access control
 
+=head1 SYNOPSIS
+
+As a C<Git::Hooks> plugin you don't use this Perl module directly. Instead, you
+may configure it in a Git configuration file like this:
+
+  [githooks]
+    plugin = CheckAcls
+    admin = joe molly
+
+  [githooks "checkacls"]
+    acl = ^.      CRUD ^refs/heads/{USER}/
+    acl = ^.      U    ^refs/heads/
+
+This allows users C<joe> and C<molly> do anything. Every other user can create,
+rewind, update, and delete branches prefixed with their own usernames, but they
+can only update other branches.
+
 =head1 DESCRIPTION
 
 This L<Git::Hooks> plugin hooks itself to the hooks below to guarantee that

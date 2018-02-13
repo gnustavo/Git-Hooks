@@ -516,6 +516,55 @@ __END__
 
 CheckJira - Git::Hooks plugin to implement JIRA checks
 
+=head1 SYNOPSIS
+
+As a C<Git::Hooks> plugin you don't use this Perl module directly. Instead, you
+may configure it in a Git configuration file like this:
+
+  [githooks]
+    plugin = CheckJira
+    admin = joe molly
+
+  [githooks "checkjira"]
+    jiraurl = https://jira.example.net
+    jirauser = jiradmin
+    jirapass = my-secret
+
+    matchlog = (?s)^\\[([^]]+)\\]
+    jql = project IN (ABC, UTF, GIT) AND issuetype IN (Bug, Story) AND status IN ("In progress", "In testing")
+    by-assignee = true
+    fixversion = refs/heads/master             future
+    fixversion = ^refs/heads/(\\d+\\.\\d+)\\.  ^$+
+
+The first section enables the plugin and defines the users C<joe> and C<molly>
+as administrators, effectivelly exempting them from any restrictions the plugin
+may impose.
+
+The second instance enables C<some> of the options specific to this plugin.
+
+The options C<jiraurl>, C<jirauser>, and C<jirapass> specify the JIRA server and
+are usually kept in the global Git configuration file and not in the
+repository's configuration file since they are sensitive and usually the same
+for all repositories.
+
+The C<matchlog> option requires that the JIRA keys be cited at the beginning of
+the commit messages title, enclosed in brackets. By default JIRA keys can be
+cited anywhere, but it's usually a good idea to restrict where they should be
+cited to avoid falselly identifying other words as JIRA keys.
+
+The C<jql> option imposes more restrictions on the cited JIRA issues (besides
+the few restrictions that are imposed by default, such as they being resolved
+and they exist).
+
+The C<by-assignee> option requires that all cited JIRA issues be assigned to the
+user pushing the commits.
+
+The firt C<fixversion> option requires that commits pushed to C<master> must
+cite JIRA issues associated with the fixVersion C<future>. The second option
+requires that commits pushed to branches named after a version name
+(e.g. C<1.0.1>) must cite JIRA issues associated with a fixVersion named after
+the same C<major.minor> version number (e.g. C<1.0>).
+
 =head1 DESCRIPTION
 
 This L<Git::Hooks> plugin hooks itself to the hooks below to guarantee that

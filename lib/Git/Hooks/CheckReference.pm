@@ -60,6 +60,28 @@ __END__
 
 CheckReference - Git::Hooks plugin for checking references
 
+=head1 SYNOPSIS
+
+As a C<Git::Hooks> plugin you don't use this Perl module directly. Instead, you
+may configure it in a Git configuration file like this:
+
+  [githooks]
+    plugin = CheckReference
+    admin = joe molly
+
+  [githooks "checkreference"]
+    deny  = ^refs/heads/
+    allow = ^refs/heads/(?:feature|release|hotfix)/
+
+The first section enables the plugin and defines the users C<joe> and C<molly>
+as administrators, effectivelly exempting them from any restrictions the plugin
+may impose.
+
+The second instance enables C<some> of the options specific to this plugin.
+
+The C<deny> and C<allow> options conspire to only allow the creation of branches
+which names begin with C<feature/>, C<release/>, and C<hotfix/>.
+
 =head1 DESCRIPTION
 
 This L<Git::Hooks> plugin hooks itself to the hooks below to check if the

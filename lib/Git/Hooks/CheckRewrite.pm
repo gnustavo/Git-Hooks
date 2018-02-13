@@ -168,6 +168,19 @@ __END__
 
 Git::Hooks::CheckRewrite - Git::Hooks plugin for checking against unsafe rewrites
 
+=head1 SYNOPSIS
+
+As a C<Git::Hooks> plugin you don't use this Perl module directly. Instead, you
+may configure it in a Git configuration file like this:
+
+  [githooks]
+    plugin = CheckRewrite
+    admin = joe molly
+
+This section enables the plugin and defines the users C<joe> and C<molly> as
+administrators, effectivelly exempting them from any restrictions the plugin may
+impose.
+
 =head1 DESCRIPTION
 
 This L<Git::Hooks> plugin hooks itself to the B<pre-rebase> hook to

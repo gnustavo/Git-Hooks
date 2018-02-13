@@ -263,6 +263,38 @@ __END__
 
 Notify - Git::Hooks plugin to notify users via email
 
+=head1 SYNOPSIS
+
+As a C<Git::Hooks> plugin you don't use this Perl module directly. Instead, you
+may configure it in a Git configuration file like this:
+
+  [githooks]
+    plugin = Notify
+
+  [githooks "notify"]
+    from = githooks@example.net
+    commit-url = https://github.com/userid/repoid/commit/%H
+    rule = gnustavo@cpan.org
+    rule = fred@example.net barney@example.net -- lib/Git/Hooks/Notify.pm
+    rule = batman@example.net robin@example.net -- Changes lib/
+
+The first section enables the plugin.
+
+The second instance enables C<some> of the options specific to this plugin.
+
+The C<from> option defines the value of the C<From:> header in the
+notifications.
+
+The C<commit-url> option defines a URL pattern to embed links to commits in
+the notifications.
+
+The C<rule> options specifies who must be notified about what changes in the
+repository. The first rule notifies C<gnustavo@cpan.org> about every new
+commits. The second rule notifies to the Bedrock fellows only about changes
+affecting the F<lib/Git/Hooks/Notify.pm> file. The third rule notifies the
+Dynamic Duo about changes affecting the F<Changes> file in the repository root
+and changes affecting any file under the F<lib/> directory.
+
 =head1 DESCRIPTION
 
 This L<Git::Hooks> plugin hooks itself to the hooks below to notify users via

@@ -397,6 +397,43 @@ __END__
 
 Git::Hooks::CheckCommit - Git::Hooks plugin to enforce commit policies
 
+=head1 SYNOPSIS
+
+As a C<Git::Hooks> plugin you don't use this Perl module directly. Instead, you
+may configure it in a Git configuration file like this:
+
+  [githooks]
+    plugin = CheckCommit
+    admin = joe molly
+    groups = mergers = larry sally
+
+  [githooks "checkcommit"]
+    name = !^[a-z]+$
+    email = @cpqd\.com\.br$
+    email-valid = true
+    merger = @mergers
+    push-limit = 2
+
+The first section enables the plugin and defines the users C<joe> and C<molly>
+as administrators, effectivelly exempting them from any restrictions the plugin
+may impose. It also defines a user group called C<mergers> containing two users.
+
+The second instance enables C<some> of the options specific to this plugin. The
+C<name> option requires that the user.name configuration must be anything other
+than a sequence of lower-case letters, trying to detect and deny commits made by
+users without proper configuration.
+
+The C<email> option requires that the user.email must be of a specific domain.
+
+The C<email-valid> option enables several integrity checks of the user.email
+using the L<Email::Valid> module.
+
+The C<merger> option only accepts pushes of merge commits performed by the users
+in the C<@mergers> group.
+
+The C<push-limit> option denies pushes with more than two commits in a single
+branch, in order to avoid careless pushes.
+
 =head1 DESCRIPTION
 
 This L<Git::Hooks> plugin hooks itself to the hooks below to enforce commit
