@@ -10,7 +10,6 @@ use warnings;
 use Try::Tiny;
 use Git::Hooks;
 
-my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
 ##########
@@ -71,7 +70,7 @@ sub check_ref {
         next unless $git->match_user($who);
         next unless match_ref($ref, $refspec);
         if ($what =~ /[^CRUD-]/) {
-            $git->error($PKG, "invalid acl 'what' component: '$what'");
+            $git->fault("invalid acl 'what' component: '$what'");
             return 0;
         }
         return 1 if index($what, $op) != -1;
@@ -86,9 +85,9 @@ sub check_ref {
     );
 
     if (my $myself = eval { $git->authenticated_user() }) {
-        $git->error($PKG, "you ($myself) cannot $op{$op} ref $ref");
+        $git->fault("you ($myself) cannot $op{$op} ref $ref");
     } else {
-        $git->error($PKG, "cannot grok authenticated username", $@);
+        $git->fault("cannot grok authenticated username", {details => $@});
     }
 
     return 0;

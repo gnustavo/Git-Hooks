@@ -10,7 +10,6 @@ use warnings;
 use Git::Hooks;
 use Text::Glob qw/glob_to_regex/;
 
-my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
 # This routine can act both as an update or a pre-receive hook.
@@ -59,7 +58,7 @@ sub check_affected_refs {
             $old_commit eq $git->undef_commit ? $git->empty_tree : $old_commit,
             $new_commit);
         if ($? != 0) {
-            $git->error($PKG, "whitespace errors in the changed files in $ref", $output);
+            $git->fault("whitespace errors in the changed files in $ref", {details => $output});
             ++$errors;
         };
     }
@@ -76,7 +75,7 @@ sub check_commit {
     if ($? == 0) {
         return 1;
     } else {
-        $git->error($PKG, 'whitespace errors in the changed files', $output);
+        $git->fault('whitespace errors in the changed files', {details => $output});
         return 0;
     };
 }
@@ -92,7 +91,7 @@ sub check_patchset {
     if ($? == 0) {
         return 1;
     } else {
-        $git->error($PKG, 'whitespace errors in the changed files', $output);
+        $git->fault('whitespace errors in the changed files', {details => $output});
         return 0;
     };
 }

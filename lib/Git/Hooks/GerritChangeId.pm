@@ -13,7 +13,6 @@ use Path::Tiny;
 use Carp;
 use Try::Tiny;
 
-my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
 ##########
@@ -23,7 +22,8 @@ sub gen_change_id {
 
     my $filename = Path::Tiny->tempfile(UNLINK => 1);
     open my $fh, '>', $filename ## no critic (RequireBriefOpen)
-        or croak "$PKG: internal error: can't open $filename for writing: $!";
+        or $git->fault("internal error: can't open $filename for writing:", {details => $!})
+        and die;
 
     foreach my $info (
         [ tree      => [qw/write-tree/] ],
@@ -71,7 +71,7 @@ sub rewrite_message {
 
     my $msg = eval { $git->read_commit_msg_file($commit_msg_file) };
     unless (defined $msg) {
-        $git->error($PKG, "cannot read commit message file '$commit_msg_file'", $@);
+        $git->fault("cannot read commit message file '$commit_msg_file'", {details => $@});
         return 0;
     }
 

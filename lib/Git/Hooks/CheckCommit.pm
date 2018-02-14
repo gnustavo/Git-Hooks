@@ -59,12 +59,12 @@ sub match_errors {
                     my $data     = $commit->$who_info;
 
                     unless (any  { $data =~ $_ } @{$checks->{''}}) {
-                        $git->error($PKG, "commit @{[$commit->commit]} $who $info ($data) does not match any positive githooks.checkcommit.$info option");
+                        $git->fault("commit @{[$commit->commit]} $who $info ($data) does not match any positive githooks.checkcommit.$info option");
                         ++$errors;
                     }
 
                     unless (none { $data =~ $_ } @{$checks->{'!'}}) {
-                        $git->error($PKG, "commit @{[$commit->commit]} $who $info ($data) matches some negative githooks.checkcommit.$info option");
+                        $git->fault("commit @{[$commit->commit]} $who $info ($data) matches some negative githooks.checkcommit.$info option");
                         ++$errors;
                     }
                 }
@@ -81,7 +81,7 @@ sub merge_errors {
     if ($commit->parent() > 1) { # it's a merge commit
         if (my @mergers = $git->get_config($CFG => 'merger')) {
             if (none {$git->match_user($_)} @mergers) {
-                $git->error($PKG, "commit @{[$commit->commit]} is a merge but you (@{[$git->authenticated_user]}) are not allowed to perform merges");
+                $git->fault("commit @{[$commit->commit]} is a merge but you (@{[$git->authenticated_user]}) are not allowed to perform merges");
                 return 1;
             }
         }
@@ -110,7 +110,7 @@ sub email_valid_errors {
                 }
                 $cache->{email_valid} = Email::Valid->new(@checks);
             } else {
-                $git->error($PKG, "the checkcommit.email-valid failed because the Email::Valid Perl module is not installed");
+                $git->fault("the checkcommit.email-valid failed because the Email::Valid Perl module is not installed");
                 ++$errors;
             }
         }
@@ -121,7 +121,7 @@ sub email_valid_errors {
                 my $email     = $commit->$who_email;
                 unless ($ev->address($email)) {
                     my $fail = $ev->details();
-                    $git->error($PKG, "commit @{[$commit->commit]} $who email ($email) failed $fail check");
+                    $git->fault("commit @{[$commit->commit]} $who email ($email) failed $fail check");
                     ++$errors;
                 }
             }
@@ -146,7 +146,7 @@ sub _canonical_identity {
                 ));
                 $canonical;
             } catch {
-                $git->error($PKG, <<'EOS');
+                $git->fault(<<'EOS');
 The githooks.checkcommit.canonical option requires the git-check-mailmap
 command which isn't found. It's available since Git 1.8.4. You should either
 upgrade your Git or disable this option.
@@ -171,8 +171,7 @@ sub canonical_errors {
             my $canonical = _canonical_identity($git, $mailmap, $identity);
 
             if ($identity ne $canonical) {
-                $git->error(
-                    $PKG,
+                $git->fault(
                     "commit @{[$commit->commit]} $who identity ($identity) isn't canonical ($canonical)",
                 );
                 ++$errors;
@@ -194,13 +193,13 @@ sub signature_errors {
         my $status = $git->run(qw/log -1 --format='%G?'/, $commit->commit);
 
         if ($status eq 'B') {
-            $git->error($PKG, "commit @{[$commit->commit]} has a BAD signature");
+            $git->fault("commit @{[$commit->commit]} has a BAD signature");
             ++$errors;
         } elsif ($status eq 'N' && $signature ne 'optional') {
-            $git->error($PKG, "commit @{[$commit->commit]} has NO signature");
+            $git->fault("commit @{[$commit->commit]} has NO signature");
             ++$errors;
         } elsif ($status eq 'U' && $signature eq 'trusted') {
-            $git->error($PKG, "commit @{[$commit->commit]} has an UNTRUSTED signature");
+            $git->fault("commit @{[$commit->commit]} has an UNTRUSTED signature");
             ++$errors;
         }
     }
@@ -224,11 +223,11 @@ sub code_errors {
                 $code = do $check;
                 unless ($code) {
                     if (length $@) {
-                        $git->error($PKG, "couldn't parse check-code file ($check): ", $@);
+                        $git->fault("couldn't parse check-code file ($check): ", {details => $@});
                     } elsif (! defined $code) {
-                        $git->error($PKG, "couldn't read check-code file ($check): ", $!);
+                        $git->fault("couldn't read check-code file ($check): ", {details => $!});
                     } else {
-                        $git->error($PKG, "check-code file ($check) returned FALSE");
+                        $git->fault("check-code file ($check) returned FALSE");
                     }
                     ++$errors;
                     next CODE;
@@ -236,7 +235,7 @@ sub code_errors {
             } else {
                 $code = eval $check; ## no critic (BuiltinFunctions::ProhibitStringyEval)
                 if (length $@) {
-                    $git->error($PKG, "couldn't parse check-code value: ", $@);
+                    $git->fault("couldn't parse check-code value: ", {details => $@});
                     ++$errors;
                     next CODE;
                 }
@@ -244,7 +243,7 @@ sub code_errors {
             if (defined $code && ref $code && ref $code eq 'CODE') {
                 push @{$cache->{codes}}, $code;
             } else {
-                $git->error($PKG, "option check-code must end with a code ref");
+                $git->fault("option check-code must end with a code ref");
                 ++$errors;
             }
         }
@@ -254,11 +253,11 @@ sub code_errors {
         my $ok = eval { $code->($git, $commit, $ref) };
         if (defined $ok) {
             unless ($ok) {
-                $git->error($PKG, "error while evaluating check-code");
+                $git->fault("error while evaluating check-code");
                 ++$errors;
             }
         } elsif (length $@) {
-            $git->error($PKG, 'error while evaluating check-code', $@);
+            $git->fault('error while evaluating check-code', {details => $@});
             ++$errors;
         }
     }
@@ -287,7 +286,7 @@ sub check_ref {
 
     if (my $limit = $git->get_config_integer($CFG => 'push-limit')) {
         if (@commits > $limit) {
-            $git->error($PKG, "you're pushing @{[scalar @commits]} commits to $ref, more than our current limit of $limit");
+            $git->fault("you're pushing @{[scalar @commits]} commits to $ref, more than our current limit of $limit");
             ++$errors;
         }
     }
@@ -335,7 +334,7 @@ sub check_post_commit {
     my $commit = $git->get_sha1('HEAD');
 
     if (signature_errors($git, $commit)) {
-        $git->error($PKG, "broken commit", <<"EOF");
+        $git->fault("broken commit", {details => <<"EOF"});
 ATTENTION: To fix the problems in this commit, please consider
 amending it:
 

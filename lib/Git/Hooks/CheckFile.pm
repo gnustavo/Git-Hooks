@@ -13,7 +13,6 @@ use Text::Glob qw/glob_to_regex/;
 use Path::Tiny;
 use List::MoreUtils qw/any none/;
 
-my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
 #############
@@ -82,7 +81,7 @@ sub check_command {
         # $file to avoid confounding the user.
         $output =~ s/\Q$tmpfile\E/$file/g;
 
-        $git->error($PKG, $message, $output);
+        $git->fault($message, {details => $output});
         return;
     } else {
         # FIXME: What should we do with eventual output from a
@@ -136,14 +135,14 @@ sub check_new_files {
 
         if (any  {$basename =~ $_} @{$re_checks{basename}{deny}} and
             none {$basename =~ $_} @{$re_checks{basename}{allow}}) {
-            $git->error($PKG, "File '$file' basename was denied.");
+            $git->fault("File '$file' basename was denied.");
             ++$errors;
             next FILE;          # Don't botter checking the contents of invalid files
         }
 
         if (any  {$file =~ $_} @{$re_checks{path}{deny}} and
             none {$file =~ $_} @{$re_checks{path}{allow}}) {
-            $git->error($PKG, "File '$file' path was denied.");
+            $git->fault("File '$file' path was denied.");
             ++$errors;
             next FILE;          # Don't botter checking the contents of invalid files
         }
@@ -159,7 +158,7 @@ sub check_new_files {
         }
 
         if ($file_sizelimit && $file_sizelimit < $size) {
-            $git->error($PKG, "File '$file' has $size bytes but the current limit is just $file_sizelimit bytes.");
+            $git->fault("File '$file' has $size bytes but the current limit is just $file_sizelimit bytes.");
             ++$errors;
             next FILE;    # Don't botter checking the contents of huge files
         }

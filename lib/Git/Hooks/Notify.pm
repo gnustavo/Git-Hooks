@@ -15,7 +15,6 @@ use Set::Scalar;
 use List::MoreUtils qw/any/;
 use Try::Tiny;
 
-my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
 sub pretty_log {
@@ -238,10 +237,11 @@ sub notify_affected_refs {
                 notify($git, $ref, $old_commit, $new_commit, $rule, $message);
             } catch {
                 my $error = $_;
-                $git->error($PKG, 'Could not send mail to the following recipients: '
-                                . join(", ", $error->recipients) . "\n"
-                                . 'Error message: ' . $error->message . "\n"
-                            );
+                $git->fault(
+                    sprintf('Could not send mail to the following recipients: %s\n',
+                            join(", ", $error->recipients)),
+                    {details => $error->message}
+                );
                 ++$errors;
             };
         }

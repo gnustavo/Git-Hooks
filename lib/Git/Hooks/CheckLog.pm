@@ -11,7 +11,6 @@ use Git::Hooks;
 use Git::Message;
 use List::MoreUtils qw/uniq/;
 
-my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
 #############
@@ -48,7 +47,8 @@ sub _spell_checker {
 
     unless (state $tried_to_check) {
         unless (eval { require Text::SpellChecker; }) {
-            $git->error($PKG, "Please, install Perl module Text::SpellChecker to spell messages", $@);
+            $git->fault("Please, install Perl module Text::SpellChecker to spell messages",
+                        {details => $@});
             return;
         }
 
@@ -63,7 +63,7 @@ sub _spell_checker {
 
         my $word = eval { $checker->next_word(); };
         length $@
-            and $git->error($PKG, "cannot spell check using Text::SpellChecker", $@)
+            and $git->fault("cannot spell check using Text::SpellChecker", {details => $@})
                 and return;
 
         $tried_to_check = 1;
@@ -87,8 +87,10 @@ sub spelling_errors {
 
     foreach my $badword ($checker->next_word()) {
         my @suggestions = $checker->suggestions($badword);
-        $git->error($PKG, "commit $id log has a misspelled word: '$badword'",
-                    defined $suggestions[0] ? "suggestions: " . join(', ', @suggestions) : undef,
+        $git->fault("commit $id log has a misspelled word: '$badword'",
+                    defined $suggestions[0]
+                        ? {details => "suggestions: " . join(', ', @suggestions)}
+                        : undef,
                 );
         ++$errors;
     }
@@ -104,12 +106,12 @@ sub _pattern_error {
 
     if ($match =~ s/^!\s*//) {
         $text !~ /$match/m
-            or $git->error($PKG, "$what SHOULD NOT match '\Q$match\E'")
+            or $git->fault("$what SHOULD NOT match '\Q$match\E'")
             and return 1;
     }
     else {
         $text =~ /$match/m
-            or $git->error($PKG, "$what SHOULD match '\Q$match\E'")
+            or $git->fault("$what SHOULD match '\Q$match\E'")
             and return 1;
     }
 
@@ -135,7 +137,7 @@ sub revert_errors {
         if ($msg =~ /This reverts commit ([0-9a-f]{40})/s) {
             my $reverted_commit = $git->get_commit($1);
             if ($reverted_commit->parent() > 1) {
-                $git->error($PKG, "commit $id reverts a merge commit, which is not allowed");
+                $git->fault("commit $id reverts a merge commit, which is not allowed");
                 return 1;
             }
         }
@@ -149,7 +151,7 @@ sub title_errors {
 
     unless (defined $title and length $title) {
         if ($git->get_config_boolean($CFG => 'title-required')) {
-            $git->error($PKG, "commit $id log needs a title line");
+            $git->fault("commit $id log needs a title line");
             return 1;
         } else {
             return 0;
@@ -157,7 +159,7 @@ sub title_errors {
     }
 
     ($title =~ tr/\n/\n/) == 1
-        or $git->error($PKG, "commit $id log title should have just one line")
+        or $git->fault("commit $id log title should have just one line")
             and return 1;
 
     my $errors = 0;
@@ -165,21 +167,21 @@ sub title_errors {
     if (my $max_width = $git->get_config_integer($CFG => 'title-max-width')) {
         my $tlen = length($title) - 1; # discount the newline
         $tlen <= $max_width
-            or $git->error($PKG, "commit $id log title should be at most $max_width characters wide, but it has $tlen")
+            or $git->fault("commit $id log title should be at most $max_width characters wide, but it has $tlen")
                 and ++$errors;
     }
 
     if (my $period = $git->get_config($CFG => 'title-period')) {
         if ($period eq 'deny') {
             $title !~ /\.$/
-                or $git->error($PKG, "commit $id log title SHOULD NOT end in a period")
+                or $git->fault("commit $id log title SHOULD NOT end in a period")
                     and ++$errors;
         } elsif ($period eq 'require') {
             $title =~ /\.$/
-                or $git->error($PKG, "commit $id log title SHOULD end in a period")
+                or $git->fault("commit $id log title SHOULD end in a period")
                     and ++$errors;
         } elsif ($period ne 'allow') {
-            $git->error($PKG, "invalid value for the $CFG.title-period option: '$period'")
+            $git->fault("invalid value for the $CFG.title-period option: '$period'")
                 and ++$errors;
         }
     }
@@ -199,9 +201,8 @@ sub body_errors {
     if (my $max_width = $git->get_config_integer($CFG => 'body-max-width')) {
         if (my @biggies = grep {/^\S/} grep {length > $max_width} split(/\n/, $body)) {
             my $theseare = @biggies == 1 ? "this is" : "these are";
-            $git->error($PKG,
-                        "commit $id log body lines should be at most $max_width characters wide, but $theseare bigger",
-                        join("\n", @biggies),
+            $git->fault("commit $id log body lines should be at most $max_width characters wide, but $theseare bigger",
+                        {details => join("\n", @biggies)},
                     );
             return 1;
         }
@@ -217,7 +218,7 @@ sub footer_errors {
 
     if ($git->get_config_boolean($CFG => 'signed-off-by')) {
         scalar($cmsg->get_footer_values('signed-off-by')) > 0
-            or $git->error($PKG, "commit $id must have a Signed-off-by footer")
+            or $git->fault("commit $id must have a Signed-off-by footer")
                 and ++$errors;
     }
 
@@ -258,7 +259,8 @@ sub check_message_file {
     my $msg = eval {$git->read_commit_msg_file($commit_msg_file)};
 
     unless (defined $msg) {
-        $git->error($PKG, "cannot read commit message file '$commit_msg_file'", $@);
+        $git->fault("cannot read commit message file '$commit_msg_file'",
+                    {details => $@});
         return 0;
     }
 

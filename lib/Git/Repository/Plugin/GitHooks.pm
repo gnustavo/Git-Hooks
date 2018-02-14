@@ -21,7 +21,7 @@ sub _keywords {                 ## no critic (ProhibitUnusedPrivateSubroutines)
 
           get_config get_config_boolean get_config_integer
 
-          error get_errors
+          error get_errors fault get_faults
 
           undef_commit empty_tree get_commit get_commits
 
@@ -416,7 +416,7 @@ sub _invoke_external_hook {     ## no critic (ProhibitExcessComplexity)
         my $pid = open my $pipe, '|-'; ## no critic (InputOutput::RequireBriefOpen)
 
         if (! defined $pid) {
-            $git->error($prefix, "can't fork: $!");
+            $git->fault("can't fork: $!", {prefix => $prefix});
         } elsif ($pid) {
             # parent
             $pipe->print(join("\n", map {join(' ', @$_)} @{_get_input_data($git)}) . "\n");
@@ -432,9 +432,15 @@ sub _invoke_external_hook {     ## no critic (ProhibitExcessComplexity)
                 say STDERR $output if length $output;
                 return 1;
             } elsif ($!) {
-                $git->error($prefix, "Error closing pipe to external hook: $!", $output);
+                $git->fault("Error closing pipe to external hook: $!", {
+                    prefix  => $prefix,
+                    details => $output,
+                });
             } else {
-                $git->error($prefix, "External hook exited with code $?", $output);
+                $git->fault("External hook exited with code $?", {
+                    prefix  => $prefix,
+                    details => $output,
+                });
             }
         } else {
             # child
@@ -478,7 +484,7 @@ sub _invoke_external_hook {     ## no critic (ProhibitExcessComplexity)
                     sprintf("'$file' exited abnormally with value %d", $exit >> 8);
                 }
             };
-            $git->error($prefix, $message, $output);
+            $git->fault($message, {prefix => $prefix, details => $output});
         }
     }
 
@@ -498,11 +504,11 @@ sub invoke_external_hooks {
         ($git->get_config(githooks => 'hooks'), path($git->git_dir())->child('hooks.d'))
     ) {
         opendir my $dh, $dir
-            or $git->error(__PACKAGE__, ": cannot opendir '$dir'", $!)
+            or $git->fault(": cannot opendir '$dir'", {details => $!})
             and next;
         foreach my $file (grep {!-d && -x} map {path($dir)->child($_)} readdir $dh) {
             _invoke_external_hook($git, $file, $hookname, @args)
-                or $git->error(__PACKAGE__, ": error in external hook '$file'");
+                or $git->fault(": error in external hook '$file'");
         }
     }
     return;
@@ -649,6 +655,7 @@ sub get_config_integer {
     }
 }
 
+# DEPRECATED: use fault instead!
 sub error {
     my ($git, $prefix, $message, $details) = @_;
     $message =~ s/\n*$//s;    # strip trailing newlines
@@ -659,28 +666,51 @@ sub error {
         $fmtmsg .= ":\n\n$details\n";
     }
     $fmtmsg .= "\n";            # end in a newline
-    push @{$git->{_plugin_githooks}{errors}}, $fmtmsg;
+    push @{$git->{_plugin_githooks}{faults}}, $fmtmsg;
 
     # Return true to allow for the idiom: <expression> or $git->error(...) and <next|last|return>;
     return 1;
 }
 
+# DEPRECATED: use get_faults instead!
 sub get_errors {
+    return get_faults(@_);
+}
+
+sub fault {
+    my ($git, $message, $info) = @_;
+    $info //= {};
+    my $prefix = exists $info->{prefix} ? $info->{prefix} : caller(1);
+    $message =~ s/\n*$//s;    # strip trailing newlines
+    my $fmtmsg = "\n[$prefix] $message";
+    if (my $details = $info->{details}) {
+        $details =~ s/\n*$//s; # strip trailing newlines
+        $details =~ s/^/  /gm; # prefix each line with two spaces
+        $fmtmsg .= ":\n\n$details\n";
+    }
+    $fmtmsg .= "\n";            # end in a newline
+    push @{$git->{_plugin_githooks}{faults}}, $fmtmsg;
+
+    # Return true to allow for the idiom: <expression> or $git->fault(...) and <next|last|return>;
+    return 1;
+}
+
+sub get_faults {
     my ($git) = @_;
 
-    return unless exists $git->{_plugin_githooks}{errors};
+    return unless exists $git->{_plugin_githooks}{faults};
 
-    my $errors = '';
+    my $faults = '';
 
     if (my $header = $git->get_config(githooks => 'error-header')) {
-        $errors .= qx{$header} . "\n"; ## no critic (ProhibitBacktickOperators)
+        $faults .= qx{$header} . "\n"; ## no critic (ProhibitBacktickOperators)
     }
 
-    $errors .= join("\n\n", @{$git->{_plugin_githooks}{errors}});
+    $faults .= join("\n\n", @{$git->{_plugin_githooks}{faults}});
 
     if ($git->{_plugin_githooks}{hookname} =~ /^commit-msg|pre-commit$/
             && ! $git->get_config_boolean(githooks => 'abort-commit')) {
-        $errors .= <<"EOF";
+        $faults .= <<"EOF";
 
 ATTENTION: To fix the problems in this commit, please consider amending it:
 
@@ -689,10 +719,10 @@ EOF
     }
 
     if (my $footer = $git->get_config(githooks => 'error-footer')) {
-        $errors .= "\n" . qx{$footer} . "\n"; ## no critic (ProhibitBacktickOperators)
+        $faults .= "\n" . qx{$footer} . "\n"; ## no critic (ProhibitBacktickOperators)
     }
 
-    return $errors;
+    return $faults;
 }
 
 sub undef_commit {
@@ -1431,31 +1461,53 @@ method croaks. If the variable isn't defined the method returns undef.
 In the L<Git::Hooks> documentation, all configuration variables mentioning an
 C<INT> value are grokked with this method.
 
-=head2 error PREFIX MESSAGE [DETAILS]
+=head2 fault MESSAGE INFO
 
 This method should be used by plugins to record consistent error or warning
-messages. It gets two or three arguments. The PREFIX is usually the plugin's
-package name. The MESSAGE is a one line string. These two arguments are
-combined to produce a single line like this:
+messages. It gets one or two arguments. MESSAGE is a one line string. INFO is an
+optional hash-ref which may contain additional information about the message
+with the following keys:
+
+=over 4
+
+=item * prefix
+
+A string giving contextual information about the error message. It's used as a
+prefix to the message. When absent, the prefix used is the package name of the
+function which called C<fault>, which is usually a Git::Hooks plugin name. So,
+the actual error message looks like this:
 
   [PREFIX] MESSAGE
 
-DETAILS is an optional string. If present, it is appended to the line above,
-separated by an empty line, and with its lines prefixed by two spaces, like
-this:
+=item * details
+
+A string containing details about the error message. If present, it is appended
+to the line above, separated by an empty line, and with its lines prefixed by
+two spaces, like this:
 
   [PREFIX] MESSAGE
 
     DETAILS
     MORE DETAILS...
 
+=back
+
 The method simply records the formatted error message and returns. It
 doesn't die.
 
-=head2 get_errors
+=head2 get_faults
 
 This method returns a string specially formatted with all error messages
-recorded with the C<error> method, a header, and a footer, if requested.
+recorded with the C<fault> method, a header, and a footer, if requested by
+configuration.
+
+=head2 error PREFIX MESSAGE [DETAILS]
+
+This method is DEPRECATED. Please, use C<fault> instead.
+
+=head2 get_errors
+
+This method is DEPRECATED. Please, use C<get_faults> instead.
 
 =head2 undef_commit
 

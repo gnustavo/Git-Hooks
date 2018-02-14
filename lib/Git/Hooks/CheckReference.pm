@@ -10,7 +10,6 @@ use warnings;
 use Git::Hooks;
 use List::MoreUtils qw/any none/;
 
-my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
 sub check_ref {
@@ -22,7 +21,7 @@ sub check_ref {
     if ($old_commit eq $git->undef_commit) {
         if (any  {$ref =~ qr/$_/} $git->get_config($CFG => 'deny') and
             none {$ref =~ qr/$_/} $git->get_config($CFG => 'allow')) {
-            $git->error($PKG, "reference name '$ref' not allowed");
+            $git->fault("reference name '$ref' not allowed");
             return 0;
         }
     }

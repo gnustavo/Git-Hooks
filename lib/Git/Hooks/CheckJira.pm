@@ -67,21 +67,21 @@ sub _jira {
     # Connect to JIRA if not yet connected
     unless (exists $cache->{jira}) {
         unless (eval { require JIRA::REST; }) {
-            $git->error($PKG, "Please, install Perl module JIRA::REST to use the CheckJira plugin", $@);
+            $git->fault("Please, install Perl module JIRA::REST to use the CheckJira plugin", {details => $@});
             return;
         }
 
         my %jira;
         for my $option (qw/jiraurl jirauser jirapass/) {
             $jira{$option} = $git->get_config($CFG => $option)
-                or $git->error($PKG, "missing $CFG.$option configuration attribute")
+                or $git->fault("missing $CFG.$option configuration attribute")
                     and return;
         }
         $jira{jiraurl} =~ s:/+$::; # trim trailing slashes from the URL
 
         my $jira = eval { JIRA::REST->new($jira{jiraurl}, $jira{jirauser}, $jira{jirapass}) };
         length $@
-            and $git->error($PKG, "cannot connect to the JIRA server at '$jira{jiraurl}' as '$jira{jirauser}", $@)
+            and $git->fault("cannot connect to the JIRA server at '$jira{jiraurl}' as '$jira{jirauser}", {details => $@})
                 and return;
         $cache->{jira} = $jira;
     }
@@ -130,22 +130,22 @@ sub check_codes {
                 $code = do $check;
                 unless ($code) {
                     if (length $@) {
-                        $git->error($PKG, "couldn't parse option check-code ($check)", $@);
+                        $git->fault("couldn't parse option check-code ($check)", {details => $@});
                     } elsif (! defined $code) {
-                        $git->error($PKG, "couldn't do option check-code ($check)", $!);
+                        $git->fault("couldn't do option check-code ($check)", {details => $!});
                     } else {
-                        $git->error($PKG, "couldn't run option check-code ($check)");
+                        $git->fault("couldn't run option check-code ($check)");
                     }
                     next CODE;
                 }
             } else {
                 $code = eval $check; ## no critic (BuiltinFunctions::ProhibitStringyEval)
                 length $@
-                    and $git->error($PKG, "couldn't parse option check-code value", $@)
+                    and $git->fault("couldn't parse option check-code value", {details => $@})
                     and next CODE;
             }
             defined $code and ref $code and ref $code eq 'CODE'
-                or $git->error($PKG, "option check-code must end with a code ref")
+                or $git->fault("option check-code must end with a code ref")
                 and next CODE;
             push @{$cache->{codes}}, $code;
         }
@@ -159,7 +159,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
 
     unless (@keys) {
         if ($git->get_config_boolean($CFG => 'require')) {
-            $git->error($PKG, "commit @{[substr($commit->commit, 0, 10)]} must cite a JIRA in its message");
+            $git->fault("commit @{[substr($commit->commit, 0, 10)]} must cite a JIRA in its message");
             return 0;
         } else {
             return 1;
@@ -211,7 +211,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
         my $matched_set = Set::Scalar->new(keys %$issues);
 
         if (my $missed_set = $cited_set - $matched_set) {
-            $git->error($PKG, "the JIRA issue(s) @{[$missed_set]} do(es) not match the expression '$JQL'");
+            $git->fault("the JIRA issue(s) @{[$missed_set]} do(es) not match the expression '$JQL'");
             ++$errors;
         }
     }
@@ -243,7 +243,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
       ISSUE:
         while (my ($key, $issue) = each %issues) {
             if ($unresolved && defined $issue->{fields}{resolution}) {
-                $git->error($PKG, "issue $key cannot be used because it is already resolved");
+                $git->fault("issue $key cannot be used because it is already resolved");
                 ++$errors;
                 next ISSUE;
             }
@@ -257,25 +257,25 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
                         next VERSION if $fixversion->{name} eq $version;
                     }
                 }
-                $git->error($PKG, "issue $key has no fixVersion matching '$version', which is required for commits affecting '$ref'");
+                $git->fault("issue $key has no fixVersion matching '$version', which is required for commits affecting '$ref'");
                 ++$errors;
                 next ISSUE;
             }
 
             if ($by_assignee) {
                 my $user = $git->authenticated_user()
-                    or $git->error($PKG, "cannot grok the authenticated user")
+                    or $git->fault("cannot grok the authenticated user")
                     and ++$errors
                     and next ISSUE;
 
                 if (my $assignee = $issue->{fields}{assignee}) {
                     my $name = $assignee->{name};
                     $user eq $name
-                        or $git->error($PKG, "issue $key should be assigned to '$user', not '$name'")
+                        or $git->fault("issue $key should be assigned to '$user', not '$name'")
                         and ++$errors
                         and next KEY;
                 } else {
-                    $git->error($PKG, "issue $key should be assigned to '$user', but it's unassigned");
+                    $git->fault("issue $key should be assigned to '$user', but it's unassigned");
                     ++$errors;
                     next KEY;
                 }
@@ -292,7 +292,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
             if (defined $ok) {
                 ++$errors unless $ok;
             } elsif (length $@) {
-                $git->error($PKG, 'error while evaluating check-code', $@);
+                $git->fault('error while evaluating check-code', {details => $@});
                 ++$errors;
             }
         } else {
@@ -355,7 +355,7 @@ sub check_message_file {
 
     my $msg = eval { path($commit_msg_file)->slurp };
     defined $msg
-        or $git->error($PKG, "cannot open file '$commit_msg_file' for reading: $@")
+        or $git->fault("cannot open file '$commit_msg_file' for reading:", {details => $@})
             and return 0;
 
     # Remove comment lines from the message file contents.
@@ -440,7 +440,7 @@ EOF
 
     foreach my $key (@keys) {
         eval { $jira->POST("/issue/$key/comment", undef, \%comment); 1; }
-            or $git->error($PKG, "Cannot add a comment to JIRA issue $key:", $@)
+            or $git->fault("Cannot add a comment to JIRA issue $key:", {details => $@})
             and ++$errors;
     }
 
@@ -483,7 +483,7 @@ sub notify_affected_refs {
             value => $2,
         };
     } elsif ($comment ne 'all') {
-        $git->error($PKG, "Invalid argument to githooks.checkjira.comment: $comment");
+        $git->fault("Invalid argument to githooks.checkjira.comment: $comment");
         return 0;
     }
 
