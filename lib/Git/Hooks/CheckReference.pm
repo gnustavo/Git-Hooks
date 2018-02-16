@@ -21,7 +21,10 @@ sub check_ref {
     if ($old_commit eq $git->undef_commit) {
         if (any  {$ref =~ qr/$_/} $git->get_config($CFG => 'deny') and
             none {$ref =~ qr/$_/} $git->get_config($CFG => 'allow')) {
-            $git->fault("reference name '$ref' not allowed");
+            $git->fault(<<EOS);
+The reference name '$ref' is not allowed.
+Please, check the $CFG.deny options in your configuration.
+EOS
             return 0;
         }
     }

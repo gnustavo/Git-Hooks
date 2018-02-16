@@ -34,6 +34,18 @@ sub _setup_config {
 
 ##########
 
+# Return common help messages to fix author or committer name/email.
+sub _amend_help {
+    my ($who) = @_;
+    if ($who eq 'author') {
+        return 'Please, amend your commit using the --author option to fix the author name/email.';
+    } elsif ($who eq 'committer') {
+        return 'Please, amend your commit after fixing your user.name and/or user.email configuration options.';
+    } else {
+        die "Internal error: invalid who ($who)";
+    }
+}
+
 sub match_errors {
     my ($git, $commit) = @_;
 
@@ -58,13 +70,21 @@ sub match_errors {
                     my $who_info = "${who}_${info}";
                     my $data     = $commit->$who_info;
 
-                    unless (any  { $data =~ $_ } @{$checks->{''}}) {
-                        $git->fault("commit @{[$commit->commit]} $who $info ($data) does not match any positive githooks.checkcommit.$info option");
+                    if (none { $data =~ $_ } @{$checks->{''}}) {
+                        $git->fault(<<"EOS");
+The commit @{[$commit->commit]} $who $info ($data) is invalid.
+It must match at least one positive $CFG.$info option.
+@{[_amend_help($who)]}
+EOS
                         ++$errors;
                     }
 
-                    unless (none { $data =~ $_ } @{$checks->{'!'}}) {
-                        $git->fault("commit @{[$commit->commit]} $who $info ($data) matches some negative githooks.checkcommit.$info option");
+                    if (any { $data =~ $_ } @{$checks->{'!'}}) {
+                        $git->fault(<<"EOS");
+The commit @{[$commit->commit]} $who $info ($data) is invalid.
+It matches some negative $CFG.$info option.
+@{[_amend_help($who)]}
+EOS
                         ++$errors;
                     }
                 }
@@ -81,7 +101,14 @@ sub merge_errors {
     if ($commit->parent() > 1) { # it's a merge commit
         if (my @mergers = $git->get_config($CFG => 'merger')) {
             if (none {$git->match_user($_)} @mergers) {
-                $git->fault("commit @{[$commit->commit]} is a merge but you (@{[$git->authenticated_user]}) are not allowed to perform merges");
+                $git->fault(<<"EOS");
+Authorization error: you cannot push commit @{[$commit->commit]}.
+
+I'm sorry, but you (@{[$git->authenticated_user]}) are not authorized to push
+*merge commits* because you're not included in the $CFG.merger option. You must
+either include yourself in that option or ask somebody else to push the commit
+for you.
+EOS
                 return 1;
             }
         }
@@ -110,7 +137,14 @@ sub email_valid_errors {
                 }
                 $cache->{email_valid} = Email::Valid->new(@checks);
             } else {
-                $git->fault("the checkcommit.email-valid failed because the Email::Valid Perl module is not installed");
+                $git->fault(<<"EOS");
+I could not load the Email::Valid Perl module.
+
+I need it to validate your commit's author and committer as requested by the
+$CFG.email-valid.* options in your configuration.
+
+Please, install the module or disable the options to proceed.
+EOS
                 ++$errors;
             }
         }
@@ -120,8 +154,11 @@ sub email_valid_errors {
                 my $who_email = "${who}_email";
                 my $email     = $commit->$who_email;
                 unless ($ev->address($email)) {
-                    my $fail = $ev->details();
-                    $git->fault("commit @{[$commit->commit]} $who email ($email) failed $fail check");
+                    my $details = $ev->details();
+                    $git->fault(<<"EOS");
+The commit @{[$commit->commit]} $who email ($email) failed the $details check.
+@{[_amend_help($who)]}
+EOS
                     ++$errors;
                 }
             }
@@ -147,9 +184,10 @@ sub _canonical_identity {
                 $canonical;
             } catch {
                 $git->fault(<<'EOS');
-The githooks.checkcommit.canonical option requires the git-check-mailmap
-command which isn't found. It's available since Git 1.8.4. You should either
-upgrade your Git or disable this option.
+The command git-check-mailmap wasn't found.
+The $CFG.canonical option requires it.
+It's available since Git 1.8.4.
+Please, either upgrade your Git or disable this option.
 EOS
                 $identity;
         };
@@ -171,9 +209,11 @@ sub canonical_errors {
             my $canonical = _canonical_identity($git, $mailmap, $identity);
 
             if ($identity ne $canonical) {
-                $git->fault(
-                    "commit @{[$commit->commit]} $who identity ($identity) isn't canonical ($canonical)",
-                );
+                $git->fault(<<"EOS");
+The commit @{[$commit->commit]} $who identity isn't canonical.
+It's '$identity' but its canonical form is '$canonical'.
+@{[_amend_help($who)]}
+EOS
                 ++$errors;
             }
         }
@@ -193,13 +233,22 @@ sub signature_errors {
         my $status = $git->run(qw/log -1 --format='%G?'/, $commit->commit);
 
         if ($status eq 'B') {
-            $git->fault("commit @{[$commit->commit]} has a BAD signature");
+            $git->fault(<<"EOS");
+The commit @{[$commit->commit]} has a BAD GPG signature.
+Please, amend your commit with the -S option to fix it.
+EOS
             ++$errors;
         } elsif ($status eq 'N' && $signature ne 'optional') {
-            $git->fault("commit @{[$commit->commit]} has NO signature");
+            $git->fault(<<"EOS");
+The commit @{[$commit->commit]} has NO GPG signature.
+Please, amend your commit with the -S option to add one.
+EOS
             ++$errors;
         } elsif ($status eq 'U' && $signature eq 'trusted') {
-            $git->fault("commit @{[$commit->commit]} has an UNTRUSTED signature");
+            $git->fault(<<"EOS");
+The commit @{[$commit->commit]} has an UNTRUSTED GPG signature.
+Please, amend your commit with the -S option to add another one.
+EOS
             ++$errors;
         }
     }
@@ -223,11 +272,11 @@ sub code_errors {
                 $code = do $check;
                 unless ($code) {
                     if (length $@) {
-                        $git->fault("couldn't parse check-code file ($check): ", {details => $@});
+                        $git->fault("I couldn't parse the $CFG.check-code file ($check): ", {details => $@});
                     } elsif (! defined $code) {
-                        $git->fault("couldn't read check-code file ($check): ", {details => $!});
+                        $git->fault("I couldn't read the $CFG.check-code file ($check): ", {details => $!});
                     } else {
-                        $git->fault("check-code file ($check) returned FALSE");
+                        $git->fault("The $CFG.check-code file ($check) returned FALSE");
                     }
                     ++$errors;
                     next CODE;
@@ -235,7 +284,7 @@ sub code_errors {
             } else {
                 $code = eval $check; ## no critic (BuiltinFunctions::ProhibitStringyEval)
                 if (length $@) {
-                    $git->fault("couldn't parse check-code value: ", {details => $@});
+                    $git->fault("I couldn't parse the $CFG.check-code value: ", {details => $@});
                     ++$errors;
                     next CODE;
                 }
@@ -243,7 +292,7 @@ sub code_errors {
             if (defined $code && ref $code && ref $code eq 'CODE') {
                 push @{$cache->{codes}}, $code;
             } else {
-                $git->fault("option check-code must end with a code ref");
+                $git->fault("The option $CFG.check-code must end with a code ref.");
                 ++$errors;
             }
         }
@@ -253,11 +302,11 @@ sub code_errors {
         my $ok = eval { $code->($git, $commit, $ref) };
         if (defined $ok) {
             unless ($ok) {
-                $git->fault("error while evaluating check-code");
+                $git->fault("Error detected while evaluating $CFG.check-code.");
                 ++$errors;
             }
         } elsif (length $@) {
-            $git->fault('error while evaluating check-code', {details => $@});
+            $git->fault('Error detected while evaluating $CFG.check-code', {details => $@});
             ++$errors;
         }
     }
@@ -286,7 +335,15 @@ sub check_ref {
 
     if (my $limit = $git->get_config_integer($CFG => 'push-limit')) {
         if (@commits > $limit) {
-            $git->fault("you're pushing @{[scalar @commits]} commits to $ref, more than our current limit of $limit");
+            $git->fault(<<"EOS");
+Are you sure you want to push @{[scalar @commits]} commits to $ref at once?
+
+The $CFG.push-limit configuration option currently allows one to push at most
+$limit commits to a reference at once.
+
+If you're sure about this you can break the whole commit sequence in smaller
+subsequences and push them one at a time.
+EOS
             ++$errors;
         }
     }
@@ -333,18 +390,7 @@ sub check_post_commit {
 
     my $commit = $git->get_sha1('HEAD');
 
-    if (signature_errors($git, $commit)) {
-        $git->fault("broken commit", {details => <<"EOF"});
-ATTENTION: To fix the problems in this commit, please consider
-amending it:
-
-        git commit --amend      # to amend it
-EOF
-        return 0;
-    } else {
-        return 1;
-    }
-
+    return signature_errors($git, $commit);
 }
 
 # This routine can act both as an update or a pre-receive hook.

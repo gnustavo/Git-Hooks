@@ -238,7 +238,7 @@ sub notify_affected_refs {
             } catch {
                 my $error = $_;
                 $git->fault(
-                    sprintf('Could not send mail to the following recipients: %s\n',
+                    sprintf('I could not send mail to the following recipients: %s\n',
                             join(", ", $error->recipients)),
                     {details => $error->message}
                 );

@@ -68,12 +68,12 @@ sub check_command {
         $command =~ s/\{\}/\'$file\'/g;
         my $message = do {
             if ($exit == -1) {
-                "command '$command' could not be executed: $!";
+                "Command '$command' could not be executed: $!";
             } elsif ($exit & 127) {
-                sprintf("command '%s' was killed by signal %d, %s coredump",
+                sprintf("Command '%s' was killed by signal %d, %s coredump",
                         $command, ($exit & 127), ($exit & 128) ? 'with' : 'without');
             } else {
-                sprintf("command '%s' failed with exit code %d", $command, $exit >> 8);
+                sprintf("Command '%s' failed with exit code %d", $command, $exit >> 8);
             }
         };
 
@@ -135,14 +135,22 @@ sub check_new_files {
 
         if (any  {$basename =~ $_} @{$re_checks{basename}{deny}} and
             none {$basename =~ $_} @{$re_checks{basename}{allow}}) {
-            $git->fault("File '$file' basename was denied.");
+            $git->fault(<<"EOS");
+The file '$file' basename is not allowed.
+Please, check the $CFG.basename.deny and
+$CFG.basename.allow options in your configuration.
+EOS
             ++$errors;
             next FILE;          # Don't botter checking the contents of invalid files
         }
 
         if (any  {$file =~ $_} @{$re_checks{path}{deny}} and
             none {$file =~ $_} @{$re_checks{path}{allow}}) {
-            $git->fault("File '$file' path was denied.");
+            $git->fault(<<"EOS");
+The file '$file' path is not allowed.
+Please, check the $CFG.path.deny and
+$CFG.path.allow options in your configuration.
+EOS
             ++$errors;
             next FILE;          # Don't botter checking the contents of invalid files
         }
@@ -158,7 +166,13 @@ sub check_new_files {
         }
 
         if ($file_sizelimit && $file_sizelimit < $size) {
-            $git->fault("File '$file' has $size bytes but the current limit is just $file_sizelimit bytes.");
+            $git->fault(<<"EOS");
+The file '$file' is too big.
+
+It has $size bytes but the current limit is $file_sizelimit bytes.
+Please, check the $CFG.sizelimit and
+$CFG.basename.sizelimit options in your configuration.
+EOS
             ++$errors;
             next FILE;    # Don't botter checking the contents of huge files
         }

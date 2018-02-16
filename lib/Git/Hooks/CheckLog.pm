@@ -47,8 +47,14 @@ sub _spell_checker {
 
     unless (state $tried_to_check) {
         unless (eval { require Text::SpellChecker; }) {
-            $git->fault("Please, install Perl module Text::SpellChecker to spell messages",
-                        {details => $@});
+            $git->fault(<<"EOS", {details => $@});
+I could not load the Text::SpellChecker Perl module.
+
+I need it to spell check your commit's messages as requested by the
+$CFG.spelling option in your configuration.
+
+Please, install the module or disable the option to proceed.
+EOS
             return;
         }
 
@@ -63,7 +69,11 @@ sub _spell_checker {
 
         my $word = eval { $checker->next_word(); };
         length $@
-            and $git->fault("cannot spell check using Text::SpellChecker", {details => $@})
+            and $git->fault(<<"EOS", {details => $@})
+There was an error while I tried to spell check your commits using the
+Text::SpellChecker module. If you cannot fix it consider disabling the
+$CFG.spelling option in your configuration.
+EOS
                 and return;
 
         $tried_to_check = 1;
@@ -87,7 +97,7 @@ sub spelling_errors {
 
     foreach my $badword ($checker->next_word()) {
         my @suggestions = $checker->suggestions($badword);
-        $git->fault("commit $id log has a misspelled word: '$badword'",
+        $git->fault("The commit $id log message has a misspelled word: '$badword'",
                     defined $suggestions[0]
                         ? {details => "suggestions: " . join(', ', @suggestions)}
                         : undef,
@@ -106,12 +116,12 @@ sub _pattern_error {
 
     if ($match =~ s/^!\s*//) {
         $text !~ /$match/m
-            or $git->fault("$what SHOULD NOT match '\Q$match\E'")
+            or $git->fault("The $what SHOULD NOT match '\Q$match\E'")
             and return 1;
     }
     else {
         $text =~ /$match/m
-            or $git->fault("$what SHOULD match '\Q$match\E'")
+            or $git->fault("The $what SHOULD match '\Q$match\E'")
             and return 1;
     }
 
@@ -124,7 +134,7 @@ sub pattern_errors {
     my $errors = 0;
 
     foreach my $match ($git->get_config($CFG => 'match')) {
-        $errors += _pattern_error($git, $msg, $match, "commit $id log");
+        $errors += _pattern_error($git, $msg, $match, "commit $id log message");
     }
 
     return $errors;
@@ -137,7 +147,10 @@ sub revert_errors {
         if ($msg =~ /This reverts commit ([0-9a-f]{40})/s) {
             my $reverted_commit = $git->get_commit($1);
             if ($reverted_commit->parent() > 1) {
-                $git->fault("commit $id reverts a merge commit, which is not allowed");
+                $git->fault(<<"EOS");
+The commit $id reverts a merge commit, which is not allowed
+by the $CFG.deny-merge-revert option in your configuration.
+EOS
                 return 1;
             }
         }
@@ -151,7 +164,11 @@ sub title_errors {
 
     unless (defined $title and length $title) {
         if ($git->get_config_boolean($CFG => 'title-required')) {
-            $git->fault("commit $id log needs a title line");
+            $git->fault(<<"EOS");
+The commit $id log message needs a title line.
+This is required by the $CFG.title-required option in your configuration.
+Please, amend your commit to add one.
+EOS
             return 1;
         } else {
             return 0;
@@ -159,7 +176,11 @@ sub title_errors {
     }
 
     ($title =~ tr/\n/\n/) == 1
-        or $git->fault("commit $id log title should have just one line")
+        or $git->fault(<<"EOS")
+The commit $id log message title must have just one line.
+Please amend your commit and edit its log message so that its first line
+is separated from the rest by an empty line.
+EOS
             and return 1;
 
     my $errors = 0;
@@ -167,21 +188,37 @@ sub title_errors {
     if (my $max_width = $git->get_config_integer($CFG => 'title-max-width')) {
         my $tlen = length($title) - 1; # discount the newline
         $tlen <= $max_width
-            or $git->fault("commit $id log title should be at most $max_width characters wide, but it has $tlen")
+            or $git->fault(<<"EOS")
+The commit $id log message title is too long.
+It is $tlen characters wide but should be at most $max_width, a limit set by
+the $CFG.title-max-width option in your configuration.
+Please, amend your commit to make its title shorter.
+EOS
                 and ++$errors;
     }
 
     if (my $period = $git->get_config($CFG => 'title-period')) {
         if ($period eq 'deny') {
             $title !~ /\.$/
-                or $git->fault("commit $id log title SHOULD NOT end in a period")
+                or $git->fault(<<"EOS")
+The commit $id log message title SHOULD NOT end in a period.
+This is required by the $CFG.title-period option in your configuration.
+Please, amend your commit to remove the period.
+EOS
                     and ++$errors;
         } elsif ($period eq 'require') {
             $title =~ /\.$/
-                or $git->fault("commit $id log title SHOULD end in a period")
+                or $git->fault(<<"EOS")
+The commit $id log message title SHOULD end in a period.
+This is required by the $CFG.title-period option in your configuration.
+Please, amend your commit to add the period.
+EOS
                     and ++$errors;
         } elsif ($period ne 'allow') {
-            $git->fault("invalid value for the $CFG.title-period option: '$period'")
+            $git->fault(<<"EOS")
+Configuration error: invalid value '$period' for the $CFG.title-period option.
+The valid values are 'deny', 'allow', and 'require'.
+EOS
                 and ++$errors;
         }
     }
@@ -201,9 +238,12 @@ sub body_errors {
     if (my $max_width = $git->get_config_integer($CFG => 'body-max-width')) {
         if (my @biggies = grep {/^\S/} grep {length > $max_width} split(/\n/, $body)) {
             my $theseare = @biggies == 1 ? "this is" : "these are";
-            $git->fault("commit $id log body lines should be at most $max_width characters wide, but $theseare bigger",
-                        {details => join("\n", @biggies)},
-                    );
+            $git->fault(<<"EOS", {details => join("\n", @biggies)});
+The commit $id log body has lines that are too long.
+The $CFG.body-max-width option in your configuration limits body lines
+to $max_width characters. But the following lines exceed it.
+Please, amend your commit to make its lines shorter.
+EOS
             return 1;
         }
     }
@@ -218,7 +258,11 @@ sub footer_errors {
 
     if ($git->get_config_boolean($CFG => 'signed-off-by')) {
         scalar($cmsg->get_footer_values('signed-off-by')) > 0
-            or $git->fault("commit $id must have a Signed-off-by footer")
+            or $git->fault(<<"EOS")
+The commit $id must have a Signed-off-by footer.
+This is required by the $CFG.signed-off-by option in your configuration.
+Please, amend your commit to add it.
+EOS
                 and ++$errors;
     }
 
@@ -259,8 +303,9 @@ sub check_message_file {
     my $msg = eval {$git->read_commit_msg_file($commit_msg_file)};
 
     unless (defined $msg) {
-        $git->fault("cannot read commit message file '$commit_msg_file'",
-                    {details => $@});
+        $git->fault(<<"EOS", {details => $@});
+I cannot read the commit message file '$commit_msg_file'.
+EOS
         return 0;
     }
 

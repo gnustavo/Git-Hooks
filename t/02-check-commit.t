@@ -106,7 +106,7 @@ $repo->run(qw/config --add githooks.checkcommit.name valid2/);
 
 check_can_commit('allow positive author name', 'valid2');
 
-check_cannot_commit('deny positive author name', qr/does not match any positive/, 'none');
+check_cannot_commit('deny positive author name', qr/is invalid/, 'none');
 
 $repo->run(qw/config --add githooks.checkcommit.name !invalid/);
 
@@ -124,7 +124,7 @@ $repo->run(qw/config --add githooks.checkcommit.email valid2/);
 
 check_can_commit('allow positive author email', 'valid2');
 
-check_cannot_commit('deny positive author email', qr/does not match any positive/, 'none');
+check_cannot_commit('deny positive author email', qr/is invalid/, 'none');
 
 $repo->run(qw/config --add githooks.checkcommit.email !invalid/);
 
@@ -155,7 +155,7 @@ EOS
 
     check_cannot_commit(
         'deny non-canonical email',
-        qr/identity .*? isn't canonical/,
+        qr/identity isn't canonical/,
         'Good Name',
         'bad@example.net',
     );
@@ -163,7 +163,7 @@ EOS
 
     check_cannot_commit(
         'deny non-canonical name',
-        qr/identity .*? isn't canonical/,
+        qr/identity isn't canonical/,
         'Improper Name',
         'proper@example.net',
     );
@@ -184,7 +184,7 @@ $repo->run(qw/config githooks.checkcommit.check-code/,
 
 check_can_commit('check-code commit ok', 'valid');
 
-check_cannot_commit('check-code commit nok', qr/error while evaluating check-code/, 'other');
+check_cannot_commit('check-code commit nok', qr/Error detected while evaluating/, 'other');
 
 $repo->run(qw/config --remove-section githooks.checkcommit/);
 
@@ -204,7 +204,7 @@ SKIP: {
 
     check_cannot_commit(
         'deny invalid email',
-        qr/failed rfc822 check/,
+        qr/failed the rfc822 check/,
         'Good Name',
         'bad@example@net',
     );
@@ -225,7 +225,7 @@ $clone->run(qw/config githooks.checkcommit.name valid1/);
 
 check_can_push('allow positive author name (push)', 'master', 'valid1');
 
-check_cannot_push('deny positive author name (push)', qr/does not match any positive/, 'master', 'none');
+check_cannot_push('deny positive author name (push)', qr/is invalid/, 'master', 'none');
 
 $clone->run(qw/config --remove-section githooks.checkcommit/);
 
@@ -254,7 +254,7 @@ check_can_push_merge('allow merges by default');
 $clone->run(qw/config githooks.checkcommit.merger merger/);
 
 $ENV{GITMERGER} = 'user';
-check_cannot_push_merge('deny merges by non-mergers', qr/are not allowed to perform merges/);
+check_cannot_push_merge('deny merges by non-mergers', qr/are not authorized to push/);
 
 $ENV{GITMERGER} = 'merger';
 check_can_push_merge('allow merges by merger');
@@ -268,7 +268,7 @@ $clone->run(qw/config --remove-section githooks.checkcommit/);
 $clone->run(qw/config githooks.checkcommit.push-limit 1/);
 
 $repo->run(qw/commit --allow-empty -mempty/);
-check_cannot_push('push-limit deny', qr/more than our current limit of/, 'master', 'name');
+check_cannot_push('push-limit deny', qr/allows one to push at most/, 'master', 'name');
 
 $clone->run(qw/config --remove-section githooks.checkcommit/);
 
@@ -279,7 +279,7 @@ $clone->run(qw/config githooks.checkcommit.check-code/,
 
 check_can_push('check-code push ok', 'valid', 'name');
 
-check_cannot_push('check-code push nok', qr/error while evaluating check-code/, 'invalid', 'name');
+check_cannot_push('check-code push nok', qr/Error detected while evaluating/, 'invalid', 'name');
 
 $clone->run(qw/config --remove-section githooks.checkcommit/);
 
@@ -300,6 +300,6 @@ $clone->run(qw/config githooks.checkcommit.check-code/, "file:$script");
 
 check_can_push('check-code push file ok', 'valid', 'name');
 
-check_cannot_push('check-code push file nok', qr/error while evaluating check-code/, 'invalid', 'name');
+check_cannot_push('check-code push file nok', qr/Error detected while evaluating/, 'invalid', 'name');
 
 $clone->run(qw/config --remove-section githooks.checkcommit/);

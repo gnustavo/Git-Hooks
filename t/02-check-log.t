@@ -81,7 +81,7 @@ check_cannot_commit('deny commit on enabled ref when commit message is faulty', 
 
 $repo->run(qw/config --remove-section githooks.checklog/);
 
-check_cannot_commit('deny without required title', qr/log needs a title line/, <<'EOF');
+check_cannot_commit('deny without required title', qr/log message needs a title line/, <<'EOF');
 No
 Title
 EOF
@@ -111,13 +111,13 @@ check_can_commit('allow without denied period', <<'EOF');
 Title
 EOF
 
-check_cannot_commit('deny with denied period', qr/log title SHOULD NOT end in a period/, <<'EOF');
+check_cannot_commit('deny with denied period', qr/log message title SHOULD NOT end in a period/, <<'EOF');
 Title.
 EOF
 
 $repo->run(qw/config githooks.checklog.title-period require/);
 
-check_cannot_commit('deny without required period', qr/log title SHOULD end in a period/, <<'EOF');
+check_cannot_commit('deny without required period', qr/log message title SHOULD end in a period/, <<'EOF');
 Title
 EOF
 
@@ -137,7 +137,7 @@ EOF
 
 $repo->run(qw/config githooks.checklog.title-period invalid/);
 
-check_cannot_commit('deny due to invalid value', qr/invalid value for the/, <<'EOF');
+check_cannot_commit('deny due to invalid value', qr/error: invalid value/, <<'EOF');
 Title
 EOF
 
@@ -145,7 +145,7 @@ $repo->run(qw/config --remove-section githooks.checklog/);
 
 # title-max-width
 
-check_cannot_commit('deny large title', qr/log title should be at most 50 characters wide, but it has 51/, <<'EOF');
+check_cannot_commit('deny large title', qr/It is 51 characters wide but should be at most 50,/, <<'EOF');
 123456789012345678901234567890123456789012345678901
 
 The above title has 51 characters.
@@ -164,7 +164,7 @@ $repo->run(qw/config --remove-section githooks.checklog/);
 # body-max-width
 
 check_cannot_commit('deny large body',
-                    qr/log body lines should be at most 72 characters wide, but/, <<'EOF');
+                    qr/to 72 characters./, <<'EOF');
 Title
 
 Body first line.
@@ -206,13 +206,13 @@ Title
 has to have
 EOF
 
-check_cannot_commit('deny if do not match positive regex', qr/log SHOULD match/, <<'EOF');
+check_cannot_commit('deny if do not match positive regex', qr/log message SHOULD match/, <<'EOF');
 Title
 
 abracadabra
 EOF
 
-check_cannot_commit('deny if match negative regex', qr/log SHOULD NOT match/, <<'EOF');
+check_cannot_commit('deny if match negative regex', qr/log message SHOULD NOT match/, <<'EOF');
 Title
 
 has to have
@@ -296,7 +296,7 @@ EOF
 
     $repo->run(qw/config --add githooks.checklog.spelling 1/);
 
-    check_cannot_commit('deny misspelling with checking', qr/log has a misspelled word/, <<'EOF');
+    check_cannot_commit('deny misspelling with checking', qr/log message has a misspelled word/, <<'EOF');
 xytxuythiswordshouldnotspell
 EOF
 

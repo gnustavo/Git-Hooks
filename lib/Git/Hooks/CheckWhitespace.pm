@@ -58,7 +58,10 @@ sub check_affected_refs {
             $old_commit eq $git->undef_commit ? $git->empty_tree : $old_commit,
             $new_commit);
         if ($? != 0) {
-            $git->fault("whitespace errors in the changed files in $ref", {details => $output});
+            $git->fault(<<"EOS", {details => $output});
+There are extra whitespaces in the changed files in $ref.
+Please, remove them and amend your commit.
+EOS
             ++$errors;
         };
     }
@@ -75,7 +78,10 @@ sub check_commit {
     if ($? == 0) {
         return 1;
     } else {
-        $git->fault('whitespace errors in the changed files', {details => $output});
+        $git->fault(<<"EOS", {details => $output});
+There are extra whitespaces in the changed files.
+Please, remove them and amend your commit.
+EOS
         return 0;
     };
 }
@@ -91,7 +97,10 @@ sub check_patchset {
     if ($? == 0) {
         return 1;
     } else {
-        $git->fault('whitespace errors in the changed files', {details => $output});
+        $git->fault(<<"EOS", {details => $output});
+There are extra whitespaces in the changed files.
+Please, remove them and amend your commit.
+EOS
         return 0;
     };
 }

@@ -22,7 +22,7 @@ sub check_can_push {
 sub check_cannot_push {
     my ($testname, $ref, $error) = @_;
     new_commit($repo, $file);
-    test_nok_match($testname, $error || qr/\) cannot \S+ ref /, $repo,
+    test_nok_match($testname, $error || qr/\) cannot \S+ reference /, $repo,
 		   'push', '--tags', $clone->git_dir(), $ref || 'master');
 }
 

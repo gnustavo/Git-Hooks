@@ -22,7 +22,7 @@ sub gen_change_id {
 
     my $filename = Path::Tiny->tempfile(UNLINK => 1);
     open my $fh, '>', $filename ## no critic (RequireBriefOpen)
-        or $git->fault("internal error: can't open $filename for writing:", {details => $!})
+        or $git->fault("Internal error: can't open '$filename' for writing:", {details => $!})
         and die;
 
     foreach my $info (
@@ -71,7 +71,8 @@ sub rewrite_message {
 
     my $msg = eval { $git->read_commit_msg_file($commit_msg_file) };
     unless (defined $msg) {
-        $git->fault("cannot read commit message file '$commit_msg_file'", {details => $@});
+        $git->fault("Internal error: cannot read commit message file '$commit_msg_file'",
+                    {details => $@});
         return 0;
     }
 

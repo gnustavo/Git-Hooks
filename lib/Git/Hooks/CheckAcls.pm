@@ -70,7 +70,16 @@ sub check_ref {
         next unless $git->match_user($who);
         next unless match_ref($ref, $refspec);
         if ($what =~ /[^CRUD-]/) {
-            $git->fault("invalid acl 'what' component: '$what'");
+            $git->fault(<<EOS);
+Configuration error in a $CFG.acl option.
+
+It has an invalid second argument:
+
+  acl = $who *$what* $refspec
+
+The valid values are combinations of the letters 'CRUD'.
+Please, check your configuration and fix it.
+EOS
             return 0;
         }
         return 1 if index($what, $op) != -1;
@@ -85,9 +94,16 @@ sub check_ref {
     );
 
     if (my $myself = eval { $git->authenticated_user() }) {
-        $git->fault("you ($myself) cannot $op{$op} ref $ref");
+        $git->fault(<<EOS);
+Authorization error: you ($myself) cannot $op{$op} reference $ref.
+Please, check the $CFG.acl options in your configuration.
+EOS
     } else {
-        $git->fault("cannot grok authenticated username", {details => $@});
+        $git->fault(<<EOS, {details => $@});
+Internal error: I cannot get your username to authorize you.
+Please check your Git::Hooks configuration with regards to the function
+https://metacpan.org/pod/Git::Repository::Plugin::GitHooks#authenticated_user
+EOS
     }
 
     return 0;

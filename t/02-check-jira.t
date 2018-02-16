@@ -176,7 +176,7 @@ $repo->run(qw/checkout -q master/);
 
 $repo->run(qw/config githooks.checkjira.project OTHER/);
 check_cannot_commit('deny commit citing non-allowed projects [GIT-0]',
-		    qr/not match the expression/);
+		    qr/not match the JQL expression/);
 
 $repo->run(qw/config githooks.checkjira.require 0/);
 check_can_commit('allow commit if JIRA is not required');
@@ -186,14 +186,14 @@ $repo->run(qw/config --replace-all githooks.checkjira.project GIT/);
 
 $repo->run(qw/config --replace-all githooks.checkjira.jirapass invalid/);
 check_cannot_commit('deny commit if cannot connect to JIRA [GIT-0]',
-		    qr/cannot connect to the JIRA server/);
+		    qr/Cannot connect to the JIRA server/);
 $repo->run(qw/config --replace-all githooks.checkjira.jirapass valid/);
 
 check_cannot_commit('deny commit if cannot get issue [GIT-0]',
-		    qr/not match the expression/);
+		    qr/not match the JQL expression/);
 
 check_cannot_commit('deny commit if issue is already resolved [GIT-1]',
-		    qr/cannot be used because it is already resolved/);
+		    qr/which is already resolved/);
 
 $repo->run(qw/config --replace-all githooks.checkjira.unresolved 0/);
 check_can_commit('allow commit if issue can be resolved [GIT-1]');
@@ -202,7 +202,7 @@ $repo->run(qw/config --unset-all githooks.checkjira.unresolved/);
 $repo->run(qw/config --replace-all githooks.checkjira.by-assignee 1/);
 $ENV{USER} = 'other';
 check_cannot_commit('deny commit if not by-assignee [GIT-2]',
-		    qr/should be assigned to 'other', not 'user'/);
+		    qr/which is assigned to 'user'/);
 
 $ENV{USER} = 'user';
 check_can_commit('allow commit if by-assignee [GIT-2]');
@@ -212,13 +212,13 @@ check_can_commit('allow commit if valid issue cited [GIT-2]');
 
 $repo->run(qw/config --replace-all githooks.checkjira.status Taken/);
 check_cannot_commit('deny commit if not in valid status [GIT-2]',
-		    qr/not match the expression/);
+		    qr/not match the JQL expression/);
 check_can_commit('allow commit if in valid status [GIT-3]');
 $repo->run(qw/config --unset-all githooks.checkjira.status/);
 
 $repo->run(qw/config --replace-all githooks.checkjira.issuetype Bug/);
 check_cannot_commit('deny commit if not with valid type [GIT-3]',
-		    qr/not match the expression/);
+		    qr/not match the JQL expression/);
 check_can_commit('allow commit if with valid type [GIT-2]');
 $repo->run(qw/config --unset-all githooks.checkjira.issuetype/);
 
@@ -226,18 +226,18 @@ $repo->run(qw/config --replace-all githooks.checkjira.fixversion/, 'refs/heads/x
 check_can_commit('allow commit with fixversion if do not match branch [GIT-2]');
 $repo->run(qw/config --replace-all githooks.checkjira.fixversion/, 'refs/heads/master 1.2');
 check_cannot_commit('deny commit matching branch but not version [GIT-2]',
-		    qr/has no fixVersion matching/);
+		    qr/must cite issues associated with a fixVersion matching/);
 check_can_commit('allow commit matching branch and version [GIT-3]');
 $repo->run(qw/config --replace-all githooks.checkjira.fixversion/, '^.+/master ^1.2');
 check_can_commit('allow commit matching branch and version [GIT-2]');
 $repo->run(qw/config --replace-all githooks.checkjira.fixversion/, '^.+/(master) ^1.2$');
 check_cannot_commit('deny commit matching branch but not regexp version [GIT-2]',
-		    qr/has no fixVersion matching/);
+		    qr/must cite issues associated with a fixVersion matching/);
 $repo->run(qw/config --replace-all githooks.checkjira.fixversion/, '^refs/heads/m(aste)r m$+r');
 check_can_commit('allow commit matching capture branch [GIT-4]');
 $repo->run(qw/config --replace-all githooks.checkjira.fixversion/, '^refs/heads/m(aste)r $+');
 check_cannot_commit('deny commit matching not matching capture branch [GIT-4]',
-		    qr/has no fixVersion matching/);
+		    qr/must cite issues associated with a fixVersion matching/);
 $repo->run(qw/config --replace-all githooks.checkjira.fixversion/, '^refs/heads/m(aste)r ^.$+.');
 check_can_commit('allow commit matching capture branch and fixversion [GIT-4]');
 $repo->run(qw/config --unset-all githooks.checkjira.fixversion/);

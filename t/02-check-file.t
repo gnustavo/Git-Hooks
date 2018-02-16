@@ -112,11 +112,11 @@ $repo->run(qw/config githooks.checkfile.sizelimit 4/);
 
 check_can_commit('small file', 'file.txt', 'truncate', '12');
 
-check_cannot_commit('big file', qr/the current limit is just/, 'file.txt', 'truncate', '123456789');
+check_cannot_commit('big file', qr/the current limit is/, 'file.txt', 'truncate', '123456789');
 
 $repo->run(qw/config githooks.checkfile.basename.sizelimit/, '2 \.txt$');
 
-check_cannot_commit('basename big file', qr/the current limit is just 2 bytes/, 'file.txt', 'truncate', '123');
+check_cannot_commit('basename big file', qr/the current limit is 2 bytes/, 'file.txt', 'truncate', '123');
 
 $repo->run(qw/config --unset-all githooks.checkfile.sizelimit/);
 
@@ -124,7 +124,7 @@ $repo->run(qw/config --unset-all githooks.checkfile.basename.sizelimit/);
 
 $repo->run(qw/config githooks.checkfile.basename.deny txt/);
 
-check_cannot_commit('deny basename', qr/basename was denied/, 'file.txt');
+check_cannot_commit('deny basename', qr/basename is not allowed/, 'file.txt');
 
 $repo->run(qw/config githooks.checkfile.basename.allow txt/);
 
@@ -136,7 +136,7 @@ $repo->run(qw/config --unset-all githooks.checkfile.basename.allow/);
 
 $repo->run(qw/config githooks.checkfile.path.deny txt/);
 
-check_cannot_commit('deny path', qr/path was denied/, 'file.txt');
+check_cannot_commit('deny path', qr/path is not allowed/, 'file.txt');
 
 $repo->run(qw/config githooks.checkfile.path.allow txt/);
 
@@ -167,4 +167,4 @@ $clone->run(qw/config githooks.checkfile.sizelimit 4/);
 
 check_can_push('small file', 'file.txt', 'truncate', '12');
 
-check_cannot_push('big file', qr/the current limit is just/, 'file.txt', 'truncate', '123456789');
+check_cannot_push('big file', qr/the current limit is/, 'file.txt', 'truncate', '123456789');

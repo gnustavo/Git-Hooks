@@ -60,8 +60,11 @@ sub check_commit_amend {
     my $record_file = _record_filename($git);
 
     -r $record_file
-        or $git->fault("cannot read $record_file. You probably forgot to symlink the pre-commit hook")
-            and return 0;
+        or $git->fault(<<EOS)
+I cannot read $record_file.
+Please, check if you forgot to create the pre-commit hook.
+EOS
+        and return 0;
 
     my ($old_commit, $old_parents) = $record_file->lines;
 
@@ -89,18 +92,18 @@ sub check_commit_amend {
     if (@branches > 0) {
         # $old_commit is reachable by at least one branch, which means
         # the amend was unsafe.
-        my $branches = join "\n    ", @branches;
-        $git->fault("unsafe commit", {details => <<"EOF"});
-You've just performed un unsafe "git commit --amend" because your
+        my $branches = join "\n  ", @branches;
+        $git->fault(<<EOS);
+You just performed an unsafe "git commit --amend" because your
 original HEAD ($old_commit) is still reachable by the following
 branch(es):
 
-    $branches
+  $branches
 
-Consider amending it again:
+Consider amending it again with the following command:
 
-    git commit --amend      # to amend it
-EOF
+  git commit --amend
+EOS
         return 0;
     }
 
@@ -139,13 +142,21 @@ sub check_rebase {
     if (@branches > 1) {
         # The base commit is reachable by more than one branch, which
         # means the rewrite is unsafe.
-        my $branches = join("\n    ", grep {$_ ne $branch} @branches);
-        $git->fault("unsafe rebase", {details => <<"EOF"});
-This is an unsafe rebase because it would rewrite commits shared by
-$branch and the following other branch(es):
+        my $branches = join("\n  ", grep {$_ ne $branch} @branches);
+        $git->fault(<<EOS);
+You just performed an unsafe rebase because it would rewrite commits shared
+by $branch and the following other branch(es):
 
-    $branches
-EOF
+  $branches
+
+If the rebase was just effected, you can reset your branch to its previous
+commit with the command:
+
+  git reset --hard \@{1}
+
+But be sure to understand the consequences of this command, as it can
+potentially make you lose work.
+EOS
         return 0;
     }
 

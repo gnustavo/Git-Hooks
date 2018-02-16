@@ -67,21 +67,36 @@ sub _jira {
     # Connect to JIRA if not yet connected
     unless (exists $cache->{jira}) {
         unless (eval { require JIRA::REST; }) {
-            $git->fault("Please, install Perl module JIRA::REST to use the CheckJira plugin", {details => $@});
+            $git->fault(<<"EOS", {details => $@});
+I could not load the JIRA::REST Perl module.
+
+I need it to talk to your JIRA server, as configured by the $CFG.* options in
+your Git configuration.
+
+Please, install the module or disable these options to proceed.
+EOS
             return;
         }
 
         my %jira;
         for my $option (qw/jiraurl jirauser jirapass/) {
             $jira{$option} = $git->get_config($CFG => $option)
-                or $git->fault("missing $CFG.$option configuration attribute")
-                    and return;
+                or $git->fault(<<"EOS")
+The $CFG.$option option is missing from the configuration.
+It's required in order to connect to the JIRA server.
+EOS
+                and return;
         }
         $jira{jiraurl} =~ s:/+$::; # trim trailing slashes from the URL
 
         my $jira = eval { JIRA::REST->new($jira{jiraurl}, $jira{jirauser}, $jira{jirapass}) };
         length $@
-            and $git->fault("cannot connect to the JIRA server at '$jira{jiraurl}' as '$jira{jirauser}", {details => $@})
+            and $git->fault(<<"EOS", {details => $@})
+Cannot connect to the JIRA server at '$jira{jiraurl}' as '$jira{jirauser}.
+
+Please, check your $CFG.jiraurl, $CFG.jirauser,
+and $CFG.jirapass configuration options.
+EOS
                 and return;
         $cache->{jira} = $jira;
     }
@@ -130,22 +145,22 @@ sub check_codes {
                 $code = do $check;
                 unless ($code) {
                     if (length $@) {
-                        $git->fault("couldn't parse option check-code ($check)", {details => $@});
+                        $git->fault("I couldn't parse $CFG.check-code option ($check).", {details => $@});
                     } elsif (! defined $code) {
-                        $git->fault("couldn't do option check-code ($check)", {details => $!});
+                        $git->fault("I couldn't do $CFG.check-code option ($check).", {details => $!});
                     } else {
-                        $git->fault("couldn't run option check-code ($check)");
+                        $git->fault("I couldn't run $CFG.check-code option ($check).");
                     }
                     next CODE;
                 }
             } else {
                 $code = eval $check; ## no critic (BuiltinFunctions::ProhibitStringyEval)
                 length $@
-                    and $git->fault("couldn't parse option check-code value", {details => $@})
+                    and $git->fault("I couldn't parse $CFG.check-code option value.", {details => $@})
                     and next CODE;
             }
             defined $code and ref $code and ref $code eq 'CODE'
-                or $git->fault("option check-code must end with a code ref")
+                or $git->fault("The $CFG.check-code option must end with a code-ref.")
                 and next CODE;
             push @{$cache->{codes}}, $code;
         }
@@ -159,7 +174,11 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
 
     unless (@keys) {
         if ($git->get_config_boolean($CFG => 'require')) {
-            $git->fault("commit @{[$commit->commit]} must cite a JIRA in its message");
+            $git->fault(<<"EOS");
+The commit @{[$commit->commit]} must cite a JIRA in its message.
+
+Please, amend your commit to insert a JIRA key.
+EOS
             return 0;
         } else {
             return 1;
@@ -211,7 +230,31 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
         my $matched_set = Set::Scalar->new(keys %$issues);
 
         if (my $missed_set = $cited_set - $matched_set) {
-            $git->fault("the JIRA issue(s) @{[$missed_set]} do(es) not match the expression '$JQL'");
+            if ($missed_set->size == 1) {
+                $git->fault(<<"EOS");
+The commit $commit cites an invalid issue:
+
+  @{[$missed_set]}
+
+The issue does not match the JQL expression:
+
+  $JQL
+
+Please, update your issue or fix your $CFG git configuration.
+EOS
+            } else {
+                $git->fault(<<"EOS");
+The commit $commit cites invalid issues:
+
+  @{[$missed_set]}
+
+The issues do not match the JQL expression:
+
+  $JQL
+
+Please, update your issues or fix your $CFG git configuration.
+EOS
+            }
             ++$errors;
         }
     }
@@ -243,7 +286,12 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
       ISSUE:
         while (my ($key, $issue) = each %issues) {
             if ($unresolved && defined $issue->{fields}{resolution}) {
-                $git->fault("issue $key cannot be used because it is already resolved");
+                $git->fault(<<"EOS");
+The commit cites issue $key which is already resolved.
+
+The $CFG.unresolved option in your configuration requires
+that all JIRA issues be unresolved.
+EOS
                 ++$errors;
                 next ISSUE;
             }
@@ -257,25 +305,44 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
                         next VERSION if $fixversion->{name} eq $version;
                     }
                 }
-                $git->fault("issue $key has no fixVersion matching '$version', which is required for commits affecting '$ref'");
+                $git->fault(<<"EOS");
+The commit $commit cites issue $key which is invalid.
+
+Commits on '$ref' must cite issues associated with a fixVersion matching
+'$version' according to the $CFG.fixversion options in your configuration.
+EOS
                 ++$errors;
                 next ISSUE;
             }
 
             if ($by_assignee) {
                 my $user = $git->authenticated_user()
-                    or $git->fault("cannot grok the authenticated user")
+                    or $git->fault(<<"EOS")
+Internal error: I cannot get your username to authorize you.
+Please check your Git::Hooks configuration with regards to the function
+https://metacpan.org/pod/Git::Repository::Plugin::GitHooks#authenticated_user
+EOS
                     and ++$errors
                     and next ISSUE;
 
                 if (my $assignee = $issue->{fields}{assignee}) {
                     my $name = $assignee->{name};
                     $user eq $name
-                        or $git->fault("issue $key should be assigned to '$user', not '$name'")
+                        or $git->fault(<<"EOS")
+The commit $commit cites issue $key which is assigned to '$name'.
+The $CFG.by-assignee configuration requires that cited issues be assigned
+to you ($user).
+Please, update your issue.
+EOS
                         and ++$errors
                         and next KEY;
                 } else {
-                    $git->fault("issue $key should be assigned to '$user', but it's unassigned");
+                    $git->fault(<<"EOS");
+The commit $commit cites issue $key which is unassigned.
+The $CFG.by-assignee configuration requires that cited issues be assigned
+to you ($user).
+Please, update your issue.
+EOS
                     ++$errors;
                     next KEY;
                 }
@@ -292,7 +359,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
             if (defined $ok) {
                 ++$errors unless $ok;
             } elsif (length $@) {
-                $git->fault('error while evaluating check-code', {details => $@});
+                $git->fault('Error while evaluating $CFG.check-code', {details => $@});
                 ++$errors;
             }
         } else {
@@ -355,7 +422,7 @@ sub check_message_file {
 
     my $msg = eval { path($commit_msg_file)->slurp };
     defined $msg
-        or $git->fault("cannot open file '$commit_msg_file' for reading:", {details => $@})
+        or $git->fault("Cannot open file '$commit_msg_file' for reading:", {details => $@})
             and return 0;
 
     # Remove comment lines from the message file contents.
@@ -440,7 +507,7 @@ EOF
 
     foreach my $key (@keys) {
         eval { $jira->POST("/issue/$key/comment", undef, \%comment); 1; }
-            or $git->fault("Cannot add a comment to JIRA issue $key:", {details => $@})
+            or $git->fault("I could not add a comment to JIRA issue $key.", {details => $@})
             and ++$errors;
     }
 
@@ -483,7 +550,13 @@ sub notify_affected_refs {
             value => $2,
         };
     } elsif ($comment ne 'all') {
-        $git->fault("Invalid argument to githooks.checkjira.comment: $comment");
+        $git->fault(<<"EOS");
+Configuration error.
+
+The $CFG.comment option is defined as '$comment', but
+the valid values are 'role:ROLE', 'group:GROUP', or 'all'.
+Please, check your git configuration.
+EOS
         return 0;
     }
 

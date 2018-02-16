@@ -416,7 +416,7 @@ sub _invoke_external_hook {     ## no critic (ProhibitExcessComplexity)
         my $pid = open my $pipe, '|-'; ## no critic (InputOutput::RequireBriefOpen)
 
         if (! defined $pid) {
-            $git->fault("can't fork: $!", {prefix => $prefix});
+            $git->fault("I can't fork: $!", {prefix => $prefix});
         } elsif ($pid) {
             # parent
             $pipe->print(join("\n", map {join(' ', @$_)} @{_get_input_data($git)}) . "\n");
@@ -504,7 +504,7 @@ sub invoke_external_hooks {
         ($git->get_config(githooks => 'hooks'), path($git->git_dir())->child('hooks.d'))
     ) {
         opendir my $dh, $dir
-            or $git->fault(": cannot opendir '$dir'", {details => $!})
+            or $git->fault("I cannot opendir '$dir'", {details => $!})
             and next;
         foreach my $file (grep {!-d && -x} map {path($dir)->child($_)} readdir $dh) {
             _invoke_external_hook($git, $file, $hookname, @args)

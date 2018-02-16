@@ -71,7 +71,7 @@ check_can_commit('commit ok', "ok\n");
 
 check_cannot_commit(
     'commit end in space',
-    qr/whitespace errors in the changed files/,
+    qr/extra whitespaces in the changed files/,
     "end in space \n",
 );
 
@@ -85,6 +85,6 @@ check_can_push('push ok', "ok\n");
 
 check_cannot_push(
     'push end in space',
-    qr/whitespace errors in the changed files/,
+    qr/extra whitespaces in the changed files/,
     "end in space \n",
 );
