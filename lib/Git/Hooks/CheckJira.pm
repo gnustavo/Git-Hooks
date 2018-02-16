@@ -159,7 +159,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
 
     unless (@keys) {
         if ($git->get_config_boolean($CFG => 'require')) {
-            $git->fault("commit @{[substr($commit->commit, 0, 10)]} must cite a JIRA in its message");
+            $git->fault("commit @{[$commit->commit]} must cite a JIRA in its message");
             return 0;
         } else {
             return 1;
