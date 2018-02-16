@@ -2,6 +2,24 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.5.0     2018-02-16 16:44:43-02:00 America/Sao_Paulo
+
+  [Documentation]
+
+  - Added a SYNOPSIS section to the POD of all plugins showing an example of the
+    Git configuration for it.
+
+  - Improved almost all error messages making them more useful to the end-user.
+
+  - The SHA1s appearing in error messages are shortened to make them easier to
+    read by the end-user.
+
+  [New feature]
+
+  - GitHooks: deprecate the errors/get_errors methods and replace them by the
+    newly added fault/get_faults methods. The new ones have a different
+    signature which is more flexible.
+
 2.4.0     2018-02-11 14:08:19-02:00 America/Sao_Paulo
 
   [New feature]
