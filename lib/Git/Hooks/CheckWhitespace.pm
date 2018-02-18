@@ -106,6 +106,7 @@ EOS
 }
 
 # Install hooks
+PRE_APPLYPATCH   \&check_commit;
 PRE_COMMIT       \&check_commit;
 UPDATE           \&check_affected_refs;
 PRE_RECEIVE      \&check_affected_refs;
@@ -143,6 +144,8 @@ errors as detected by C<git diff --check> command. If they don't, the
 commit/push is aborted.
 
 =over
+
+=item * B<pre-applypatch>
 
 =item * B<pre-commit>
 

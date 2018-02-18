@@ -377,6 +377,7 @@ sub check_patchset {
 }
 
 # Install hooks
+APPLYPATCH_MSG   \&check_message_file;
 COMMIT_MSG       \&check_message_file;
 UPDATE           \&check_affected_refs;
 PRE_RECEIVE      \&check_affected_refs;
@@ -440,7 +441,7 @@ policies on the commit log messages.
 
 =over
 
-=item * B<commit-msg>
+=item * B<commit-msg>, B<applypatch-msg>
 
 This hook is invoked during the commit, to check if the commit log
 message complies.

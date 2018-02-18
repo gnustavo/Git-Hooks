@@ -224,6 +224,7 @@ sub check_patchset {
 }
 
 # Install hooks
+PRE_APPLYPATCH   \&check_commit;
 PRE_COMMIT       \&check_commit;
 UPDATE           \&check_affected_refs;
 PRE_RECEIVE      \&check_affected_refs;
@@ -287,6 +288,8 @@ names and contents of files added to or modified in the repository meet
 specified constraints. If they don't, the commit/push is aborted.
 
 =over
+
+=item * B<pre-applypatch>
 
 =item * B<pre-commit>
 

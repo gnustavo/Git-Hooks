@@ -424,6 +424,8 @@ sub check_patchset {
 }
 
 # Install hooks
+PRE_APPLYPATCH   \&check_pre_commit;
+POST_APPLYPATCH  \&check_post_commit;
 PRE_COMMIT       \&check_pre_commit;
 POST_COMMIT      \&check_post_commit;
 UPDATE           \&check_affected_refs;
@@ -486,12 +488,12 @@ policies.
 
 =over
 
-=item * B<pre-commit>
+=item * B<pre-commit>, B<pre-applypatch>
 
 This hook is invoked before a commit is made to check the author and
 committer identities.
 
-=item * B<post-commit>
+=item * B<post-commit>, B<post-applypatch>
 
 This hook is invoked after a commit is made to check its signature. Note
 that the commit is checked after is has been made and any errors must be

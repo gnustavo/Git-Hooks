@@ -572,6 +572,7 @@ EOS
 }
 
 # Install hooks
+APPLYPATCH_MSG   \&check_message_file;
 COMMIT_MSG       \&check_message_file;
 UPDATE           \&check_affected_refs;
 PRE_RECEIVE      \&check_affected_refs;
@@ -647,7 +648,7 @@ request (a.k.a. ticket) open.
 
 =over
 
-=item * B<commit-msg>
+=item * B<commit-msg>, B<applypatch-msg>
 
 This hook is invoked during the commit, to check if the commit message
 cites valid JIRA issues.
