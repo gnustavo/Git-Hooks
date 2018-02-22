@@ -256,14 +256,31 @@ sub footer_errors {
 
     my $errors = 0;
 
-    if ($git->get_config_boolean($CFG => 'signed-off-by')) {
-        scalar($cmsg->get_footer_values('signed-off-by')) > 0
-            or $git->fault(<<"EOS")
+    my @signed_off_by = $cmsg->get_footer_values('signed-off-by');
+
+    if (@signed_off_by) {
+        # Check for duplicate Signed-off-by footers
+        my (%signed_off_by, @duplicates);
+        foreach my $person (@signed_off_by) {
+            $signed_off_by{$person} += 1;
+            if ($signed_off_by{$person} == 2) {
+                push @duplicates, $person;
+            }
+        }
+        if (@duplicates) {
+            $git->fault(<<EOS, {details => join("\n", sort @duplicates)});
+The commit $id have duplicate Signed-off-by footers.
+Please, amend it to remove the duplicates:
+EOS
+            ++$errors;
+        }
+    } elsif ($git->get_config_boolean($CFG => 'signed-off-by')) {
+        $git->fault(<<"EOS");
 The commit $id must have a Signed-off-by footer.
 This is required by the $CFG.signed-off-by option in your configuration.
 Please, amend your commit to add it.
 EOS
-                and ++$errors;
+        ++$errors;
     }
 
     return $errors;
@@ -594,6 +611,9 @@ language passing its ISO code to this option.
 
 This option requires the commit to have at least one C<Signed-off-by>
 footer.
+
+Despite of the value of this option, the plugin checks and complains if there
+are duplicate C<Signed-off-by> footers in the commit.
 
 =head2 githooks.checklog.deny-merge-revert BOOL
 
