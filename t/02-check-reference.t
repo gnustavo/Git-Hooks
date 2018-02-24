@@ -6,7 +6,7 @@ use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
 use Path::Tiny;
-use Test::More tests => 6;
+use Test::More tests => 9;
 
 my ($repo, $clone);
 
@@ -54,3 +54,18 @@ check_can_push('allow release', 'release/1.0');
 check_can_push('allow hotfix', 'hotfix/bug');
 
 check_cannot_push('deny anything else', 'xpto');
+
+$clone->run(qw/config --remove-section githooks.checkreference/);
+
+$repo->run(qw/tag mytag HEAD/);
+test_ok('can push lightweight tag by default', $repo, 'push', $clone->git_dir(), 'tag', 'mytag');
+
+$clone->run(qw{config githooks.checkreference.require-annotated-tags true});
+
+$repo->run(qw/tag mytag2 HEAD/);
+test_nok_match('require-annotated-tag deny lightweight tag',
+               qr/recreate your tag as an annotated tag/,
+               $repo, 'push', $clone->git_dir(), 'tag', 'mytag2');
+
+$repo->run(qw/tag -f -a -mmessage mytag2 HEAD/);
+test_ok('require-annotated-tag allow annotated', $repo, 'push', $clone->git_dir(), 'tag', 'mytag2');
