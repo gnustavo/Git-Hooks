@@ -84,9 +84,11 @@ sub rewrite_message {
     return 1;
 }
 
-# Install hooks
-APPLYPATCH_MSG \&rewrite_message;
-COMMIT_MSG     \&rewrite_message;
+INIT: {
+    # Install hooks
+    APPLYPATCH_MSG \&rewrite_message;
+    COMMIT_MSG     \&rewrite_message;
+}
 
 1;
 

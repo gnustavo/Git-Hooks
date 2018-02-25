@@ -423,16 +423,18 @@ sub check_patchset {
     return commit_errors($git, $commit) == 0;
 }
 
-# Install hooks
-PRE_APPLYPATCH   \&check_pre_commit;
-POST_APPLYPATCH  \&check_post_commit;
-PRE_COMMIT       \&check_pre_commit;
-POST_COMMIT      \&check_post_commit;
-UPDATE           \&check_affected_refs;
-PRE_RECEIVE      \&check_affected_refs;
-REF_UPDATE       \&check_affected_refs;
-PATCHSET_CREATED \&check_patchset;
-DRAFT_PUBLISHED  \&check_patchset;
+INIT: {
+    # Install hooks
+    PRE_APPLYPATCH   \&check_pre_commit;
+    POST_APPLYPATCH  \&check_post_commit;
+    PRE_COMMIT       \&check_pre_commit;
+    POST_COMMIT      \&check_post_commit;
+    UPDATE           \&check_affected_refs;
+    PRE_RECEIVE      \&check_affected_refs;
+    REF_UPDATE       \&check_affected_refs;
+    PATCHSET_CREATED \&check_patchset;
+    DRAFT_PUBLISHED  \&check_patchset;
+}
 
 1;
 

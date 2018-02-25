@@ -250,8 +250,10 @@ sub notify_affected_refs {
     return $errors == 0;
 }
 
-# Install hooks
-POST_RECEIVE \&notify_affected_refs;
+INIT: {
+    # Install hooks
+    POST_RECEIVE \&notify_affected_refs;
+}
 
 1;
 

@@ -124,8 +124,10 @@ sub prepare_message {
     return $errors;
 }
 
-# Install hooks
-PREPARE_COMMIT_MSG \&prepare_message;
+INIT: {
+    # Install hooks
+    PREPARE_COMMIT_MSG \&prepare_message;
+}
 
 1;
 
