@@ -355,53 +355,59 @@ own documentation for more details.
 
 =over
 
-=item * Git::Hooks::CheckAcls
+=item * L<Git::Hooks::CheckAcls>
 
 Allow you to specify Access Control Lists to tell who can commit or
 push to the repository and affect which Git refs.
 
-=item * Git::Hooks::CheckFile
+=item * L<Git::Hooks::CheckFile>
 
 Check if the contents of newly added or modified files comply with specified
 policies.
 
-=item * Git::Hooks::CheckJira
+=item * L<Git::Hooks::CheckJira>
 
 Integrate Git with the L<JIRA|http://www.atlassian.com/software/jira/>
 ticketing system by requiring that every commit message cites valid
 JIRA issues.
 
-=item * Git::Hooks::CheckCommit
+=item * L<Git::Hooks::CheckCommit>
 
 Check various aspects of commits like author and committer names and emails,
 and signatures.
 
-=item * Git::Hooks::CheckLog
+=item * L<Git::Hooks::CheckLog>
 
 Check commit log messages formatting.
 
-=item * Git::Hooks::CheckRewrite
+=item * L<Git::Hooks::CheckRewrite>
 
 Check if a B<git rebase> or a B<git commit --amend> is safe, meaning
 that no rewritten commit is contained by any other branch besides the
 current one. This is useful, for instance, to prevent rebasing commits
 already pushed.
 
-=item * Git::Hooks::CheckReference
+=item * L<Git::Hooks::CheckReference>
 
 Check if newly added reference names (branches, tags are just the most
 common Git references) comply with specified policies, so that you can
 impose a strict structure to the repository's reference hierarchies.
 
-=item * Git::Hooks::GerritChangeId
+=item * L<Git::Hooks::GerritChangeId>
 
 Inserts a C<Change-Id> line in the commit log message to allow
 integration with Gerrit's code review system.
 
-=item * Git::Hooks::Notify
+=item * L<Git::Hooks::Notify>
 
 Sends email notifications to interested parties about pushed commits affecting
 specific files in the repository.
+
+=item * L<Git::Hooks::PrepareLog>
+
+Prepare commit log messages before they are opened by the editor. It can be used
+to pre-format or to insert automatic information in the message before the user
+is given a chance to edit it.
 
 =back
 
