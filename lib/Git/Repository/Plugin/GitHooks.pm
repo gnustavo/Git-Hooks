@@ -682,7 +682,7 @@ sub fault {
     $info //= {};
     my $prefix = exists $info->{prefix} ? $info->{prefix} : caller(1);
     chomp $message;             # strip trailing newlines
-    $message =~ s/\b([0-9a-f]{40})\b/$git->run('rev-parse', '--short', $1)/eg; # shorten SHA1s in the message
+    $message =~ s/\b[0-9a-f]{40}\b/$git->run('rev-parse', '--short', ${^MATCH})/egp; # shorten SHA1s in the message
     my $fmtmsg = "\n[$prefix] $message";
     if (my $details = $info->{details}) {
         $details =~ s/\n*$//s; # strip trailing newlines
