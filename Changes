@@ -2,6 +2,14 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.6.1     2018-02-26 18:44:54-03:00 America/Sao_Paulo
+
+  [Fix]
+
+  - PrepareLog: require Git >= 2.8.0 in order to insert issues in the log
+    message trailers. Previously we required Git >= 2.7.0, but they didn't
+    implement a feature we use.
+
 2.6.0     2018-02-26 16:38:54-03:00 America/Sao_Paulo
 
   [New features]
