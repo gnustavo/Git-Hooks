@@ -7,6 +7,87 @@
 
 =head1 Git::Hooks
 
-=head2 Framework for implementing Git (and Gerrit) hooks
+A Perl framework for implementing Git (and Gerrit) hooks.
 
-Please, see the L<project's wiki at GitHub|https://github.com/gnustavo/Git-Hooks/wiki>.
+=head2 What's this about?
+
+L<Git hooks|http://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks> are
+programs you install in Git repositories in order to augment Git's
+functionality.
+
+The Git::Hooks Perl module is a framework that makes it easier to implement and
+use Git hooks. It comes with a set of plugins already implementing useful
+functionality for you to make sure your commits comply with your project
+policies. As a Git user or a Git server administrator you probably don't need to
+implement any hooks for most of your needs, just to enable and configure some of
+the existing plugins.
+
+=head2 Installation
+
+Git::Hooks is installed like any other Perl module. It's easier to use a CPAN
+client, such as C<cpanm> or C<cpan>, so that dependencies are installed
+automatically:
+
+  $ cpanm Git::Hooks
+  $ cpan Git::Hooks
+
+You can even use it directly from a clone of its Git repository. All you have to
+do is to tell Perl where to find it by using this in your scripts:
+
+  use lib '/path/to/clone/of/git-hooks/lib';
+  use Git::Hooks;
+
+=head2 Documentation
+
+The main module documents its L<usage|Git::Hooks> in detail. Each plugin is
+implemented as a separate module under the C<Git::Hooks::> namespace. Git::Hooks
+distribution comes with a set of plugins and you can find more on
+L<CPAN|https://metacpan.org/search?q=module%3AGit%3A%3AHooks>. The native
+plugins provided by the distrubution are these:
+
+=over
+
+=item * L<Git::Hooks::CheckAcls> - branch/tag access control
+
+=item * L<Git::Hooks::CheckCommit> - enforce commit policies
+
+=item * L<Git::Hooks::CheckFile> - check file names and contents
+
+=item * L<Git::Hooks::CheckJira> - integrate with L<JIRA|https://www.atlassian.com/software/jira>
+
+=item * L<Git::Hooks::CheckLog> - enforce log message policies
+
+=item * L<Git::Hooks::CheckReference> - check reference names
+
+=item * L<Git::Hooks::CheckRewrite> - protect against unsafe rewrites
+
+=item * L<Git::Hooks::CheckWhitespace> - detect whitespace errors
+
+=item * L<Git::Hooks::GerritChangeId> - insert Gerrit's Change-Ids into commit messages
+
+=item * L<Git::Hooks::Notify> - notify users via email
+
+=item * L<Git::Hooks::PrepareLog> - prepare commit messages before being edited
+
+=back
+
+For a gentler introduction you can read our L<Git::Hooks::Tutorial>. They have
+instructions for Git users, Git administrators, and Gerrit administrators.
+
+=head2 Getting Help
+
+In order to ask questions or to report problems, please, L<file an issue at
+GitHub|https://github.com/gnustavo/Git-Hooks/issues>.
+
+=head2 Copyright & License
+
+Git::Hooks is copyright (c) 2008-2018 of L<CPqD|http://www.cpqd.com.br>.
+
+This is free software; you can redistribute it and/or modify it under the same
+terms as the Perl 5 programming language system itself. About the only thing you
+can't do is pretend that you wrote code that you didn't.
+
+=head2 Enjoy!
+
+Gustavo Chaves <gnustavo@cpan.org>
+
