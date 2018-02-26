@@ -130,6 +130,10 @@ options. (More on this later.)
 
         run_hook($0, @ARGV);
 
+In fact, this module installs a script called F<githooks.pl> containing the
+three lines above, so that all you have to do is to create symbolic links in
+your Git repository's F<.git/hook> pointing to it.
+
 =head1 INTRODUCTION
 
 =over
