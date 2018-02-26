@@ -63,7 +63,7 @@ $repo->run(qw/config githooks.preparelog.issue-place/, 'title %T (%I)');
 check_can_commit_prepared('prepare in title with different format', ' \\(JIRA-10\\)$');
 
 SKIP: {
-    test_requires_git skip => 1, version_ge => '2.7.1';
+    test_requires_git skip => 1, version_ge => '2.8.0';
 
     $repo->run(qw/config githooks.preparelog.issue-place/, 'trailer JIRA');
 
