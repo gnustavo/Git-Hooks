@@ -1136,6 +1136,8 @@ The following commands may give you an idea as to which commands to use:
 
 =item * L<fortune|https://en.wikipedia.org/wiki/Fortune_(Unix)>
 
+=item * L<FIGlet|http://www.figlet.org/>
+
 =item * L<cowsay|https://en.wikipedia.org/wiki/Cowsay>
 
 =item * C<fortune -s | cowsay>
