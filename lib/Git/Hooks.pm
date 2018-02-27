@@ -219,6 +219,10 @@ don't worry. Git::Hooks can drive external hooks very easily.
 
 =head1 USAGE
 
+Please, read the L<Git::Hooks::Tutorial> if you want an easy guide to start
+using the framework. Most probably you can set it up in a few minutes with
+it. Continue on if you want to get deeper in the Documentation.
+
 There are a few simple steps you should do in order to set up
 Git::Hooks so that you can configure it to use some predefined plugins
 or start coding your own hooks.
@@ -1227,7 +1231,7 @@ though.
 
 =over
 
-=item * L<Git::Hooks wiki|https://github.com/gnustavo/Git-Hooks/wiki>
+=item * L<Git::Hooks::Tutorial>
 
 Tutorials for Git users and administrators.
 
