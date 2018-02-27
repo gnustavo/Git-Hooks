@@ -240,7 +240,7 @@ The commit @{[$commit->commit]} cites an invalid issue:
 
   @{[$missed_set]}
 
-The issue does not match the JQL expression:
+The issue does not match the following JQL expression:
 
   $JQL
 
@@ -252,7 +252,7 @@ The commit @{[$commit->commit]} cites invalid issues:
 
   @{[$missed_set]}
 
-The issues do not match the JQL expression:
+The issues do not match the following JQL expression:
 
   $JQL
 

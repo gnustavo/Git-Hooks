@@ -176,7 +176,7 @@ $repo->run(qw/checkout -q master/);
 
 $repo->run(qw/config githooks.checkjira.project OTHER/);
 check_cannot_commit('deny commit citing non-allowed projects [GIT-0]',
-		    qr/not match the JQL expression/);
+		    qr/not match the following JQL expression/);
 
 $repo->run(qw/config githooks.checkjira.require 0/);
 check_can_commit('allow commit if JIRA is not required');
@@ -190,7 +190,7 @@ check_cannot_commit('deny commit if cannot connect to JIRA [GIT-0]',
 $repo->run(qw/config --replace-all githooks.checkjira.jirapass valid/);
 
 check_cannot_commit('deny commit if cannot get issue [GIT-0]',
-		    qr/not match the JQL expression/);
+		    qr/not match the following JQL expression/);
 
 check_cannot_commit('deny commit if issue is already resolved [GIT-1]',
 		    qr/which is already resolved/);
@@ -212,13 +212,13 @@ check_can_commit('allow commit if valid issue cited [GIT-2]');
 
 $repo->run(qw/config --replace-all githooks.checkjira.status Taken/);
 check_cannot_commit('deny commit if not in valid status [GIT-2]',
-		    qr/not match the JQL expression/);
+		    qr/not match the following JQL expression/);
 check_can_commit('allow commit if in valid status [GIT-3]');
 $repo->run(qw/config --unset-all githooks.checkjira.status/);
 
 $repo->run(qw/config --replace-all githooks.checkjira.issuetype Bug/);
 check_cannot_commit('deny commit if not with valid type [GIT-3]',
-		    qr/not match the JQL expression/);
+		    qr/not match the following JQL expression/);
 check_can_commit('allow commit if with valid type [GIT-2]');
 $repo->run(qw/config --unset-all githooks.checkjira.issuetype/);
 
