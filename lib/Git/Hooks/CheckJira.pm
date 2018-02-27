@@ -232,7 +232,7 @@ EOS
         if (my $missed_set = $cited_set - $matched_set) {
             if ($missed_set->size == 1) {
                 $git->fault(<<"EOS");
-The commit $commit cites an invalid issue:
+The commit @{[$commit->commit]} cites an invalid issue:
 
   @{[$missed_set]}
 
@@ -244,7 +244,7 @@ Please, update your issue or fix your $CFG git configuration.
 EOS
             } else {
                 $git->fault(<<"EOS");
-The commit $commit cites invalid issues:
+The commit @{[$commit->commit]} cites invalid issues:
 
   @{[$missed_set]}
 
@@ -287,7 +287,7 @@ EOS
         while (my ($key, $issue) = each %issues) {
             if ($unresolved && defined $issue->{fields}{resolution}) {
                 $git->fault(<<"EOS");
-The commit cites issue $key which is already resolved.
+The commit @{[$commit->commit]} cites issue $key which is already resolved.
 
 The $CFG.unresolved option in your configuration requires
 that all JIRA issues be unresolved.
@@ -306,7 +306,7 @@ EOS
                     }
                 }
                 $git->fault(<<"EOS");
-The commit $commit cites issue $key which is invalid.
+The commit @{[$commit->commit]} cites issue $key which is invalid.
 
 Commits on '$ref' must cite issues associated with a fixVersion matching
 '$version' according to the $CFG.fixversion options in your configuration.
@@ -329,7 +329,7 @@ EOS
                     my $name = $assignee->{name};
                     $user eq $name
                         or $git->fault(<<"EOS")
-The commit $commit cites issue $key which is assigned to '$name'.
+The commit @{[$commit->commit]} cites issue $key which is assigned to '$name'.
 The $CFG.by-assignee configuration requires that cited issues be assigned
 to you ($user).
 Please, update your issue.
@@ -338,7 +338,7 @@ EOS
                         and next KEY;
                 } else {
                     $git->fault(<<"EOS");
-The commit $commit cites issue $key which is unassigned.
+The commit @{[$commit->commit]} cites issue $key which is unassigned.
 The $CFG.by-assignee configuration requires that cited issues be assigned
 to you ($user).
 Please, update your issue.
