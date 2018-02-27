@@ -53,8 +53,9 @@ repositories pointing to the common script. So, for example, if you want to
 enable some C<pre-commit> and some C<commit-msg> hooks, you would do this:
 
     $ cd /my/git/repo/.git/hooks
-    $ ln -s $HOME/bin/githooks.pl pre-commit
+    $ ln -s $HOME/bin/githooks.pl prepare-commit-msg
     $ ln -s $HOME/bin/githooks.pl commit-msg
+    $ ln -s $HOME/bin/githooks.pl pre-commit
     $ ln -s $HOME/bin/githooks.pl pre-rebase
 
 =head3 Automating the creation of links
@@ -74,7 +75,7 @@ You may customize one for you like this:
     $ cp -a /usr/share/git-core/templates $HOME/.git-templates
     $ cd $HOME/.git-templates/hooks
     $ rm *
-    $ for i in commit-msg post-commit pre-commit pre-rebase
+    $ for i in prepare-commit-msg commit-msg post-commit pre-commit pre-rebase
     > do ln -s $HOME/bin/githooks.pl $i
     > done
 
