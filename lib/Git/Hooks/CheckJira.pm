@@ -222,6 +222,10 @@ EOS
         # Conjunct all terms in a single JQL expression
         my $JQL = '(' . join(') AND (', @jqls) . ')';
 
+        # Squeeze multiple whitespaces in a single space to make it appear
+        # neatly in error messages.
+        $JQL =~ s/\s{2,}/ /g;
+
         my $issues = _jql_query($git, $JQL);
 
         @issues{keys %$issues} = values %$issues; # cache all matched issues
