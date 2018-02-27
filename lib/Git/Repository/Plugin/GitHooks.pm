@@ -584,9 +584,9 @@ sub get_config {
         }
 
         # Set default values for undefined ones.
-        $config{githooks}{externals}       //= [1];
-        $config{githooks}{gerrit}{enabled} //= [1];
-        $config{githooks}{'abort-commit'}  //= [1];
+        $config{githooks}{externals}       //= ['true'];
+        $config{githooks}{gerrit}{enabled} //= ['true'];
+        $config{githooks}{'abort-commit'}  //= ['true'];
 
         $git->{_plugin_githooks}{config} = \%config;
     }

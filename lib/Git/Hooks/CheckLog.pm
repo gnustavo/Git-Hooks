@@ -24,7 +24,7 @@ sub _setup_config {
     $config->{lc $CFG} //= {};
 
     my $default = $config->{lc $CFG};
-    $default->{'title-required'}  //= [1];
+    $default->{'title-required'}  //= ['true'];
     $default->{'title-max-width'} //= [50];
     $default->{'title-period'}    //= ['deny'];
     $default->{'body-max-width'}  //= [72];

@@ -31,8 +31,8 @@ sub _setup_config {
     # Default matchkey for matching default JIRA keys.
     $default->{matchkey}   //= ['\b[A-Z][A-Z]+-\d+\b'];
 
-    $default->{require}    //= [1];
-    $default->{unresolved} //= [1];
+    $default->{require}    //= ['true'];
+    $default->{unresolved} //= ['true'];
 
     return;
 }
