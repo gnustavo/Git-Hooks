@@ -2,6 +2,13 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.6.3     2018-02-28 09:31:25-03:00 America/Sao_Paulo
+
+  [Fix]
+
+  - PrepareLog: the tests required a feature implemented on Git 1.7.2. It was
+    rewritten to support Git 1.7.1.
+
 2.6.2     2018-02-27 14:24:12-03:00 America/Sao_Paulo
 
   [Fix]
