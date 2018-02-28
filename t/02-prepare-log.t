@@ -15,8 +15,12 @@ sub check_can_commit_prepared {
 
     # Use a Perl script as GIT_EDITOR to check if the commit message was
     # prepared.
-    $ENV{GIT_EDITOR} = "$^X -ne '\$match += 1 if /$regex/; warn \"\$.: \$_\"; END {die unless \$match}'";
-    test_ok($testname, $repo, qw/commit --allow-empty --allow-empty-message/);
+
+    # NOTE: We insert a bogus 'x' in the message's first line to guarantee
+    # that it's not empty. We could use the --allow-empty-message option, but it
+    # was implemented on Git 1.7.2 and we still want to support Git 1.7.1.
+    local $ENV{GIT_EDITOR} = "$^X -i -pe '\$match += 1 if /$regex/; \$_ = 'x' if \$. == 1; END {die unless \$match}'";
+    test_ok($testname, $repo, qw/commit --allow-empty/);
 }
 
 sub check_can_commit_not_prepared {
@@ -24,20 +28,9 @@ sub check_can_commit_not_prepared {
 
     # Use a Perl script as GIT_EDITOR to check if the commit message was
     # not prepared.
-    $ENV{GIT_EDITOR} = "$^X -ne '\$match += 1 if /$regex/; END {die if \$match}'";
-    test_ok($testname, $repo, qw/commit --allow-empty --allow-empty-message/);
+    local $ENV{GIT_EDITOR} = "$^X -i -pe '\$match += 1 if /$regex/; \$_ = 'x' if \$. == 1; END {die if \$match}'";
+    test_ok($testname, $repo, qw/commit --allow-empty/);
 }
-
-sub check_cannot_commit {
-    my ($testname, $regex) = @_;
-
-    my $exit = $regex
-        ? test_nok_match($testname, $regex, $repo, qw/commit --allow-empty --allow-empty-message/)
-        : test_nok($testname, $repo, qw/commit --allow-empty --allow-empty-message/);
-
-    return $exit;
-}
-
 
 
 # Repo hooks
