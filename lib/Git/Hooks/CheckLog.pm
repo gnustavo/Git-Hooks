@@ -569,9 +569,15 @@ This means that the title SHOULD end in a period.
 
 =head2 githooks.checklog.title-match [!]REGEXP
 
-This option may be specified more than once. It defines a list of
-regular expressions that will be matched against the title.
-If the '!' prefix is used, the title must not match the REGEXP.
+This option may be specified more than once. It defines a list of regular
+expressions that will be matched against the title.  If the '!' prefix is used,
+the title must not match the REGEXPs. Otherwise, the log must match REGEXPs.
+
+This allows you, for example, to require that the title starts with a capital
+letter:
+
+  [githooks "checklog"]
+    title-match = ^[A-Z]
 
 =head2 githooks.checklog.body-max-width INT
 
@@ -589,7 +595,16 @@ authentic.
 This option may be specified more than once. It defines a list of
 regular expressions that will be matched against the commit log
 messages. If the '!' prefix is used, the log must not match the
-REGEXP.
+REGEXPs. Otherwise, the log must match REGEXPs.
+
+The REGEXPs are matched with the C</m> modifier so that the C<^> and the C<$>
+metacharacters, if used, match the beginning and end of each line in the log,
+respectively.
+
+This allows you, for example, to disallow hard-tabs in your log messages:
+
+  [githooks "checklog"]
+    match = !\\t
 
 =head2 githooks.checklog.spelling BOOL
 

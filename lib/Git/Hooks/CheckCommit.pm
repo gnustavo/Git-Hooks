@@ -360,7 +360,7 @@ sub check_pre_commit {
 
     _setup_config($git);
 
-    # Grok author and committer information from git's envorinent variables, if
+    # Grok author and committer information from git's environment variables, if
     # they're defined. Sometimes they aren't...
 
     my $author_name     = $ENV{GIT_AUTHOR_NAME}     || 'nobody';
@@ -549,6 +549,12 @@ ones not prefixed by "!") and they must not match any one of the negative
 regular expressions (the ones prefixed by "!").
 
 This check is performed by the C<pre-commit> local hook.
+
+This allows you, for example, to require that author and committer names have at
+least a first and a last name, separated by spaces:
+
+  [githooks "checklog"]
+    name = .\\s+.
 
 =head2 githooks.checkcommit.email [!]REGEXP
 
