@@ -183,7 +183,72 @@ EOS
         }
     }
 
-    return $errors == 0;
+    return $errors;
+}
+
+sub deny_case_conflicts {
+    my ($git, $commit, $get_names_sub) = @_;
+
+    return 0 unless $git->get_config_boolean($CFG => 'deny-case-conflict');
+
+    # $get_names_sub is a reference to a function which returns the list of
+    # names of files added in $commit. We get a sub-ref instead of the actual
+    # list to avoid calling a git command before making sure above that we
+    # really need to check this. (NOTE: This may be premature optimization,
+    # which is the root of all evil, but I'm leaving it in for now.)
+    my @names = $get_names_sub->();
+
+    return 0 unless @names;     # No new names to check
+
+    # Grok the list of all files in the repository at $commit
+    my @ls_files = split /\0/, $git->run(qw/ls-tree -r -z --name-only --full-tree/,
+                                         $commit eq ':0' ? 'HEAD' : $commit);
+
+    my $errors = 0;
+
+    # Check if the new files conflict with each other
+    for (my $i = 0; $i < $#names; ++$i) {
+        for (my $j = $i + 1; $j <= $#names; ++$j) {
+            if (lc($names[$i]) eq lc($names[$j]) && $names[$i] ne $names[$j]) {
+                ++$errors;
+                $git->fault(<<EOS);
+Commit $commit adds two files with names that will conflict
+with each other in the repository in case-insensitive
+filesystems:
+
+  $names[$i]
+  $names[$j]
+
+This check is enabled by the $CFG.deny-case-conflict option.
+Please, rename the added files to avoid the conflict and amend your commit.
+EOS
+            }
+        }
+    }
+
+    # Check if the new files conflict with already existing files
+    foreach my $file (@ls_files) {
+        my $lc_file = lc $file;
+        foreach my $name (@names) {
+            my $lc_name = lc $name;
+            if ($lc_name eq $lc_file && $name ne $file) {
+                ++$errors;
+                $git->fault(<<EOS);
+Commit $commit adds a file with a name that will conflict
+with the name of another file already existing in the repository
+in case-insensitive filesystems:
+
+  ADDED:    $name
+  EXISTING: $file
+
+This check is enabled by the $CFG.deny-case-conflict option.
+Please, rename the added file to avoid the conflict and amend your commit.
+EOS
+            }
+        }
+    }
+
+    return $errors;
 }
 
 # This routine can act both as an update or a pre-receive hook.
@@ -198,8 +263,8 @@ sub check_affected_refs {
 
     foreach my $ref ($git->get_affected_refs()) {
         my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
-        check_new_files($git, $new_commit, $git->filter_files_in_range('AM', $old_commit, $new_commit))
-            or ++$errors;
+        $errors += check_new_files($git, $new_commit, $git->filter_files_in_range('AM', $old_commit, $new_commit));
+        $errors += deny_case_conflicts($git, $new_commit, sub { $git->filter_files_in_range('ACR', $old_commit, $new_commit) });
     }
 
     return $errors == 0;
@@ -210,7 +275,12 @@ sub check_commit {
 
     _setup_config($git);
 
-    return check_new_files($git, ':0', $git->filter_files_in_index('AM'));
+    my $errors = 0;
+
+    $errors += check_new_files($git, ':0', $git->filter_files_in_index('AM'));
+    $errors += deny_case_conflicts($git, ':0', sub { $git->filter_files_in_index('ACR') });
+
+    return $errors == 0;
 }
 
 sub check_patchset {
@@ -220,7 +290,12 @@ sub check_patchset {
 
     return 1 if $git->im_admin();
 
-    return check_new_files($git, $opts->{'--commit'}, $git->filter_files_in_commit('AM', $opts->{'--commit'}));
+    my $errors = 0;
+
+    $errors += check_new_files($git, $opts->{'--commit'}, $git->filter_files_in_commit('AM', $opts->{'--commit'}));
+    $errors += deny_case_conflicts($git, $opts->{'--commit'}, sub { $git->filter_files_in_commit('ACR', $opts->{'--commit'}) });
+
+    return $errors == 0;
 }
 
 INIT: {
@@ -237,7 +312,7 @@ INIT: {
 1;
 
 __END__
-=for Pod::Coverage check_command check_new_files check_affected_refs check_commit check_patchset
+=for Pod::Coverage check_command check_new_files deny_case_conflicts check_affected_refs check_commit check_patchset
 
 =head1 NAME
 
@@ -266,6 +341,8 @@ may configure it in a Git configuration file like this:
     path.deny = ^.
     path.allow = ^[a-zA-Z0-1/_.-]$
 
+    deny-case-conflict = true
+
 The first section enables the plugin and defines the users C<joe> and C<molly>
 as administrators, effectivelly exempting them from any restrictions the plugin
 may impose.
@@ -282,6 +359,10 @@ than 1MiB, preventing careless users to commit huge binary files.
 The C<path.deny> and C<path.allow> options conspire to only allow the addition
 of files which names comprised of only a small set of characters, avoiding names
 which may cause problems.
+
+The C<deny-case-conflict> option rejects commits which add files with names that
+would conflict with each other or with the names of other files already in the
+repository in case-insensitive filesystems, such as the ones on Windows.
 
 =head1 DESCRIPTION
 
@@ -442,3 +523,19 @@ This directive denies files which full paths match REGEXP.
 
 This directive allows files which full paths match REGEXP. It's useful in
 the same way that B<githooks.checkfile.basename.deny> is.
+
+=head2 githooks.checkfile.deny-case-conflict BOOL
+
+This directive checks for newly added files that would conflict in
+case-insensitive filesystems.
+
+Git itself is case-sensitive with regards to file names. Many operating system's
+filesystems are case-sensitive too, such as Linux, macOS, and other Unix-derived
+systems. But Windows's filesystems are notoriously case-insensitive. So, if you
+want your repository to be absolutely safe for Windows users you don't want to
+add two files which filenames differ only in a case-sensitive manner. Enable
+this option to be safe
+
+Note that this check have to check the newly added files against all files
+already in the repository. It can be a little slow for large repositories. Take
+heed!

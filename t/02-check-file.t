@@ -6,7 +6,7 @@ use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
 use Path::Tiny;
-use Test::More tests => 19;
+use Test::More tests => 23;
 
 my ($repo, $clone);
 
@@ -142,9 +142,19 @@ $repo->run(qw/config githooks.checkfile.path.allow txt/);
 
 check_can_commit('allow path', 'file.txt');
 
-$repo->run(qw/config --unset-all githooks.checkfile.path.deny/);
-$repo->run(qw/config --unset-all githooks.checkfile.path.allow/);
+$repo->run(qw/config --remove-section githooks.checkfile/);
 
+SKIP: {
+    skip "Non-Windows checks", 2 if $^O eq 'MSWin32';
+
+    check_can_commit('Allow commit case conflict by default', 'FILE.TXT');
+
+    $repo->run(qw/config githooks.checkfile.deny-case-conflict true/);
+
+    check_cannot_commit('Deny commit case conflict',
+                        qr/adds a file with a name that will conflict/,
+                        'File.Txt');
+}
 # PRE-RECEIVE
 
 setup_repos();
@@ -168,3 +178,17 @@ $clone->run(qw/config githooks.checkfile.sizelimit 4/);
 check_can_push('small file', 'file.txt', 'truncate', '12');
 
 check_cannot_push('big file', qr/the current limit is/, 'file.txt', 'truncate', '123456789');
+
+$clone->run(qw/config --remove-section githooks.checkfile/);
+
+SKIP: {
+    skip "Non-Windows checks", 2 if $^O eq 'MSWin32';
+
+    check_can_push('Allow push case conflict by default', 'FILE2.TXT');
+
+    $clone->run(qw/config githooks.checkfile.deny-case-conflict true/);
+
+    check_cannot_push('Deny push case conflict',
+                      qr/adds a file with a name that will conflict/,
+                      'File2.Txt');
+}
