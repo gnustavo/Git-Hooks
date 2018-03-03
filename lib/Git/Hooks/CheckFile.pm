@@ -251,6 +251,50 @@ EOS
     return $errors;
 }
 
+sub deny_token {
+    my ($git, $new_commit, $old_commit) = @_;
+
+    my $regex = $git->get_config($CFG => 'deny-token')
+        or return 0;
+
+    if ($git->version_lt('1.7.4')) {
+        $git->fault(<<EOS);
+The $CFG.deny-token option requires Git 1.7.4 or later.
+Your Git is older.
+Please, upgrade your Git or disable this option.
+EOS
+        return 1;
+    }
+
+    my @diff;
+
+    if (! defined $new_commit) {
+        die 'Internal error: $new_commit must be defined';
+    } elsif ($new_commit eq ':0') {
+        @diff = $git->run(qw/diff-index -p --diff-filter=AM --ignore-submodules/,
+                          "-G$regex", 'HEAD');
+    } elsif (! defined $old_commit) {
+        @diff = $git->run(qw/diff-tree -p --diff-filter=AM --ignore-submodules/,
+                          "-G$regex", $new_commit);
+    } else {
+        @diff = $git->run(qw/diff-tree -p --diff-filter=AM --ignore-submodules/,
+                          "-G$regex", $old_commit, $new_commit);
+    }
+
+    # Extract only the lines showing addition of the $regex
+    @diff = grep {/^+.*?(?:$regex)/} @diff;
+
+    if (@diff) {
+        $git->fault(<<EOS, {details => join("\n", @diff)});
+Invalid tokens detected in added lines.
+The $CFG.deny-token option rejects lines matching $regex.
+Please, amend these lines and try again.
+EOS
+    }
+
+    return scalar @diff;
+}
+
 # This routine can act both as an update or a pre-receive hook.
 sub check_affected_refs {
     my ($git) = @_;
@@ -265,6 +309,7 @@ sub check_affected_refs {
         my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
         $errors += check_new_files($git, $new_commit, $git->filter_files_in_range('AM', $old_commit, $new_commit));
         $errors += deny_case_conflicts($git, $new_commit, sub { $git->filter_files_in_range('ACR', $old_commit, $new_commit) });
+        $errors += deny_token($git, $new_commit, $old_commit);
     }
 
     return $errors == 0;
@@ -279,6 +324,7 @@ sub check_commit {
 
     $errors += check_new_files($git, ':0', $git->filter_files_in_index('AM'));
     $errors += deny_case_conflicts($git, ':0', sub { $git->filter_files_in_index('ACR') });
+    $errors += deny_token($git, ':0');
 
     return $errors == 0;
 }
@@ -294,6 +340,7 @@ sub check_patchset {
 
     $errors += check_new_files($git, $opts->{'--commit'}, $git->filter_files_in_commit('AM', $opts->{'--commit'}));
     $errors += deny_case_conflicts($git, $opts->{'--commit'}, sub { $git->filter_files_in_commit('ACR', $opts->{'--commit'}) });
+    $errors += deny_token($git, $opts->{'--commit'});
 
     return $errors == 0;
 }
@@ -312,7 +359,7 @@ INIT: {
 1;
 
 __END__
-=for Pod::Coverage check_command check_new_files deny_case_conflicts check_affected_refs check_commit check_patchset
+=for Pod::Coverage check_command check_new_files deny_case_conflicts deny_token check_affected_refs check_commit check_patchset
 
 =head1 NAME
 
@@ -343,6 +390,8 @@ may configure it in a Git configuration file like this:
 
     deny-case-conflict = true
 
+    deny-token = \b(FIXME|TODO)\b
+
 The first section enables the plugin and defines the users C<joe> and C<molly>
 as administrators, effectivelly exempting them from any restrictions the plugin
 may impose.
@@ -363,6 +412,10 @@ which may cause problems.
 The C<deny-case-conflict> option rejects commits which add files with names that
 would conflict with each other or with the names of other files already in the
 repository in case-insensitive filesystems, such as the ones on Windows.
+
+The C<deny-token> option rejects commits which introduces lines
+containing the strings C<FIXME> or C<TODO>, as they are often committed by
+mistake.
 
 =head1 DESCRIPTION
 
@@ -539,3 +592,15 @@ this option to be safe
 Note that this check have to check the newly added files against all files
 already in the repository. It can be a little slow for large repositories. Take
 heed!
+
+=head2 githooks.checkfile.deny-token REGEXP
+
+This directive rejects commits or pushes which diff (patch) matches REGEXP. This
+is a multi-valued directive, i.e., you can specify it multiple times to check
+several REGEXes.
+
+It is useful to detect marks left by developers in the code while developing,
+such as FIXME or TODO. These marks are usually a reminder to fix things before
+commit, but as it so often happens, they end up being forgotten.
+
+Note that this option requires Git 1.7.4 or newer.

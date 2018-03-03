@@ -6,7 +6,8 @@ use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
 use Path::Tiny;
-use Test::More tests => 23;
+use Test::More tests => 25;
+use Test::Requires::Git;
 
 my ($repo, $clone);
 
@@ -155,6 +156,22 @@ SKIP: {
                         qr/adds a file with a name that will conflict/,
                         'File.Txt');
 }
+
+SKIP: {
+    test_requires_git skip => 1, version_ge => '1.7.4';
+
+    $repo->run(qw/config --remove-section githooks.checkfile/);
+
+    $repo->run(qw/config githooks.checkfile.deny-token FIXME/);
+
+    check_cannot_commit('Deny commit if match FIXME',
+                        qr/Invalid tokens detected in added lines/,
+                        'file.txt',
+                        0,
+                        "FIXME: something\n",
+                    );
+}
+
 # PRE-RECEIVE
 
 setup_repos();
@@ -191,4 +208,19 @@ SKIP: {
     check_cannot_push('Deny push case conflict',
                       qr/adds a file with a name that will conflict/,
                       'File2.Txt');
+}
+
+SKIP: {
+    test_requires_git skip => 1, version_ge => '1.7.4';
+
+    $clone->run(qw/config --remove-section githooks.checkfile/);
+
+    $clone->run(qw/config githooks.checkfile.deny-token FIXME/);
+
+    check_cannot_push('Deny push if match FIXME',
+                      qr/Invalid tokens detected in added lines/,
+                      'file.txt',
+                      0,
+                      "FIXME: something\n",
+                  );
 }
