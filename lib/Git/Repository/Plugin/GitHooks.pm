@@ -35,7 +35,7 @@ sub _keywords {                 ## no critic (ProhibitUnusedPrivateSubroutines)
 
           get_current_branch get_sha1 get_head_or_empty_tree
 
-          blob file_size
+          blob file_size file_mode
 
           is_ref_enabled match_user im_admin
       /;
@@ -1131,6 +1131,40 @@ sub file_size {
     return $size;
 }
 
+sub file_mode {
+    my ($git, $rev, $file) = @_;
+
+    if ($rev eq ':0') {
+        my @diff_index = $git->run(qw/diff-index --cached --raw --no-color HEAD/, $file);
+
+        if (@diff_index == 1) {
+            if (my ($src_mode, $dst_mode, $rest) = $diff_index[0] =~ /^:(\d+) (\d+) (.*)/) {
+                return oct $dst_mode;
+            } else {
+                die "Internal error: cannot parse output of git-diff-idex:\n\n  $diff_index[0]";
+            }
+        } else {
+            die "Internal error: git-diff-index should return a single line";
+        }
+    } else {
+        my $path = path($file);
+        my @ls_tree = $git->run('ls-tree', "$rev:" . $path->dirname, $path->basename);
+
+        if (@ls_tree == 1) {
+            if (my ($mode, $type, $object, $file) =
+                    $ls_tree[0] =~ /^(\d+) ([a-z]+) ([a-z0-9]{40})\t(.+)/) {
+                return oct $mode;
+            } else {
+                die "Internal error: cannot parse output of git-ls-tree:\n\n  $ls_tree[0]";
+            }
+        } else {
+            die "Internal error: $rev:$file should be a blob";
+        }
+    }
+
+    die "Can't happen!";
+}
+
 sub is_ref_enabled {
     my ($git, $ref, @specs) = @_;
 
@@ -1759,6 +1793,11 @@ fetch its contents the method dies.
 =head2 file_size REV FILE
 
 Returns the size (in bytes) of FILE (a path relative to the repository root)
+in revision REV.
+
+=head2 file_mode REV FILE
+
+Returns the mode (as a number) of FILE (a path relative to the repository root)
 in revision REV.
 
 =head2 is_ref_enabled REF, SPECs...

@@ -6,7 +6,7 @@ use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
 use Path::Tiny;
-use Test::More tests => 25;
+use Test::More tests => 29;
 use Test::Requires::Git;
 
 my ($repo, $clone);
@@ -155,6 +155,8 @@ SKIP: {
     check_cannot_commit('Deny commit case conflict',
                         qr/adds a file with a name that will conflict/,
                         'File.Txt');
+
+    $repo->run(qw/reset --hard HEAD/);
 }
 
 SKIP: {
@@ -170,8 +172,35 @@ SKIP: {
                         0,
                         "FIXME: something\n",
                     );
+
+    $repo->run(qw/reset --hard HEAD/);
 }
 
+$repo->run(qw/config --remove-section githooks.checkfile/);
+
+$repo->run(qw/config githooks.checkfile.executable *.sh/);
+
+$repo->run(qw/config githooks.checkfile.not-executable *.txt/);
+
+my $wc = path($repo->work_tree);
+
+$wc->child('script.sh')->touch()->chmod(0644);
+
+check_cannot_commit('executable fail', qr/is not executable but should be/, 'script.sh');
+
+$wc->child('script.sh')->chmod(0755);
+
+check_can_commit('executable succeed', 'script.sh');
+
+$wc->child('doc.txt')->touch()->chmod(0755);
+
+check_cannot_commit('not-executable fail', qr/is executable but should not be/, 'doc.txt');
+
+$wc->child('doc.txt')->chmod(0644);
+
+check_can_commit('not-executable succeed', 'doc.txt');
+
+
 # PRE-RECEIVE
 
 setup_repos();

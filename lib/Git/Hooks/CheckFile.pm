@@ -125,6 +125,19 @@ sub check_new_files {
         unshift @{$re_checks{basename}{sizelimit}}, [qr/$regexp/, $bytes];
     }
 
+    # Grok the list of patterns to check for executable permissions
+    my %executable_checks;
+    foreach my $check (qw/executable not-executable/) {
+        foreach my $pattern ($git->get_config($CFG => $check)) {
+            if ($pattern =~ m/^qr(.)(.*)\g{1}/) {
+                $pattern = qr/$2/;
+            } else {
+                $pattern = glob_to_regex($pattern);
+            }
+            push @{$executable_checks{$check}}, $pattern;
+        }
+    }
+
     # Now we iterate through every new file and apply to them the matching
     # commands.
     my $errors = 0;
@@ -180,6 +193,41 @@ EOS
         foreach my $command (map {$_->[1]} grep {$basename =~ $_->[0]} @name_checks) {
             check_command($git, $commit, $file, $command)
                 or ++$errors;
+        }
+
+        my $mode;
+
+        if (any {$basename =~ $_} @{$executable_checks{'executable'}}) {
+            $mode = $git->file_mode($commit, $file);
+            unless ($mode & 0b1) {
+                $git->fault(<<"EOS");
+The file '$file' is not executable but should be.
+Please, fix it or change the $CFG.executable options in
+your configuration.
+EOS
+                ++$errors;
+            }
+        }
+
+        if (any {$basename =~ $_} @{$executable_checks{'not-executable'}}) {
+            if (defined $mode) {
+                git->fault(<<EOS);
+Configuration error: The file '$file' matches a
+$CFG.executable and a $CFG.not-executable option,
+which is inconsistent.  Please, fix your configuration so that it matches only
+one of these options.
+EOS
+                ++$errors;
+            }
+            $mode = $git->file_mode($commit, $file);
+            if ($mode & 0b1) {
+                $git->fault(<<"EOS");
+The file '$file' is executable but should not be.
+Please, fix it or change the $CFG.not-executable options in
+your configuration.
+EOS
+                ++$errors;
+            }
         }
     }
 
@@ -390,7 +438,13 @@ may configure it in a Git configuration file like this:
 
     deny-case-conflict = true
 
-    deny-token = \b(FIXME|TODO)\b
+    deny-token = \\b(FIXME|TODO)\\b
+
+    executable = *.sh
+    executable = *.csh
+    executable = *.ksh
+    executable = *.zsh
+    not-executable = qr/\\.(?:c|cc|java|pl|pm|txt)$/
 
 The first section enables the plugin and defines the users C<joe> and C<molly>
 as administrators, effectivelly exempting them from any restrictions the plugin
@@ -416,6 +470,14 @@ repository in case-insensitive filesystems, such as the ones on Windows.
 The C<deny-token> option rejects commits which introduces lines
 containing the strings C<FIXME> or C<TODO>, as they are often committed by
 mistake.
+
+The C<executable> option rejects commits adding or modifying scripts (filenames
+with extensions F<.sh>, F<.csh>, F<.ksh>, and F<.zsh>) B<without> the executable
+permission, which is a common source of errors.
+
+The C<not-executable> option rejects commits adding or modifying source files
+(filenames with extensions F<.c>, F<.cc>, F<.java>, F<.pl>, F<.pm>, and F<.txt>)
+B<with> the executable permission.
 
 =head1 DESCRIPTION
 
@@ -604,3 +666,26 @@ such as FIXME or TODO. These marks are usually a reminder to fix things before
 commit, but as it so often happens, they end up being forgotten.
 
 Note that this option requires Git 1.7.4 or newer.
+
+=head2 githooks.checkfile.executable PATTERN
+
+This directive requires that all added or modified files with names matching
+PATTERN must have the executable permission. This allows you to detect common
+errors such as forgetting to set scripts as executable.
+
+PATTERN is specified as described in the C<githooks.checkfile.name> directive
+above.
+
+You can specify this option multiple times so that all PATTERNs are considered.
+
+=head2 githooks.checkfile.non-executable PATTERN
+
+This directive requires that all added or modified files with names matching
+PATTERN must B<not> have the executable permission. This allows you to detect
+common errors such as setting source code as executable.
+
+PATTERN is specified as described in the C<githooks.checkfile.name> directive
+above.
+
+You can specify this option multiple times so that all PATTERNs are considered.
+
