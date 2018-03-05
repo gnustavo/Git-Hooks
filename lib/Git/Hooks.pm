@@ -1165,6 +1165,32 @@ users about how to get help from your site's Git gurus.
 
 You can also provide helpful messages specific to each enabled PLUGIN.
 
+=head1 GIT AND PERL COMPATIBILITY POLICY
+
+Currently L<Git::Hooks> require Perl 5.10 and Git 1.7.1.
+
+We try to be compatible with the Git and Perl native packages of the oldest
+L<Ubuntu LTS|https://www.ubuntu.com/info/release-end-of-life> and
+L<CentOS|https://wiki.centos.org/About/Product> Linux distributions still
+getting maintainance updates.
+
+  +-----------------------+------+--------+-------------+
+  | Distro                | Perl |   Git  | End of Life |
+  +-----------------------+------+--------+-------------+
+  | Ubuntu 14.04 (trusty) | 5.18 |  1.9.1 |   2019-04   |
+  | Ubuntu 16.04 (xenial) | 5.22 |  2.7.4 |   2021-04   |
+  | Ubuntu 18.04 (bionic) | 5.26 | 2.15.1 |   2023-04   |
+  | CentOS 6              | 5.10 |  1.7.1 |   2020-12   |
+  | CentOS 7              | 5.16 |  1.8.3 |   2024-07   |
+  +-----------------------+------+--------+-------------+
+
+As you can see, we're kept behind mostly by the slow pace of CentOS (actually,
+RHEL) releases.
+
+There are a few features of Git::Hooks which require newer Gits. If they're used
+with older Gits an appropriate error message tells the user to upgrade Git or to
+disable the feature.
+
 =head1 SEE ALSO
 
 =over
