@@ -1165,68 +1165,6 @@ users about how to get help from your site's Git gurus.
 
 You can also provide helpful messages specific to each enabled PLUGIN.
 
-=head1 TO-DO list
-
-The following list is no order whatsoever. Any comments or other suggestion
-are welcome.
-
-=over
-
-=item * Support the WIN32 Platform
-
-=item * Improve documentation
-
-Follow the advice in L<13 Things People Hate about Your Open Source
-Docs|http://blog.smartbear.com/careers/13-things-people-hate-about-your-open-source-docs/>
-
-=item * I18N
-
-Use Locale::TextDomain to internationalize it?
-
-=item * In CheckAcls implement DENY for ACL operations
-
-Along the lines of NFSv4 ACLs
-(L<http://tools.ietf.org/html/rfc5661#section-6>). I'm thinking about
-prefixing the what component with a '!'.
-
-=item * In CheckLog allow for stop words
-
-C<CheckLog.spelling> should have a way to register stop words.
-
-=item * CheckLog should check the footer of the commit log message
-
-The Gerrit default C<commit-msg> implements some checks that could be used
-here. Some other things to check:
-
-=over
-
-=item * L<Require Signed-off-by lines|https://github.com/icefox/git-hooks/blob/master/git_hooks/commit-msg/signed-off-by>
-
-=item * L<Duplicate Signed-off-by lines|https://github.com/icefox/git-hooks/blob/master/contrib/commit-msg/duplicate-signedoffby>
-
-=back
-
-=item * pre-commit or pre-push
-
-It would be nice to let the user decide in which of these two hooks he'd
-like to have his checks run. The idea would be to have a (default and
-per-plugin) configuration option called C<*.hook> accepting the options
-C<pre-commit> and C<pre-push> (defaulting for the former). This way the user
-would be able to make his checks run on any one of the hooks.
-
-=item * Use the post-rewrite hook in CheckRewrite
-
-The CheckRewrite plugin was written without resort to the post-rewrite hook,
-which I think was implemented later. It seems that it would make the
-implementation easier and more efficient. I would still use the pre-rebase
-hook to detect unsafe rebases before they're done, however there should
-exist an option to choose to postpone the check to after the rebase.
-
-The pre-commit and post-commit hooks would be replaced by the post-rewrite
-though.
-
-=back
-
 =head1 SEE ALSO
 
 =over
