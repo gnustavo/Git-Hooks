@@ -23,9 +23,9 @@ sub check_ref {
     if ($old_commit eq $git->undef_commit) {
         if (any  {$ref =~ qr/$_/} $git->get_config($CFG => 'deny') and
             none {$ref =~ qr/$_/} $git->get_config($CFG => 'allow')) {
-            $git->fault(<<EOS);
-The reference name '$ref' is not allowed.
-Please, check the $CFG.deny options in your configuration.
+            $git->fault(<<EOS, {ref => $ref, option => 'deny'});
+The reference name is not allowed.
+Please, check your configuration option.
 EOS
             ++$errors;
         }
@@ -35,10 +35,9 @@ EOS
             && $git->get_config_boolean($CFG => 'require-annotated-tags')) {
         my $rev_type = $git->run('cat-file', '-t', $new_commit);
         if ($rev_type ne 'tag') {
-            $git->fault(<<EOS);
-The tag '$ref' is a lightweight tag.
-The $CFG.require-annotated-tags option in your configuration
-accepts only annotated tags.
+            $git->fault(<<EOS, {ref => $ref, option => 'require-annotated-tags'});
+This is a lightweight tag.
+The option in your configuration accepts only annotated tags.
 Please, recreate your tag as an annotated tag (option -a).
 EOS
             ++$errors;

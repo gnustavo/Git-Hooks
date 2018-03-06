@@ -71,18 +71,18 @@ sub match_errors {
                     my $data     = $commit->$who_info;
 
                     if (none { $data =~ $_ } @{$checks->{''}}) {
-                        $git->fault(<<"EOS");
-The commit @{[$commit->commit]} $who $info ($data) is invalid.
-It must match at least one positive $CFG.$info option.
+                        $git->fault(<<EOS, {commit => $commit, option => $info});
+The commit $who $info ($data) is invalid.
+It must match at least one positive option.
 @{[_amend_help($who)]}
 EOS
                         ++$errors;
                     }
 
                     if (any { $data =~ $_ } @{$checks->{'!'}}) {
-                        $git->fault(<<"EOS");
-The commit @{[$commit->commit]} $who $info ($data) is invalid.
-It matches some negative $CFG.$info option.
+                        $git->fault(<<EOS, {commit => $commit, option => $info});
+The commit $who $info ($data) is invalid.
+It matches some negative option.
 @{[_amend_help($who)]}
 EOS
                         ++$errors;
@@ -101,13 +101,13 @@ sub merge_errors {
     if ($commit->parent() > 1) { # it's a merge commit
         if (my @mergers = $git->get_config($CFG => 'merger')) {
             if (none {$git->match_user($_)} @mergers) {
-                $git->fault(<<"EOS");
-Authorization error: you cannot push commit @{[$commit->commit]}.
+                $git->fault(<<EOS, {commit => $commit, option => 'merger'});
+Authorization error: you cannot push this commit.
 
 I'm sorry, but you (@{[$git->authenticated_user]}) are not authorized to push
-*merge commits* because you're not included in the $CFG.merger option. You must
-either include yourself in that option or ask somebody else to push the commit
-for you.
+*merge commits* because you're not included in the configuration option. You
+must either include yourself in that option or ask somebody else to push the
+commit for you.
 EOS
                 return 1;
             }
@@ -137,11 +137,11 @@ sub email_valid_errors {
                 }
                 $cache->{email_valid} = Email::Valid->new(@checks);
             } else {
-                $git->fault(<<"EOS");
+                $git->fault(<<EOS, {option => 'email-valid.*'});
 I could not load the Email::Valid Perl module.
 
-I need it to validate your commit's author and committer as requested by the
-$CFG.email-valid.* options in your configuration.
+I need it to validate your commit's author and committer as requested by your
+configuration options.
 
 Please, install the module or disable the options to proceed.
 EOS
@@ -155,8 +155,8 @@ EOS
                 my $email     = $commit->$who_email;
                 unless ($ev->address($email)) {
                     my $details = $ev->details();
-                    $git->fault(<<"EOS");
-The commit @{[$commit->commit]} $who email ($email) failed the $details check.
+                    $git->fault(<<EOS, {commit => $commit});
+The commit $who email ($email) failed the $details check.
 @{[_amend_help($who)]}
 EOS
                     ++$errors;
@@ -183,9 +183,9 @@ sub _canonical_identity {
                 ));
                 $canonical;
             } catch {
-                $git->fault(<<'EOS');
+                $git->fault(<<'EOS', {option => 'canonical'});
 The command git-check-mailmap wasn't found.
-The $CFG.canonical option requires it.
+The configuration option requires it.
 It's available since Git 1.8.4.
 Please, either upgrade your Git or disable this option.
 EOS
@@ -209,8 +209,8 @@ sub canonical_errors {
             my $canonical = _canonical_identity($git, $mailmap, $identity);
 
             if ($identity ne $canonical) {
-                $git->fault(<<"EOS");
-The commit @{[$commit->commit]} $who identity isn't canonical.
+                $git->fault(<<EOS, {commit => $commit, option => 'canonical'});
+The commit $who identity isn't canonical.
 It's '$identity' but its canonical form is '$canonical'.
 @{[_amend_help($who)]}
 EOS
@@ -233,20 +233,20 @@ sub signature_errors {
         my $status = $git->run(qw/log -1 --format='%G?'/, $commit->commit);
 
         if ($status eq 'B') {
-            $git->fault(<<"EOS");
-The commit @{[$commit->commit]} has a BAD GPG signature.
+            $git->fault(<<EOS, {commit => $commit, option => 'signature'});
+The commit has a BAD GPG signature.
 Please, amend your commit with the -S option to fix it.
 EOS
             ++$errors;
         } elsif ($status eq 'N' && $signature ne 'optional') {
-            $git->fault(<<"EOS");
-The commit @{[$commit->commit]} has NO GPG signature.
+            $git->fault(<<EOS, {commit => $commit, option => 'signature'});
+The commit has NO GPG signature.
 Please, amend your commit with the -S option to add one.
 EOS
             ++$errors;
         } elsif ($status eq 'U' && $signature eq 'trusted') {
-            $git->fault(<<"EOS");
-The commit @{[$commit->commit]} has an UNTRUSTED GPG signature.
+            $git->fault(<<EOS, {commit => $commit, option => 'signature'});
+The commit has an UNTRUSTED GPG signature.
 Please, amend your commit with the -S option to add another one.
 EOS
             ++$errors;
@@ -272,11 +272,14 @@ sub code_errors {
                 $code = do $check;
                 unless ($code) {
                     if (length $@) {
-                        $git->fault("I couldn't parse the $CFG.check-code file ($check): ", {details => $@});
+                        $git->fault("I couldn't parse the file ($check):",
+                                    {commit => $commit, option => 'check-code', details => $@});
                     } elsif (! defined $code) {
-                        $git->fault("I couldn't read the $CFG.check-code file ($check): ", {details => $!});
+                        $git->fault("I couldn't read the file ($check):",
+                                    {commit => $commit, option => 'check-code', details => $@});
                     } else {
-                        $git->fault("The $CFG.check-code file ($check) returned FALSE");
+                        $git->fault("The file ($check) returned FALSE",
+                                    {commit => $commit, option => 'check-code', details => $@});
                     }
                     ++$errors;
                     next CODE;
@@ -284,7 +287,8 @@ sub code_errors {
             } else {
                 $code = eval $check; ## no critic (BuiltinFunctions::ProhibitStringyEval)
                 if (length $@) {
-                    $git->fault("I couldn't parse the $CFG.check-code value: ", {details => $@});
+                    $git->fault("I couldn't parse the option value ($check):",
+                                {commit => $commit, option => 'check-code', details => $@});
                     ++$errors;
                     next CODE;
                 }
@@ -292,7 +296,8 @@ sub code_errors {
             if (defined $code && ref $code && ref $code eq 'CODE') {
                 push @{$cache->{codes}}, $code;
             } else {
-                $git->fault("The option $CFG.check-code must end with a code ref.");
+                $git->fault("The option value must end with a code ref.",
+                            {commit => $commit, option => 'check-code'});
                 ++$errors;
             }
         }
@@ -302,11 +307,13 @@ sub code_errors {
         my $ok = eval { $code->($git, $commit, $ref) };
         if (defined $ok) {
             unless ($ok) {
-                $git->fault("Error detected while evaluating $CFG.check-code.");
+                $git->fault("Error detected while evaluating the option.",
+                            {commit => $commit, option => 'check-code'});
                 ++$errors;
             }
         } elsif (length $@) {
-            $git->fault('Error detected while evaluating $CFG.check-code', {details => $@});
+            $git->fault('Error detected while evaluating the option',
+                        {commit => $commit, option => 'check-code', details => $@});
             ++$errors;
         }
     }
@@ -335,11 +342,12 @@ sub check_ref {
 
     if (my $limit = $git->get_config_integer($CFG => 'push-limit')) {
         if (@commits > $limit) {
-            $git->fault(<<"EOS");
-Are you sure you want to push @{[scalar @commits]} commits to $ref at once?
+            $git->fault(<<EOS, {ref => $ref, option => 'push-limit'});
+Are you sure you want to push @{[scalar @commits]} commits to this reference at
+once?
 
-The $CFG.push-limit configuration option currently allows one to push at most
-$limit commits to a reference at once.
+The configuration option currently allows one to push at most $limit commits to
+a reference at once.
 
 If you're sure about this you can break the whole commit sequence in smaller
 subsequences and push them one at a time.

@@ -680,17 +680,40 @@ sub get_errors {
 sub fault {
     my ($git, $message, $info) = @_;
     $info //= {};
-    my $prefix = exists $info->{prefix} ? $info->{prefix} : caller(1);
+
+    my $msg;
+
+    {
+        my $prefix = $info->{prefix} || caller(1);
+        my @context;
+        if (my $commit = $info->{commit}) {
+            $commit = $commit->commit
+                if ref $commit; # It's a Git::Repository::Log object
+            $commit = $git->run('rev-parse', '--short', $commit)
+                if $commit =~ /^[0-9a-f]{40}$/; # It can be '<new>' or ':0' sometimes
+            push @context, "commit $commit";
+        }
+        if (my $ref = $info->{ref}) {
+            push @context, "on ref $ref";
+        }
+        if (my $option = $info->{option}) {
+            push @context, "violates option '$option'";
+        }
+        $msg = "\[$prefix";
+        $msg .= ': ' . join(' ', @context) if @context;
+        $msg .= "]\n";
+    }
+
     chomp $message;             # strip trailing newlines
-    $message =~ s/\b[0-9a-f]{40}\b/$git->run('rev-parse', '--short', ${^MATCH})/egp; # shorten SHA1s in the message
-    my $fmtmsg = "\n[$prefix] $message";
+    $msg .= "\n$message\n";
+
     if (my $details = $info->{details}) {
         $details =~ s/\n*$//s; # strip trailing newlines
         $details =~ s/^/  /gm; # prefix each line with two spaces
-        $fmtmsg .= ":\n\n$details\n";
+        $msg .= "\n$details\n\n";
     }
-    $fmtmsg .= "\n";            # end in a newline
-    push @{$git->{_plugin_githooks}{faults}}, $fmtmsg;
+
+    push @{$git->{_plugin_githooks}{faults}}, $msg;
 
     # Return true to allow for the idiom: <expression> or $git->fault(...) and <next|last|return>;
     return 1;
@@ -711,12 +734,12 @@ sub get_faults {
 
     if ($git->{_plugin_githooks}{hookname} =~ /^commit-msg|pre-commit$/
             && ! $git->get_config_boolean(githooks => 'abort-commit')) {
-        $faults .= <<"EOF";
+        $faults .= <<EOS;
 
 ATTENTION: To fix the problems in this commit, please consider amending it:
 
         git commit --amend
-EOF
+EOS
     }
 
     if (my $footer = $git->get_config(githooks => 'error-footer')) {
@@ -1499,31 +1522,69 @@ C<INT> value are grokked with this method.
 =head2 fault MESSAGE INFO
 
 This method should be used by plugins to record consistent error or warning
-messages. It gets one or two arguments. MESSAGE is a one line string. INFO is an
-optional hash-ref which may contain additional information about the message
-with the following keys:
+messages. It gets one or two arguments. MESSAGE is a multi-line string
+explaining the error. INFO is an optional hash-ref which may contain additional
+information about the message, which will be used to complement it.
+
+A "complete" fault is formatted like this:
+
+  [PREFIX: CONTEXT]
+
+  MESSAGE
+
+    DETAILS
+
+PREFIX gives contextual information about the message. It can be set via the
+C<prefix> INFO hash key. If not, the package name of the function which called
+C<fault> is used, which usually happens to be the name of the plugin which
+detected the error.
+
+CONTEXT is additional contextual information, such as a reference name, a
+commit SHA-1, and a violated configuration option.
+
+MESSAGE is the multi-line error message.
+
+DETAILS is a multi-line string giving more details about the error. Usually
+showing error output from an external command.
+
+Besides the MESSAGE, which is required, and the PREFIX, which has a default
+value, all other items must be informed via the INFO hash-ref with the following
+keys:
 
 =over 4
 
-=item * prefix
+=item * B<prefix>
 
-A string giving contextual information about the error message. It's used as a
-prefix to the message. When absent, the prefix used is the package name of the
-function which called C<fault>, which is usually a Git::Hooks plugin name. So,
-the actual error message looks like this:
+A string giving broad contextual information about the error message. When
+absent, the prefix used is the package name of the function which called
+C<fault>, which is usually a Git::Hooks plugin name.
 
-  [PREFIX] MESSAGE
+=item * B<commit>
 
-=item * details
+The SHA-1 or a Git::Repository::Log object representing a commit. It is informed
+in the CONTEXT area like this (as a short SHA-1):
+
+  [PREFIX: commit SHA-1]
+
+=item * B<ref>
+
+The name of a Git reference (usually a branch). It is informed in the CONTEXT
+area like this:
+
+  [PREFIX: on ref REF]
+
+=item * B<option>
+
+The name of a configuration option related to the error message. It is informed
+in the CONTEXT area like this:
+
+  [PREFIX: violates option 'OPTION']
+
+=item * B<details>
 
 A string containing details about the error message. If present, it is appended
-to the line above, separated by an empty line, and with its lines prefixed by
-two spaces, like this:
-
-  [PREFIX] MESSAGE
-
-    DETAILS
-    MORE DETAILS...
+to the MESSAGE, separated by an empty line, and with its lines prefixed by two
+spaces.
 
 =back
 

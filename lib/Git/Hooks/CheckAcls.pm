@@ -70,10 +70,8 @@ sub check_ref {
         next unless $git->match_user($who);
         next unless match_ref($ref, $refspec);
         if ($what =~ /[^CRUD-]/) {
-            $git->fault(<<EOS);
-Configuration error in a $CFG.acl option.
-
-It has an invalid second argument:
+            $git->fault(<<EOS, {option => 'acl', ref => $ref});
+Configuration error: It has an invalid second argument:
 
   acl = $who *$what* $refspec
 
@@ -94,9 +92,9 @@ EOS
     );
 
     if (my $myself = eval { $git->authenticated_user() }) {
-        $git->fault(<<EOS);
-Authorization error: you ($myself) cannot $op{$op} reference $ref.
-Please, check the $CFG.acl options in your configuration.
+        $git->fault(<<EOS, {option => 'acl', ref => $ref});
+Authorization error: you ($myself) cannot $op{$op} this reference.
+Please, check the your configuration options.
 EOS
     } else {
         $git->fault(<<EOS, {details => $@});

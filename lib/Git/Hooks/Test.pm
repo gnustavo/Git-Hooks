@@ -76,12 +76,12 @@ sub install_hooks {
         open my $fh, '>', $hook_pl or BAIL_OUT("Can't create $hook_pl: $!");
         state $debug = $ENV{DBG} ? '-d' : '';
         state $bliblib = $cwd->child('blib', 'lib');
-        print $fh <<"EOF";
+        print $fh <<EOS;
 #!$Config{perlpath} $debug
 use strict;
 use warnings;
 use lib '$bliblib';
-EOF
+EOS
 
         state $pathsep = $^O eq 'MSWin32' ? ';' : ':';
         if (defined $ENV{PERL5LIB} and length $ENV{PERL5LIB}) {
@@ -90,34 +90,34 @@ EOF
             }
         }
 
-        print $fh <<'EOF';
+        print $fh <<EOS;
 use Git::Hooks;
-EOF
+EOS
 
         print $fh $extra_perl if defined $extra_perl;
 
         # Not all hooks defined the GIT_DIR environment variable
         # (e.g., pre-rebase doesn't).
-        print $fh <<"EOF";
+        print $fh <<EOS;
 \$ENV{GIT_DIR}    = '.git' unless exists \$ENV{GIT_DIR};
 \$ENV{GIT_CONFIG} = "\$ENV{GIT_DIR}/config";
-EOF
+EOS
 
         # Reset HOME to avoid reading ~/.gitconfig
-        print $fh <<"EOF";
-\$ENV{HOME}       = '';
-EOF
+        print $fh <<'EOS';
+$ENV{HOME}       = '';
+EOS
 
         # Hooks on Windows are invoked indirectly.
         if ($^O eq 'MSWin32') {
-            print $fh <<"EOF";
-my \$hook = shift;
-run_hook(\$hook, \@ARGV);
-EOF
+            print $fh <<'EOS';
+my $hook = shift;
+run_hook($hook, @ARGV);
+EOS
         } else {
-            print $fh <<"EOF";
-run_hook(\$0, \@ARGV);
-EOF
+            print $fh <<'EOS';
+run_hook($0, @ARGV);
+EOS
         }
     }
     chmod 0755 => $hook_pl;
@@ -135,10 +135,10 @@ EOF
             (my $perl = $^X) =~ tr:\\:/:;
             $hook_pl =~ tr:\\:/:;
             my $d = $ENV{DBG} ? '-d' : '';
-            my $script = <<"EOF";
+            my $script = <<EOS;
 #!/bin/sh
 $perl $d $hook_pl $hook \"\$@\"
-EOF
+EOS
             path($hookfile)->spew($script)
                 or BAIL_OUT("can't path('$hookfile')->spew('$script')\n");
             chmod 0755 => $hookfile;

@@ -502,7 +502,7 @@ make this check work for other hooks as well:
             my $size = $git->file_size(":0:$name");
             if ($size > $LIMIT) {
                 $git->fault("File '$name' has $size bytes, more than our limit of $LIMIT",
-                            {prefix => 'CheckSize'});
+                            {prefix => 'CheckSize', commit => $commit});
                 ++$errors;
             }
         }
@@ -564,7 +564,7 @@ We just have to change the check_new_files function:
             my $size = $git->file_size(":0:$name");
             if ($size > $limit) {
                 $git->fault("File '$name' has $size bytes, more than our limit of $limit",
-                            {prefix => 'CheckSize'});
+                            {prefix => 'CheckSize', commit => $commit});
                 ++$errors;
             }
         }

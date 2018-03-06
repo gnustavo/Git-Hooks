@@ -81,7 +81,7 @@ sub check_command {
         # $file to avoid confounding the user.
         $output =~ s/\Q$tmpfile\E/$file/g;
 
-        $git->fault($message, {details => $output});
+        $git->fault($message, {commit => $commit, details => $output});
         return;
     } else {
         # FIXME: What should we do with eventual output from a
@@ -148,10 +148,9 @@ sub check_new_files {
 
         if (any  {$basename =~ $_} @{$re_checks{basename}{deny}} and
             none {$basename =~ $_} @{$re_checks{basename}{allow}}) {
-            $git->fault(<<"EOS");
+            $git->fault(<<EOS, {commit => $commit, option => 'basename.{allow,deny}'});
 The file '$file' basename is not allowed.
-Please, check the $CFG.basename.deny and
-$CFG.basename.allow options in your configuration.
+Please, check your configuration options.
 EOS
             ++$errors;
             next FILE;          # Don't botter checking the contents of invalid files
@@ -159,10 +158,9 @@ EOS
 
         if (any  {$file =~ $_} @{$re_checks{path}{deny}} and
             none {$file =~ $_} @{$re_checks{path}{allow}}) {
-            $git->fault(<<"EOS");
+            $git->fault(<<EOS, {commit => $commit, option => 'path.{allow,deny}'});
 The file '$file' path is not allowed.
-Please, check the $CFG.path.deny and
-$CFG.path.allow options in your configuration.
+Please, check your configuration options.
 EOS
             ++$errors;
             next FILE;          # Don't botter checking the contents of invalid files
@@ -179,12 +177,11 @@ EOS
         }
 
         if ($file_sizelimit && $file_sizelimit < $size) {
-            $git->fault(<<"EOS");
+            $git->fault(<<EOS, {commit => $commit, option => '[basename.]sizelimit'});
 The file '$file' is too big.
 
 It has $size bytes but the current limit is $file_sizelimit bytes.
-Please, check the $CFG.sizelimit and
-$CFG.basename.sizelimit options in your configuration.
+Please, check your configuration options.
 EOS
             ++$errors;
             next FILE;    # Don't botter checking the contents of huge files
@@ -200,10 +197,9 @@ EOS
         if (any {$basename =~ $_} @{$executable_checks{'executable'}}) {
             $mode = $git->file_mode($commit, $file);
             unless ($mode & 0b1) {
-                $git->fault(<<"EOS");
+                $git->fault(<<EOS, {commit => $commit, option => 'executable'});
 The file '$file' is not executable but should be.
-Please, fix it or change the $CFG.executable options in
-your configuration.
+Please, check your configuration options.
 EOS
                 ++$errors;
             }
@@ -211,20 +207,18 @@ EOS
 
         if (any {$basename =~ $_} @{$executable_checks{'not-executable'}}) {
             if (defined $mode) {
-                git->fault(<<EOS);
-Configuration error: The file '$file' matches a
-$CFG.executable and a $CFG.not-executable option,
-which is inconsistent.  Please, fix your configuration so that it matches only
-one of these options.
+                git->fault(<<EOS, {commit => $commit, option => '[not-]executable'});
+Configuration error: The file '$file' matches a 'executable' and a
+'not-executable' option simultaneously, which is inconsistent.
+Please, fix your configuration so that it matches only one of these options.
 EOS
                 ++$errors;
             }
             $mode = $git->file_mode($commit, $file);
             if ($mode & 0b1) {
-                $git->fault(<<"EOS");
+                $git->fault(<<EOS, {commit => $commit, option => 'not-executable'});
 The file '$file' is executable but should not be.
-Please, fix it or change the $CFG.not-executable options in
-your configuration.
+Please, check your configuration options.
 EOS
                 ++$errors;
             }
@@ -259,15 +253,14 @@ sub deny_case_conflicts {
         for (my $j = $i + 1; $j <= $#names; ++$j) {
             if (lc($names[$i]) eq lc($names[$j]) && $names[$i] ne $names[$j]) {
                 ++$errors;
-                $git->fault(<<EOS);
-Commit $commit adds two files with names that will conflict
+                $git->fault(<<EOS, {commit => $commit, option => 'deny-case-conflict'});
+This commit adds two files with names that will conflict
 with each other in the repository in case-insensitive
 filesystems:
 
   $names[$i]
   $names[$j]
 
-This check is enabled by the $CFG.deny-case-conflict option.
 Please, rename the added files to avoid the conflict and amend your commit.
 EOS
             }
@@ -281,15 +274,14 @@ EOS
             my $lc_name = lc $name;
             if ($lc_name eq $lc_file && $name ne $file) {
                 ++$errors;
-                $git->fault(<<EOS);
-Commit $commit adds a file with a name that will conflict
+                $git->fault(<<EOS, {commit => $commit, option => 'deny-case-conflict'});
+This commit adds a file with a name that will conflict
 with the name of another file already existing in the repository
 in case-insensitive filesystems:
 
   ADDED:    $name
   EXISTING: $file
 
-This check is enabled by the $CFG.deny-case-conflict option.
 Please, rename the added file to avoid the conflict and amend your commit.
 EOS
             }
@@ -306,9 +298,8 @@ sub deny_token {
         or return 0;
 
     if ($git->version_lt('1.7.4')) {
-        $git->fault(<<EOS);
-The $CFG.deny-token option requires Git 1.7.4 or later.
-Your Git is older.
+        $git->fault(<<EOS, {option => 'deny-token'});
+This option requires Git 1.7.4 or later but your Git is older.
 Please, upgrade your Git or disable this option.
 EOS
         return 1;
@@ -333,9 +324,9 @@ EOS
     @diff = grep {/^+.*?(?:$regex)/} @diff;
 
     if (@diff) {
-        $git->fault(<<EOS, {details => join("\n", @diff)});
+        $git->fault(<<EOS, {option => 'deny-token', details => join("\n", @diff)});
 Invalid tokens detected in added lines.
-The $CFG.deny-token option rejects lines matching $regex.
+This option rejects lines matching $regex.
 Please, amend these lines and try again.
 EOS
     }

@@ -58,8 +58,8 @@ sub insert_issue_as_trailer {
         $key = ucfirst lc $key;
         $git->run(qw/interpret-trailers --in-place --trailer/, "$key:$issue", $msg_file);
     } else {
-        $git->fault(<<EOS);
-The $CFG.issue-place option 'trailer' setting requires Git 2.8.0 or newer.
+        $git->fault(<<EOS, {option => 'issue-place'});
+The option 'trailer' setting requires Git 2.8.0 or newer.
 Please, either upgrade your Git or disable this option.
 EOS
     }
@@ -76,10 +76,9 @@ sub insert_issue {
 
     my $branch_rx = eval { qr:(?p)\brefs/heads/\K$issue_branch_regex\b: };
     unless (defined $branch_rx) {
-        $git->fault(<<EOS, {details => $@});
-Configuration error: the $CFG.issue_branch_regex option must be a
-valid regular expression, but '$issue_branch_regex' isn't.
-Please, fix your configuration and try again.
+        $git->fault(<<EOS, {option => 'issue-branch-regex', details => $@});
+Configuration error: the option must be a valid regular expression, but
+'$issue_branch_regex' isn't.  Please, fix your configuration and try again.
 EOS
         return 1;
     }
@@ -99,8 +98,8 @@ EOS
     } elsif ($place =~ /^title\s+(?<format>.+?)\s*$/) {
         insert_issue_in_title($git, $msg_file, $issue, $+{format});
     } else {
-        $git->fault(<<EOS);
-Configuration error: invalid value to option $CFG.issue-place ($place)
+        $git->fault(<<EOS, {option => 'issue-place'});
+Configuration error: invalid option value ($place)
 Please, fix it and try again.
 EOS
         return 1;

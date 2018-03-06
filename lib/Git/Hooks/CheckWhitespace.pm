@@ -58,8 +58,8 @@ sub check_affected_refs {
             $old_commit eq $git->undef_commit ? $git->empty_tree : $old_commit,
             $new_commit);
         if ($? != 0) {
-            $git->fault(<<"EOS", {details => $output});
-There are extra whitespaces in the changed files in $ref.
+            $git->fault(<<EOS, {ref => $ref, details => $output});
+There are extra whitespaces in the changed files in the reference.
 Please, remove them and amend your commit.
 EOS
             ++$errors;
@@ -78,7 +78,7 @@ sub check_commit {
     if ($? == 0) {
         return 1;
     } else {
-        $git->fault(<<"EOS", {details => $output});
+        $git->fault(<<EOS, {details => $output});
 There are extra whitespaces in the changed files.
 Please, remove them and amend your commit.
 EOS
@@ -97,7 +97,7 @@ sub check_patchset {
     if ($? == 0) {
         return 1;
     } else {
-        $git->fault(<<"EOS", {details => $output});
+        $git->fault(<<EOS, {commit => $opts->{'--commit'}, details => $output});
 There are extra whitespaces in the changed files.
 Please, remove them and amend your commit.
 EOS
