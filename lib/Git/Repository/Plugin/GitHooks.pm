@@ -677,9 +677,54 @@ sub get_errors {
     return get_faults(@_);
 }
 
+sub _githooks_colors {
+    my ($git) = @_;
+
+    state $colors;
+
+    unless (defined $colors) {
+        # Check if we want to colorize the output, and if so, return a hash
+        # containing the default colors. Otherwise, return a hash containing no
+        # color codes at all.
+
+        # BUG: https://rt.cpan.org/Ticket/Display.html?id=124711. We can't
+        # invoke 'git config --get-colorbool' via Git::Repository because it
+        # deletes the TERM environment variable before invoking Git, which makes
+        # it think it shouldn't apply any colors. So, we have to shell out Git
+        # explicitly.
+
+        my $stdout_is_tty = -t STDOUT ? 'true' : 'false';
+        my $githooks_color = qx{git config --get-colorbool githooks.color $stdout_is_tty};
+        chomp $githooks_color;
+        if ($githooks_color eq 'true') {
+            $colors = {
+                header  => $git->run(qw/config --get-color githooks.color.header/,  'green'),
+                footer  => $git->run(qw/config --get-color githooks.color.footer/,  'green'),
+                context => $git->run(qw/config --get-color githooks.color.context/, 'red bold'),
+                message => $git->run(qw/config --get-color githooks.color.message/, 'yellow'),
+                details => '',
+                reset   => $git->run(qw/config --get-color/, '', 'reset'),
+            };
+        } else {
+            $colors = {
+                header  => '',
+                footer  => '',
+                context => '',
+                message => '',
+                details => '',
+                reset   => '',
+            };
+        }
+    }
+
+    return $colors;
+}
+
 sub fault {
     my ($git, $message, $info) = @_;
     $info //= {};
+
+    my $colors = _githooks_colors($git);
 
     my $msg;
 
@@ -699,18 +744,18 @@ sub fault {
         if (my $option = $info->{option}) {
             push @context, "violates option '$option'";
         }
-        $msg = "\[$prefix";
+        $msg = "$colors->{context}\[$prefix";
         $msg .= ': ' . join(' ', @context) if @context;
-        $msg .= "]\n";
+        $msg .= "]$colors->{reset}\n";
     }
 
     chomp $message;             # strip trailing newlines
-    $msg .= "\n$message\n";
+    $msg .= "\n$colors->{message}$message$colors->{reset}\n";
 
     if (my $details = $info->{details}) {
         $details =~ s/\n*$//s; # strip trailing newlines
         $details =~ s/^/  /gm; # prefix each line with two spaces
-        $msg .= "\n$details\n\n";
+        $msg .= "\n$colors->{details}$details$colors->{reset}\n\n";
     }
 
     push @{$git->{_plugin_githooks}{faults}}, $msg;
@@ -724,10 +769,12 @@ sub get_faults {
 
     return unless exists $git->{_plugin_githooks}{faults};
 
+    my $colors = _githooks_colors($git);
+
     my $faults = '';
 
     if (my $header = $git->get_config(githooks => 'error-header')) {
-        $faults .= qx{$header} . "\n"; ## no critic (ProhibitBacktickOperators)
+        $faults .= $colors->{header} . qx{$header} . "$colors->{reset}\n"; ## no critic (ProhibitBacktickOperators)
     }
 
     $faults .= join("\n\n", @{$git->{_plugin_githooks}{faults}});
@@ -743,7 +790,7 @@ EOS
     }
 
     if (my $footer = $git->get_config(githooks => 'error-footer')) {
-        $faults .= "\n" . qx{$footer} . "\n"; ## no critic (ProhibitBacktickOperators)
+        $faults .= "\n$colors->{footer}" . qx{$footer} . "$colors->{reset}\n"; ## no critic (ProhibitBacktickOperators)
     }
 
     return $faults;
@@ -1590,6 +1637,10 @@ spaces.
 
 The method simply records the formatted error message and returns. It
 doesn't die.
+
+The messages can be colorized if they go to a terminal. This can be configured
+by the configuration options C<githooks.color> and C<< githooks.color.<slot> >>,
+which are explained in the section L<Git::Hooks/CONFIGURATION> documentation.
 
 =head2 get_faults
 

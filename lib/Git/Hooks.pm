@@ -1165,6 +1165,63 @@ users about how to get help from your site's Git gurus.
 
 You can also provide helpful messages specific to each enabled PLUGIN.
 
+=head2 githooks.color [never|auto|always]
+
+This option tells if Git::Hooks's output should be colorized. It accepts the
+same values as Git's own C<color.ui> option. If it's not set, the C<color.ui>
+value is used by default. The meaning of each value is the following:
+
+=over 4
+
+=item B<never (or false)>
+
+Do not use colors.
+
+=item B<auto (or true)>
+
+Use colors only if the messages go to a terminal. (This is the default value of
+C<color.ui> since Git 1.8.4.)
+
+=item B<always>
+
+Do use colors.
+
+=back
+
+=head2 githooks.color.<slot> COLOR
+
+Use customized colors for the Git::Hooks output colorization. B<< <slot> >>
+specifies which part of the output to use the specified color, as shown below.
+
+The COLOR value must comply with Git's color config type, which is explained in
+the L<git(1)> manpage, under the C<CONFIGURATION FILE/Values/color> section.
+
+The available I<slots> are the following:
+
+=over 4
+
+=item B<header>
+
+The text output for the C<githooks.error-header> option. (Default value is "green".)
+
+=item B<footer>
+
+The text output for the C<githooks.error-footer> option. (Default value is "green".)
+
+=item B<context>
+
+The line containing the prefix and the context of error messages. (Default value is "red bold".)
+
+=item B<message>
+
+The error message proper. (Default value is "yellow".)
+
+=item B<details>
+
+The indented lines providing details for error messages. (Default value is empty.)
+
+=back
+
 =head1 GIT AND PERL COMPATIBILITY POLICY
 
 Currently L<Git::Hooks> require Perl 5.10 and Git 1.7.1.
