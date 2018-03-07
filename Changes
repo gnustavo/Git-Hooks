@@ -2,6 +2,34 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.7.0     2018-03-07 16:01:53-03:00 America/Sao_Paulo
+
+  [New features]
+
+  - Git::Hooks now can produces colorized output by default, which can be
+    configured by the new githooks.color option. There are options to specify
+    the colors to use for each part of the output.
+
+  - The error messages were reformatted to contain a "context" line telling the
+    name of the plugin which detected the error and, optionally, a commit SHA1,
+    a reference name, and a configuration option name.
+
+  - CheckFile: new options 'executable' and 'not-executable' allows one to check
+    if specific files are executable or not, rejecting the commit otherwise.
+
+  - CheckFile: new option 'deny-token' rejects commits when their patch contains
+    one or more tokens. Useful to avoid committing "FIXME" lines.
+
+  - CheckFile: new option 'deny-case-conflict' rejects commits which add files
+    with names that would conflict with each other or with the names of other
+    files already in the repository in case-insensitive filesystems, such as the
+    ones on Windows.
+
+  [Documentation]
+
+  - The Git::Hooks documentation has a new section about our Perl and Git
+    compatibility policy.
+
 2.6.3     2018-02-28 09:31:25-03:00 America/Sao_Paulo
 
   [Fix]
