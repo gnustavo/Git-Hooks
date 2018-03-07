@@ -687,15 +687,13 @@ sub _githooks_colors {
         # containing the default colors. Otherwise, return a hash containing no
         # color codes at all.
 
-        # BUG: https://rt.cpan.org/Ticket/Display.html?id=124711. We can't
-        # invoke 'git config --get-colorbool' via Git::Repository because it
-        # deletes the TERM environment variable before invoking Git, which makes
-        # it think it shouldn't apply any colors. So, we have to shell out Git
-        # explicitly.
+        # NOTE: We have to pass the TERM environment variable explicitly because
+        # Git::Repository's constructor deletes it by default. (Se discussion in
+        # https://rt.cpan.org/Ticket/Display.html?id=124711.)
 
         my $stdout_is_tty = -t STDOUT ? 'true' : 'false';
-        my $githooks_color = qx{git config --get-colorbool githooks.color $stdout_is_tty};
-        chomp $githooks_color;
+        my $githooks_color = $git->run(qw/config --get-colorbool githooks.color/, $stdout_is_tty,
+                                       {env => {TERM => $ENV{TERM}}});
         if ($githooks_color eq 'true') {
             $colors = {
                 header  => $git->run(qw/config --get-color githooks.color.header/,  'green'),
