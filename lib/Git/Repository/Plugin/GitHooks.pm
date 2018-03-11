@@ -680,9 +680,9 @@ sub get_errors {
 sub _githooks_colors {
     my ($git) = @_;
 
-    state $colors;
+    my $cache = $git->cache('colors');
 
-    unless (defined $colors) {
+    unless (exists $colors->{reset}) {
         # Check if we want to colorize the output, and if so, return a hash
         # containing the default colors. Otherwise, return a hash containing no
         # color codes at all.
@@ -695,27 +695,23 @@ sub _githooks_colors {
         my $githooks_color = $git->run(qw/config --get-colorbool githooks.color/, $stdout_is_tty,
                                        {env => {TERM => $ENV{TERM}}});
         if ($githooks_color eq 'true') {
-            $colors = {
-                header  => $git->run(qw/config --get-color githooks.color.header/,  'green'),
-                footer  => $git->run(qw/config --get-color githooks.color.footer/,  'green'),
-                context => $git->run(qw/config --get-color githooks.color.context/, 'red bold'),
-                message => $git->run(qw/config --get-color githooks.color.message/, 'yellow'),
-                details => '',
-                reset   => $git->run(qw/config --get-color/, '', 'reset'),
-            };
+            $cache->{header}  = $git->run(qw/config --get-color githooks.color.header/,  'green');
+            $cache->{footer}  = $git->run(qw/config --get-color githooks.color.footer/,  'green');
+            $cache->{context} = $git->run(qw/config --get-color githooks.color.context/, 'red bold');
+            $cache->{message} = $git->run(qw/config --get-color githooks.color.message/, 'yellow');
+            $cache->{details} = '';
+            $cache->{reset}   = $git->run(qw/config --get-color/, '', 'reset');
         } else {
-            $colors = {
-                header  => '',
-                footer  => '',
-                context => '',
-                message => '',
-                details => '',
-                reset   => '',
-            };
+            $cache->{header}  = '';
+            $cache->{footer}  = '';
+            $cache->{context} = '';
+            $cache->{message} = '';
+            $cache->{details} = '';
+            $cache->{reset}   = '';
         }
     }
 
-    return $colors;
+    return $cache;
 }
 
 sub fault {
