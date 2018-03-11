@@ -2,6 +2,21 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.8.0     2018-03-11 20:44:24-03:00 America/Sao_Paulo
+
+  [New features]
+
+  - New options githooks.ref and githooks.noref allow one to enable or disable
+    most hooks for commits affecting specific references (usually branches).
+
+  [Deprecations]
+
+  - CheckJira: the githooks.checkjira.ref and githooks.checkjira.noref options
+    are deprecated and should be replaced by the new global options.
+
+  - CheckLog: the githooks.checklog.ref and githooks.checklog.noref options are
+    deprecated and should be replaced by the new global options.
+
 2.7.0     2018-03-07 16:01:53-03:00 America/Sao_Paulo
 
   [New features]
