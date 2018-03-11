@@ -225,6 +225,7 @@ sub notify_affected_refs {
     my $errors = 0;
 
     foreach my $ref (@refs) {
+        next unless $git->is_reference_enabled($ref);
         my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
         foreach my $rule (@rules) {
             my @commits = $git->get_commits($old_commit, $new_commit, \@options, $rule->{paths});
@@ -376,6 +377,10 @@ the configuration options explained below.
 =head1 CONFIGURATION
 
 The plugin is configured by the following git options.
+
+It can be disabled for specific references via the C<githooks.ref> and
+C<githooks.noref> options about which you can read in the L<Git::Hooks>
+documentation.
 
 =head2 githooks.notify.rule RECIPIENTS [-- PATHSPECS]
 

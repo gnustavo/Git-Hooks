@@ -345,6 +345,7 @@ sub check_affected_refs {
     my $errors = 0;
 
     foreach my $ref ($git->get_affected_refs()) {
+        next unless $git->is_reference_enabled($ref);
         my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
         $errors += check_new_files($git, $new_commit, $git->filter_files_in_range('AM', $old_commit, $new_commit));
         $errors += deny_case_conflicts($git, $new_commit, sub { $git->filter_files_in_range('ACR', $old_commit, $new_commit) });
@@ -358,6 +359,10 @@ sub check_commit {
     my ($git) = @_;
 
     _setup_config($git);
+
+    my $current_branch = $git->get_current_branch();
+
+    return 1 unless $git->is_reference_enabled($current_branch);
 
     my $errors = 0;
 
@@ -374,6 +379,15 @@ sub check_patchset {
     _setup_config($git);
 
     return 1 if $git->im_admin();
+
+    # The --branch argument contains the branch short-name if it's in the
+    # refs/heads/ namespace. But we need to always use the branch long-name,
+    # so we change it here.
+    my $branch = $opts->{'--branch'};
+    $branch = "refs/heads/$branch"
+        unless $branch =~ m:^refs/:;
+
+    return 1 unless $git->is_reference_enabled($branch);
 
     my $errors = 0;
 
@@ -502,6 +516,10 @@ option:
 =head1 CONFIGURATION
 
 The plugin is configured by the following git options.
+
+It can be disabled for specific references via the C<githooks.ref> and
+C<githooks.noref> options about which you can read in the L<Git::Hooks>
+documentation.
 
 =head2 githooks.checkfile.name PATTERN COMMAND
 

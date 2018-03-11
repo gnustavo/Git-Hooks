@@ -311,6 +311,9 @@ sub check_message_file {
     _setup_config($git);
 
     my $current_branch = $git->get_current_branch();
+
+    return 1 unless $git->is_reference_enabled($current_branch);
+
     if (my @ref = $git->get_config($CFG => 'ref')) {
         return 1 unless $git->is_ref_enabled($current_branch, @ref);
     }
@@ -360,6 +363,7 @@ sub check_affected_refs {
     my $errors = 0;
 
     foreach my $ref ($git->get_affected_refs()) {
+        next unless $git->is_reference_enabled($ref);
         check_ref($git, $ref)
             or ++$errors;
     }
@@ -383,6 +387,8 @@ sub check_patchset {
     my $branch = $opts->{'--branch'};
     $branch = "refs/heads/$branch"
         unless $branch =~ m:^refs/:;
+
+    return 1 unless $git->is_reference_enabled($branch);
 
     if (my @ref = $git->get_config($CFG => 'ref')) {
         return 1 unless $git->is_ref_enabled($branch, @ref);
@@ -509,7 +515,13 @@ option:
 
 The plugin is configured by the following git options.
 
+It can be disabled for specific references via the C<githooks.ref> and
+C<githooks.noref> options about which you can read in the L<Git::Hooks>
+documentation.
+
 =head2 githooks.checklog.ref REFSPEC
+
+This option is DEPRECATED. Please, use the C<githooks.ref> option instead.
 
 By default, the message of every commit is checked. If you want to
 have them checked only for some refs (usually some branch under
@@ -522,6 +534,8 @@ caret (C<^>), which is kept as part of the regexp
 (e.g. "^refs/heads/(master|fix)").
 
 =head2 githooks.checklog.noref REFSPEC
+
+This option is DEPRECATED. Please, use the C<githooks.noref> option instead.
 
 By default, the message of every commit is checked. If you want to exclude
 some refs (usually some branch under refs/heads/), you may specify them with

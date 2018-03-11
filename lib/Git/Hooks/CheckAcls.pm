@@ -114,6 +114,7 @@ sub check_affected_refs {
     return 1 if $git->im_admin();
 
     foreach my $ref ($git->get_affected_refs()) {
+        next unless $git->is_reference_enabled($ref);
         check_ref($git, $ref)
             or return 0;
     }
@@ -189,6 +190,10 @@ option:
 =head1 CONFIGURATION
 
 The plugin is configured by the following git options.
+
+It can be disabled for specific references via the C<githooks.ref> and
+C<githooks.noref> options about which you can read in the L<Git::Hooks>
+documentation.
 
 =head2 githooks.checkacls.acl ACL
 

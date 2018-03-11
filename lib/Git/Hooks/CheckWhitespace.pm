@@ -21,6 +21,8 @@ sub check_affected_refs {
     my $errors = 0;
 
     foreach my $ref ($git->get_affected_refs()) {
+        next unless $git->is_reference_enabled($ref);
+
         my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
 
         # If the referece is being deleted we have nothing to check
@@ -72,6 +74,10 @@ EOS
 sub check_commit {
     my ($git) = @_;
 
+    my $current_branch = $git->get_current_branch();
+
+    return 1 unless $git->is_reference_enabled($current_branch);
+
     my $output = $git->run(
         {fatal => [-129, -128]},
         qw/diff-index --check --cached/, $git->get_head_or_empty_tree());
@@ -90,6 +96,15 @@ sub check_patchset {
     my ($git, $opts) = @_;
 
     return 1 if $git->im_admin();
+
+    # The --branch argument contains the branch short-name if it's in the
+    # refs/heads/ namespace. But we need to always use the branch long-name,
+    # so we change it here.
+    my $branch = $opts->{'--branch'};
+    $branch = "refs/heads/$branch"
+        unless $branch =~ m:^refs/:;
+
+    return 1 unless $git->is_reference_enabled($branch);
 
     my $output = $git->run(
         {fatal => [-129, -128]},
@@ -170,4 +185,9 @@ option:
 
 =head1 CONFIGURATION
 
-There's no configuration needed or provided.
+There's no specific configuration for this plugin.
+
+It can be disabled for specific references via the C<githooks.ref> and
+C<githooks.noref> options about which you can read in the L<Git::Hooks>
+documentation.
+

@@ -37,7 +37,7 @@ sub _keywords {                 ## no critic (ProhibitUnusedPrivateSubroutines)
 
           blob file_size file_mode
 
-          is_ref_enabled match_user im_admin
+          is_reference_enabled is_ref_enabled match_user im_admin
       /;
 }
 
@@ -682,7 +682,7 @@ sub _githooks_colors {
 
     my $cache = $git->cache('colors');
 
-    unless (exists $colors->{reset}) {
+    unless (exists $cache->{reset}) {
         # Check if we want to colorize the output, and if so, return a hash
         # containing the default colors. Otherwise, return a hash containing no
         # color codes at all.
@@ -1229,6 +1229,7 @@ sub file_mode {
     die "Can't happen!";
 }
 
+## DEPRECATED
 sub is_ref_enabled {
     my ($git, $ref, @specs) = @_;
 
@@ -1243,6 +1244,40 @@ sub is_ref_enabled {
     }
 
     return 0;
+}
+
+sub is_reference_enabled {
+    my ($git, $reference) = @_;
+
+    return 1 unless defined $reference;
+
+    my $cache = $git->cache('is_reference_enabled');
+
+    unless (exists $cache->{$reference}) {
+        my $check_reference = sub {
+            foreach ($git->get_config(githooks => 'ref')) {
+                if (/^\^/) {
+                    return 1 if $reference =~ qr/$_/;
+                } else {
+                    return 1 if $reference eq $_;
+                }
+            }
+
+            foreach ($git->get_config(githooks => 'noref')) {
+                if (/^\^/) {
+                    return 0 if $reference =~ qr/$_/;
+                } else {
+                    return 0 if $reference eq $_;
+                }
+            }
+
+            return 1;
+        };
+
+        $cache->{$reference} = $check_reference->();
+    }
+
+    return $cache->{$reference};
 }
 
 sub _grok_groups_spec {
@@ -1906,7 +1941,32 @@ in revision REV.
 Returns the mode (as a number) of FILE (a path relative to the repository root)
 in revision REV.
 
+=head2 is_reference_enabled REF
+
+This method should be invoked by hooks to see if REF is enabled according to
+the C<githooks.ref> and C<githooks.noref> options. Please, read about these
+options in L<Git::Hooks> documetation.
+
+REF must be a complete reference name or undef. Local hooks should pass the
+current branch, and server hooks should pass the references affected by the push
+command. If REF is undef, the method returns true.
+
+The method decides if a reference is enabled using the following algorithn:
+
+=over
+
+=item * If REF matches any REFSPEC in C<githooks.ref> then it is B<enabled>.
+
+=item * Else, if REF matches any REFSPEC in C<githooks.noref> then it is B<disabled>.
+
+=item * Else, it is B<enabled>.
+
+=back
+
 =head2 is_ref_enabled REF, SPECs...
+
+This method is DEPRECATED. Please, use the C<is_reference_enabled> method
+instead.
 
 Returns a boolean indicating if REF matches one of the ref-specs in
 SPECS. REF is the complete name of a Git ref and SPECS is a list of strings,

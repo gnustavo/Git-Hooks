@@ -1036,6 +1036,22 @@ anchored at the start of the username.
 
 =back
 
+=head2 githooks.ref REFSPEC
+
+=head2 githooks.noref REFSPEC
+
+These multivalued options are meant to selectively enable/disable hook
+processing for commits in particular references (usually branches). Hook
+developers should use the C<is_reference_enabled> method
+L<Git::Repository::Plugin> method to check it.
+
+Local hooks should pass the current branch to the method and server hooks should
+pass the names of the references affected by the push command.
+
+The REFSPECs can be specified as complete ref names (e.g. "refs/heads/master")
+or by regular expressions starting with a caret (C<^>), which is kept as part of
+the regexp (e.g. "^refs/heads/(master|fix)").
+
 =head2 githooks.abort-commit BOOL
 
 This option is true by default, meaning that the C<pre-commit> and

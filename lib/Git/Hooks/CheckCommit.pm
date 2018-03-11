@@ -368,6 +368,10 @@ sub check_pre_commit {
 
     _setup_config($git);
 
+    my $current_branch = $git->get_current_branch();
+
+    return 1 unless $git->is_reference_enabled($current_branch);
+
     # Grok author and committer information from git's environment variables, if
     # they're defined. Sometimes they aren't...
 
@@ -396,6 +400,10 @@ sub check_post_commit {
 
     _setup_config($git);
 
+    my $current_branch = $git->get_current_branch();
+
+    return 1 unless $git->is_reference_enabled($current_branch);
+
     my $commit = $git->get_sha1('HEAD');
 
     return signature_errors($git, $commit);
@@ -412,6 +420,7 @@ sub check_affected_refs {
     my $errors = 0;
 
     foreach my $ref ($git->get_affected_refs()) {
+        next unless $git->is_reference_enabled($ref);
         $errors += check_ref($git, $ref);
     }
 
@@ -427,6 +436,15 @@ sub check_patchset {
 
     my $sha1   = $opts->{'--commit'};
     my $commit = $git->get_commit($sha1);
+
+    # The --branch argument contains the branch short-name if it's in the
+    # refs/heads/ namespace. But we need to always use the branch long-name,
+    # so we change it here.
+    my $branch = $opts->{'--branch'};
+    $branch = "refs/heads/$branch"
+        unless $branch =~ m:^refs/:;
+
+    return 1 unless $git->is_reference_enabled($branch);
 
     return commit_errors($git, $commit) == 0;
 }
@@ -546,6 +564,10 @@ option:
 =head1 CONFIGURATION
 
 The plugin is configured by the following git options.
+
+It can be disabled for specific references via the C<githooks.ref> and
+C<githooks.noref> options about which you can read in the L<Git::Hooks>
+documentation.
 
 =head2 githooks.checkcommit.name [!]REGEXP
 

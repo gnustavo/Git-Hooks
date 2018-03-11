@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
-use Test::More tests => 30;
+use Test::More tests => 34;
 use Test::Requires::Git;
 use Path::Tiny;
 
@@ -211,6 +211,35 @@ SKIP: {
 
     $repo->run(qw/config --remove-section githooks.checkcommit/);
 }
+
+# githooks.ref githooks.noref tests
+$repo->run(qw/config githooks.checkcommit.name isvalid/);
+
+$repo->run(qw:config githooks.noref refs/heads/master:);
+
+check_can_commit('githooks.noref', 'invalid');
+
+$repo->run(qw:config githooks.ref refs/heads/master:);
+
+check_cannot_commit('githooks.ref', qr/is invalid/, 'invalid');
+
+$repo->run(qw/config --unset-all githooks.ref/);
+
+$repo->run(qw/config --unset-all githooks.noref/);
+
+$repo->run(qw:config githooks.noref ^.*master:);
+
+check_can_commit('githooks.noref regex', 'invalid');
+
+$repo->run(qw:config githooks.ref ^.*master:);
+
+check_cannot_commit('githooks.ref regex', qr/is invalid/, 'invalid');
+
+$repo->run(qw/config --unset-all githooks.ref/);
+
+$repo->run(qw/config --unset-all githooks.noref/);
+
+$repo->run(qw/config --remove-section githooks.checkcommit/);
 
 
 # Clone hooks
