@@ -167,7 +167,7 @@ sub title_errors {
         if ($git->get_config_boolean($CFG => 'title-required')) {
             $git->fault(<<EOS, {commit => $id, option => 'title-required'});
 This commit log message needs a title line.
-This is required your configuration option.
+This is required by your configuration option.
 Please, amend your commit to add one.
 EOS
             return 1;
