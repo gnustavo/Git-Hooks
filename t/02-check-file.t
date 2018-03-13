@@ -9,10 +9,10 @@ use Path::Tiny;
 use Test::More tests => 29;
 use Test::Requires::Git;
 
-my ($repo, $clone);
+my ($repo, $clone, $T);
 
 sub setup_repos {
-    ($repo, undef, $clone) = new_repos();
+    ($repo, undef, $clone, $T) = new_repos();
 
     install_hooks($repo, undef, qw/pre-commit/);
     install_hooks($clone, undef, qw/update pre-receive/);
@@ -145,8 +145,20 @@ check_can_commit('allow path', 'file.txt');
 
 $repo->run(qw/config --remove-section githooks.checkfile/);
 
+sub filesystem_is_case_sentitive {
+    # Check using the technique described in
+    # https://quickshiftin.com/blog/2014/09/filesystem-case-sensitive-bash/
+
+    my $lowercase = $T->child('sensitive')->touch;
+    my $uppercase = $T->child('SENSITIVE')->touch;
+    $lowercase->remove;
+    my $is_case_sensitive = $uppercase->exists;
+    $uppercase->remove;
+    return $is_case_sensitive;
+}
+
 SKIP: {
-    skip "Non-Windows checks", 2 if $^O eq 'MSWin32';
+    skip "Checks for case-sensitive filesystems", 2 unless filesystem_is_case_sentitive;
 
     check_can_commit('Allow commit case conflict by default', 'FILE.TXT');
 
