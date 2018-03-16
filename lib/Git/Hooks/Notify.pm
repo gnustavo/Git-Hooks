@@ -86,6 +86,19 @@ sub sha1_link {
     my ($git, $sha1, $html) = @_;
     if (my $commit_url = $git->get_config($CFG, 'commit-url')) {
         $commit_url =~ s/%H/$sha1/g;
+        if ($commit_url =~ /%R/) {
+            # %R must be replaced by the repository name.
+            my $repository_name = $git->repository_name;
+            # HACK: for Bitbucket Server the repository name is composed: a
+            # project ID and a repository name separated by a slash. We have to
+            # insert a "repos/" string between these two parts in order to
+            # construct a valid URL. Ideally we should be able to get the
+            # repository name and the project name separately, but I'll live
+            # with this hack for now, since, as far as I know, only Bitbucket
+            # has this notion of a "project".
+            $repository_name =~ s:/:/repos/:;
+            $commit_url =~ s/%R/$repository_name/g;
+        }
         return $html ? "<a href=\"$commit_url\">$sha1</a>" : $commit_url;
     } else {
         return $sha1;
@@ -487,6 +500,9 @@ commits shown in the notification message. If configured, each SHA1 contained in
 the C<git-log> output is substituted by C<URL_PATTERN>, with the C<%H>
 placeholder replaced by the SHA1.
 
+The C<%R> is another placeholder which is substituted by the repository name, as
+returned by L<Git::Repository::Plugin::GitHooks>'s C<repository_name> method.
+
 See below how to configure this for some common Git servers. Replace the
 angle-bracketed names with values appropriate to your context:
 
@@ -502,11 +518,11 @@ angle-bracketed names with values appropriate to your context:
 
 =item * Bitbucket Server
 
-  <BITBUCKET_BASE_URL>/projects/<PROJECTID>/repos/<REPOID>/commits/%H
+  <BITBUCKET_BASE_URL>/projects/%R/commits/%H
 
 =item * Gerrit with Gitblit
 
-  <GERRIT_BASE_URL>/plugins/gitblit/commit/?r=<REPO>&h=%H
+  <GERRIT_BASE_URL>/plugins/gitblit/commit/?r=%R&h=%H
 
 =back
 
