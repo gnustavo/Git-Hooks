@@ -55,7 +55,7 @@ sub run_hook {
         if (defined $ok) {
             # Modern hooks return a boolean value indicating their success.
             # If they fail they invoke
-            # Git::Repository::Plugin::GitHooks::error.
+            # Git::Repository::Plugin::GitHooks::fault.
             unless ($ok) {
                 # Let's see if there is a help-on-error message configured
                 # specifically for this plugin.
