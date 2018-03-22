@@ -6,7 +6,7 @@ use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
 use Path::Tiny;
-use Test::More tests => 29;
+use Test::More tests => 36;
 use Test::Requires::Git;
 
 my ($repo, $clone, $T);
@@ -168,7 +168,7 @@ SKIP: {
                         qr/adds a file with a name that will conflict/,
                         'File.Txt');
 
-    $repo->run(qw/reset --hard HEAD/);
+    $repo->run(qw/reset --hard/);
 }
 
 SKIP: {
@@ -185,7 +185,7 @@ SKIP: {
                         "FIXME: something\n",
                     );
 
-    $repo->run(qw/reset --hard HEAD/);
+    $repo->run(qw/reset --hard/);
 }
 
 $repo->run(qw/config --remove-section githooks.checkfile/);
@@ -211,6 +211,30 @@ check_cannot_commit('not-executable fail', qr/is executable but should not be/, 
 $wc->child('doc.txt')->chmod(0644);
 
 check_can_commit('not-executable succeed', 'doc.txt');
+
+# ACLs
+
+$repo->run(qw/config --remove-section githooks.checkfile/);
+
+$repo->run(qw/config githooks.checkfile.acl/, 'deny AMD thefile');
+check_cannot_commit('deny AMD thefile', qr/Authorization error/, 'thefile');
+
+$repo->run(qw/config --add githooks.checkfile.acl/, 'allow A thefile');
+check_can_commit('allow A thefile', 'thefile');
+
+check_cannot_commit('deny M thefile', qr/Authorization error/, 'thefile');
+
+$repo->run(qw/config --add githooks.checkfile.acl/, 'allow M thefile');
+check_can_commit('allow M thefile', 'thefile');
+
+$repo->run(qw/rm -- thefile/);
+check_cannot_commit('deny D thefile', qr/Authorization error/, 'file');
+
+$repo->run(qw/config --add githooks.checkfile.acl/, 'allow D thefile');
+check_can_commit('allow D thefile', 'file');
+
+$repo->run(qw/config --replace-all githooks.checkfile.acl/, 'WRONG ACL');
+check_cannot_commit('deny ACL config error', qr/invalid acl syntax/, 'file');
 
 
 # PRE-RECEIVE

@@ -29,6 +29,8 @@ sub _keywords {                 ## no critic (ProhibitUnusedPrivateSubroutines)
 
           get_affected_refs get_affected_ref_range get_affected_ref_commits
 
+          filter_name_status_in_index filter_name_status_in_range filter_name_status_in_commit
+
           filter_files_in_index filter_files_in_range filter_files_in_commit
 
           authenticated_user repository_name
@@ -1002,22 +1004,33 @@ sub get_affected_ref_commits {
     return $git->get_commits($git->get_affected_ref_range($ref), $options, $paths);
 }
 
-sub filter_files_in_index {
+sub filter_name_status_in_index {
     my ($git, $filter) = @_;
+
+    my %actions;
+
     my $output = $git->run(
-        qw/diff-index --name-only --ignore-submodules --no-commit-id --cached -r -z/,
-        "--diff-filter=$filter", $git->get_head_or_empty_tree(),
+        qw/diff-index --name-status --ignore-submodules --no-commit-id --cached -r -z/,
+        "--diff-filter=$filter",
+        $git->get_head_or_empty_tree(),
     );
-    return split /\0/, $output;
+
+    my @output = split /\0/, $output;
+    while (@output >= 2) {
+        my ($action, $file) = splice @output, 0, 2;
+        $actions{$file} = $action;
+    }
+
+    return \%actions;
 }
 
-sub filter_files_in_range {
+sub filter_name_status_in_range {
     my ($git, $filter, $from, $to, $options, $paths) = @_;
 
     # If $to is the undefined commit this means that a branch or tag is being
     # removed. In this situation we return the empty list, bacause no file
     # has been affected.
-    return if $to eq $git->undef_commit;
+    return {} if $to eq $git->undef_commit;
 
     if ($from eq $git->undef_commit) {
         # If $from is the undefined commit we get the list of commits
@@ -1030,43 +1043,124 @@ sub filter_files_in_range {
             if (my @parents = $commits[0]->parent()) {
                 $from = $parents[0];
             } else {
-                # If the list's first commit has no parent (i.e., it's a
-                # root commit) then we return the empty list because
-                # git-diff-tree cannot compare the undefined commit with a
-                # commit.
-                return;
+                # If the list's first commit has no parent (i.e., it's a root
+                # commit) then we return the empty hash because git-diff-tree
+                # cannot compare the undefined commit with a commit.
+                return {};
             }
         } else {
-            # If @commits is empty we return an empty list because no new
-            # commit was pushed.
-            return;
+            # If @commits is empty we return an empty hash because no new commit
+            # was pushed.
+            return {};
         }
     }
 
+    my %actions;
+
     my $output = $git->run(
-        qw/diff-tree --name-only --ignore-submodules --no-commit-id -r -z/,
-        "--diff-filter=$filter", $from, $to, '--',
+        qw/diff-tree --name-status --ignore-submodules --no-commit-id -r -z/,
+        "--diff-filter=$filter",
+        $from, $to, '--',
     );
 
-    return split /\0/, $output;
+    my @output = split /\0/, $output;
+    while (@output >= 2) {
+        my ($action, $file) = splice @output, 0, 2;
+        $actions{$file} = $action;
+    }
+
+    return \%actions;
+}
+
+sub filter_name_status_in_commit {
+    my ($git, $filter, $commit) = @_;
+
+    my $output = $git->run(
+        qw/diff-tree --name-status --ignore-submodules -m -r -z/,
+        "--diff-filter=$filter",
+        $commit,
+    );
+
+    my @output = split /\0/, $output;
+
+    # @output is a sequence of commits, actions, and files, with the following
+    # general pattern: { COMMIT { ACTION FILE }* }+,
+
+    # COMMIT is the parent commit of $commit. There can be more than one if
+    # $commit is a merge commit.
+
+    # Below we parse the sequence, tucking all the information in %actions.
+
+    my %actions;
+
+    my $sha1;
+    my $action;
+    my $parents = 0;
+    my $expect = 'sha1';
+
+    # PARSE @output
+    while (@output) {
+        if ($expect eq 'sha1') {
+            if ($output[0] =~ /^[0-9a-f]{40}$/) {
+                $sha1 = shift @output;
+                ++$parents;
+                $expect = 'sha1 or action';
+            } else {
+                die;
+            }
+        } elsif ($expect eq 'sha1 or action') {
+            if ($output[0] =~ /^[0-9a-f]{40}$/) {
+                $sha1 = shift @output;
+                ++$parents;
+            } elsif ($output[0] =~ /^[A-Z]$/) {
+                $action = shift @output;
+                $expect = 'file';
+            } else {
+                die;
+            }
+        } elsif ($expect eq 'file') {
+            $actions{shift @output}{$sha1} = $action;
+            $expect = 'sha1 or action';
+        } else {
+            die;
+        }
+    }
+
+    # %actions is a multi-level hash: $actions{$file}{$sha1} = $action.  Next
+    # we remove the $commit level, joining all $actions together under $file.
+
+    foreach my $file (keys %actions) {
+        if (keys(%{$actions{$file}}) == $parents) {
+            # For merge commits we're interested only in files that were
+            # affected in all parent commits.  For files affected in all parents
+            # we join their actions together.  Non-merge commits ($parents == 1)
+            # reduce to the general case of merge commits.
+            $actions{$file} = join('', values %{$actions{$file}});
+        } else {
+            # Files not affected in all parents we don't care about.
+            delete $actions{$file};
+        }
+    }
+
+    return \%actions;
+}
+
+sub filter_files_in_index {
+    my $git = shift;
+
+    return sort keys %{$git->filter_name_status_in_index(@_)};
+}
+
+sub filter_files_in_range {
+    my $git = shift;
+
+    return sort keys %{$git->filter_name_status_in_range(@_)};
 }
 
 sub filter_files_in_commit {
-    my ($git, $filter, $commit) = @_;
-    my $output = $git->run(
-        qw/diff-tree --name-only --ignore-submodules -m -r -z/,
-        "--diff-filter=$filter", $commit,
-    );
-    my $num_parents = 0;
-    my %files;
-    foreach my $name (split /\0/, $output) {
-        if ($name =~ /^[0-9a-f]{40}$/) {
-            ++$num_parents;
-        } else {
-            ++$files{$name};
-        }
-    }
-    return grep { $files{$_} == $num_parents } keys %files;
+    my $git = shift;
+
+    return sort keys %{$git->filter_name_status_in_commit(@_)};
 }
 
 sub authenticated_user {
@@ -1391,8 +1485,8 @@ Git::Repository::Plugin::GitHooks - Add useful methods for hooks to Git::Reposit
     my $branch  = $git->get_current_branch();
     my @commits = $git->get_commits($oldcommit, $newcommit);
 
-    my $files_modified_by_commit = $git->filter_files_in_index('AM');
-    my $files_modified_by_push   = $git->filter_files_in_range('AM', $oldcommit, $newcommit);
+    my @files_modified_by_commit = $git->filter_files_in_index('AM');
+    my @files_modified_by_push   = $git->filter_files_in_range('AM', $oldcommit, $newcommit);
 
 =head1 DESCRIPTION
 
@@ -1806,12 +1900,13 @@ as returned by the C<get_commits> method.
 The optional arguments OPTIONS and PATHS are passed to the C<get_commits>
 method.
 
-=head2 filter_files_in_index FILTER
+=head2 filter_name_status_in_index FILTER
 
-Returns a list of the names of the files that are changed in the index
-(staging area) compared to the HEAD commit. It's useful in the C<pre-commit>
-hook when you want to know which files are being modified in the upcoming
-commit.
+Returns a hash with information about files changed in the index (aka stage area
+or cache) compared to HEAD. The hash maps file names to their respective
+statuses, which are uppercase letters, as returned by the C<git diff-index
+--name-status> command. It's useful in the C<pre-commit> hook when you want to
+know which files are being modified in the upcoming commit.
 
 FILTER specifies in which kind of changes you're interested in. It's passed
 as the argument to the C<--diff-filter> option of C<git diff-index>, which
@@ -1828,15 +1923,17 @@ is documented like this:
     other criteria in the comparison; if there is no file that matches other
     criteria, nothing is selected.
 
-=head2 filter_files_in_range FILTER FROM TO [OPTIONS [PATHS]]
+=head2 filter_name_status_in_range FILTER FROM TO [OPTIONS [PATHS]]
 
-Returns a list of the names of the files that are changed between commits
-FROM and TO. It's useful in the C<update> and the C<pre-receive> hooks when
-you want to know which files are being modified in the commits being
-received by a C<git push> command.
+Returns a hash with information about files that are changed between commits
+FROM and TO. The hash maps file names to their respective statuses, which are
+uppercase letters, as returned by the C<git diff-tree --name-status>
+command. It's useful in the C<update> and the C<pre-receive> hooks when you want
+to know which files are being modified in the commits being received by a C<git
+push> command.
 
 FILTER specifies in which kind of changes you're interested in. Please, read
-about the C<filter_files_in_index> method above.
+about it in the C<filter_name_status_in_index> method above.
 
 FROM and TO are revision parameters (see C<git help revisions>) specifying
 two commits. They're passed as arguments to the C<git diff-tree> command in
@@ -1853,25 +1950,44 @@ list.
 The optional arguments OPTIONS and PATHS are passed to the C<get_commits>
 method.
 
-=head2 filter_files_in_commit FILTER, COMMIT
+=head2 filter_name_status_in_commit FILTER, COMMIT
 
-Returns a list of the names of the files that are changed in COMMIT. It's
-useful in the C<patchset-created> and the C<draft-published> hooks when you
-want to know which files are being modified in the single commit being
-received by a C<git push> command.
+Returns a hash with information about files that are changed in COMMIT. The hash
+maps file names to their respective statuses, which are uppercase letters, as
+returned by the C<git diff-tree --name-status> command. It's useful in the
+C<patchset-created> and the C<draft-published> hooks when you want to know which
+files are being modified in the single commit being received by a C<git push>
+command.
 
 FILTER specifies in which kind of changes you're interested in. Please, read
-about the C<filter_files_in_index> method above.
+about it in the C<filter_name_status_in_index> method above.
 
 COMMIT is a revision parameter (see C<git help revisions>) specifying the
 commit. It's passed a argument to C<git diff-tree> in order to compare it to
 its parents and grok the files that changed in it.
 
-Merge commits are treated specially. Only files that are changed in COMMIT
-with respect to all of its parents are returned. The reasoning behind this
-is that if a file isn't changed with respect to one or more of COMMIT's
-parents, then it must have been checked already in those commits and we
-don't need to check it again.
+Merge commits are treated specially. Only files that are changed in COMMIT with
+respect to all of its parents are returned. The reasoning behind this is that if
+a file isn't changed with respect to one or more of COMMIT's parents, then it
+must have been checked already in those commits and we don't need to check it
+again. In this case, since the files may have been changed differently in each
+branch (added, modified, deleted, etc.), the hash values are strings of letters,
+one for each branch.
+
+=head2 filter_files_in_index FILTER
+
+Returns the sorted keys of the hash that would be returned by the
+C<filter_name_status_in_index> method if invoked with the same arguments.
+
+=head2 filter_files_in_range FILTER FROM TO [OPTIONS [PATHS]]
+
+Returns the sorted keys of the hash that would be returned by the
+C<filter_name_status_in_range> method if invoked with the same arguments.
+
+=head2 filter_files_in_commit FILTER, COMMIT
+
+Returns the sorted keys of the hash that would be returned by the
+C<filter_name_status_in_commit> method if invoked with the same arguments.
 
 =head2 authenticated_user
 

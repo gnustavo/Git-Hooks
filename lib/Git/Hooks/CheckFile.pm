@@ -12,6 +12,7 @@ use Git::Hooks;
 use Text::Glob qw/glob_to_regex/;
 use Path::Tiny;
 use List::MoreUtils qw/any none/;
+use Data::Dump;
 
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
@@ -91,9 +92,9 @@ sub check_command {
 }
 
 sub check_new_files {
-    my ($git, $commit, @files) = @_;
+    my ($git, $ctx, $commit, $name_status) = @_;
 
-    return 1 unless @files;     # No new file to check
+    return 0 unless %$name_status; # No new file to check
 
     # Construct a list of command checks from the
     # githooks.checkfile.name configuration. Each check in the list is a
@@ -143,12 +144,15 @@ sub check_new_files {
     my $errors = 0;
 
   FILE:
-    foreach my $file (@files) {
+    foreach my $file (sort keys %$name_status) {
+        # We're only interested in new and modified files
+        next unless $name_status->{$file} =~ /[AM]/;
+
         my $basename = path($file)->basename;
 
         if (any  {$basename =~ $_} @{$re_checks{basename}{deny}} and
             none {$basename =~ $_} @{$re_checks{basename}{allow}}) {
-            $git->fault(<<EOS, {commit => $commit, option => 'basename.{allow,deny}'});
+            $git->fault(<<EOS, {%$ctx, option => 'basename.{allow,deny}'});
 The file '$file' basename is not allowed.
 Please, check your configuration options.
 EOS
@@ -158,7 +162,7 @@ EOS
 
         if (any  {$file =~ $_} @{$re_checks{path}{deny}} and
             none {$file =~ $_} @{$re_checks{path}{allow}}) {
-            $git->fault(<<EOS, {commit => $commit, option => 'path.{allow,deny}'});
+            $git->fault(<<EOS, {%$ctx, option => 'path.{allow,deny}'});
 The file '$file' path is not allowed.
 Please, check your configuration options.
 EOS
@@ -177,7 +181,7 @@ EOS
         }
 
         if ($file_sizelimit && $file_sizelimit < $size) {
-            $git->fault(<<EOS, {commit => $commit, option => '[basename.]sizelimit'});
+            $git->fault(<<EOS, {%$ctx, option => '[basename.]sizelimit'});
 The file '$file' is too big.
 
 It has $size bytes but the current limit is $file_sizelimit bytes.
@@ -197,7 +201,7 @@ EOS
         if (any {$basename =~ $_} @{$executable_checks{'executable'}}) {
             $mode = $git->file_mode($commit, $file);
             unless ($mode & 0b1) {
-                $git->fault(<<EOS, {commit => $commit, option => 'executable'});
+                $git->fault(<<EOS, {%$ctx, option => 'executable'});
 The file '$file' is not executable but should be.
 Please, check your configuration options.
 EOS
@@ -207,7 +211,7 @@ EOS
 
         if (any {$basename =~ $_} @{$executable_checks{'not-executable'}}) {
             if (defined $mode) {
-                git->fault(<<EOS, {commit => $commit, option => '[not-]executable'});
+                git->fault(<<EOS, {%$ctx, option => '[not-]executable'});
 Configuration error: The file '$file' matches a 'executable' and a
 'not-executable' option simultaneously, which is inconsistent.
 Please, fix your configuration so that it matches only one of these options.
@@ -216,7 +220,7 @@ EOS
             }
             $mode = $git->file_mode($commit, $file);
             if ($mode & 0b1) {
-                $git->fault(<<EOS, {commit => $commit, option => 'not-executable'});
+                $git->fault(<<EOS, {%$ctx, option => 'not-executable'});
 The file '$file' is executable but should not be.
 Please, check your configuration options.
 EOS
@@ -229,16 +233,12 @@ EOS
 }
 
 sub deny_case_conflicts {
-    my ($git, $commit, $get_names_sub) = @_;
+    my ($git, $ctx, $commit, $name_status) = @_;
 
     return 0 unless $git->get_config_boolean($CFG => 'deny-case-conflict');
 
-    # $get_names_sub is a reference to a function which returns the list of
-    # names of files added in $commit. We get a sub-ref instead of the actual
-    # list to avoid calling a git command before making sure above that we
-    # really need to check this. (NOTE: This may be premature optimization,
-    # which is the root of all evil, but I'm leaving it in for now.)
-    my @names = $get_names_sub->();
+    # We're only interested in new file names
+    my @names = sort grep {$name_status->{$_} =~ /[AC]/} keys %$name_status;
 
     return 0 unless @names;     # No new names to check
 
@@ -253,7 +253,7 @@ sub deny_case_conflicts {
         for (my $j = $i + 1; $j <= $#names; ++$j) {
             if (lc($names[$i]) eq lc($names[$j]) && $names[$i] ne $names[$j]) {
                 ++$errors;
-                $git->fault(<<EOS, {commit => $commit, option => 'deny-case-conflict'});
+                $git->fault(<<EOS, {%$ctx, option => 'deny-case-conflict'});
 This commit adds two files with names that will conflict
 with each other in the repository in case-insensitive
 filesystems:
@@ -274,7 +274,7 @@ EOS
             my $lc_name = lc $name;
             if ($lc_name eq $lc_file && $name ne $file) {
                 ++$errors;
-                $git->fault(<<EOS, {commit => $commit, option => 'deny-case-conflict'});
+                $git->fault(<<EOS, {%$ctx, option => 'deny-case-conflict'});
 This commit adds a file with a name that will conflict
 with the name of another file already existing in the repository
 in case-insensitive filesystems:
@@ -292,7 +292,7 @@ EOS
 }
 
 sub deny_token {
-    my ($git, $new_commit, $old_commit) = @_;
+    my ($git, $ctx, $new_commit, $old_commit) = @_;
 
     my $regex = $git->get_config($CFG => 'deny-token')
         or return 0;
@@ -324,7 +324,7 @@ EOS
     @diff = grep {/^+.*?(?:$regex)/} @diff;
 
     if (@diff) {
-        $git->fault(<<EOS, {option => 'deny-token', details => join("\n", @diff)});
+        $git->fault(<<EOS, {%$ctx, option => 'deny-token', details => join("\n", @diff)});
 Invalid tokens detected in added lines.
 This option rejects lines matching $regex.
 Please, amend these lines and try again.
@@ -332,6 +332,98 @@ EOS
     }
 
     return scalar @diff;
+}
+
+sub grok_acls {
+    my ($git) = @_;
+
+    my @acls;
+
+    foreach ($git->get_config($CFG => 'acl')) {
+        my %acl;
+        if (/^\s*(allow|deny)\s+([AMD]+)\s+(\S+)/) {
+            $acl{allow}  = $1 eq 'allow';
+            $acl{action} = $2;
+            $acl{spec}   = substr($3, 0, 1) eq '^' ? qr/$3/ : $3;
+        } else {
+            die "invalid acl syntax: $_\n";
+        }
+
+        if (substr($_, $+[0]) =~ /^\s*by\s+(\S+)\s*$/) {
+            $acl{who} = $1;
+        } elsif (substr($_, $+[0]) !~ /^\s*$/) {
+            die "invalid acl syntax: $_\n";
+        }
+
+        unshift @acls, \%acl;
+    }
+
+    return @acls;
+}
+
+# Assign meaningful names to action codes.
+my %ACTION = (
+    A => 'add',
+    M => 'modify',
+    D => 'delete',
+);
+
+sub check_acls {
+    my ($git, $ctx, $commit, $name_status) = @_;
+
+    my @acls = eval { grok_acls($git) };
+    if ($@) {
+        $git->fault($@, $ctx);
+        return 1;
+    }
+
+    # Keep only ACLs matching the current user
+    @acls = grep {! exists $_->{who} || $git->match_user($_->{who})} @acls;
+
+    return 0 unless @acls;
+
+    my $errors = 0;
+
+  FILE:
+    foreach my $file (sort keys %$name_status) {
+        my $statuses = $name_status->{$file};
+        foreach my $acl (@acls) {
+            next unless ref $acl->{spec} ? $file =~ $acl->{spec} : $file eq $acl->{spec};
+
+            # $status is usually a single letter but it can be a string of
+            # letters if we grokked affected files in a merge commit. So, we
+            # consider a match if the intersection of the two strings ($statuses
+            # and $acl->{action}) is not empty.
+            next unless any {index($acl->{action}, $_) != -1} split //, $statuses;
+
+            unless ($acl->{allow}) {
+                ++$errors;
+                my $myself = $git->authenticated_user();
+                my $action = $ACTION{$statuses} || $statuses;
+                $git->fault(<<EOS, {%$ctx, option => 'acl'});
+Authorization error: you ($myself) cannot $action this file:
+
+  $file
+
+Please, check your acl options.
+EOS
+            }
+
+            next FILE;
+        }
+    }
+
+    return $errors;
+}
+
+sub check_everything {
+    my ($git, $ctx, $old_commit, $new_commit, $name_status) = @_;
+
+    return
+        check_new_files(    $git, $ctx, $new_commit, $name_status) +
+        deny_case_conflicts($git, $ctx, $new_commit, $name_status) +
+        deny_token(         $git, $ctx, $new_commit, $old_commit) +
+        check_acls(         $git, $ctx, $new_commit, $name_status);
 }
 
 # This routine can act both as an update or a pre-receive hook.
@@ -346,10 +438,16 @@ sub check_affected_refs {
 
     foreach my $ref ($git->get_affected_refs()) {
         next unless $git->is_reference_enabled($ref);
+
         my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
-        $errors += check_new_files($git, $new_commit, $git->filter_files_in_range('AM', $old_commit, $new_commit));
-        $errors += deny_case_conflicts($git, $new_commit, sub { $git->filter_files_in_range('ACR', $old_commit, $new_commit) });
-        $errors += deny_token($git, $new_commit, $old_commit);
+
+        $errors += check_everything(
+            $git,
+            {ref => $ref},
+            $old_commit,
+            $new_commit,
+            $git->filter_name_status_in_range('ACMD', $old_commit, $new_commit),
+        );
     }
 
     return $errors == 0;
@@ -364,13 +462,13 @@ sub check_commit {
 
     return 1 unless $git->is_reference_enabled($current_branch);
 
-    my $errors = 0;
-
-    $errors += check_new_files($git, ':0', $git->filter_files_in_index('AM'));
-    $errors += deny_case_conflicts($git, ':0', sub { $git->filter_files_in_index('ACR') });
-    $errors += deny_token($git, ':0');
-
-    return $errors == 0;
+    return 0 == check_everything(
+        $git,
+        {},
+        ':0',
+        ':0',
+        $git->filter_name_status_in_index('ACMD'),
+    );
 }
 
 sub check_patchset {
@@ -389,13 +487,15 @@ sub check_patchset {
 
     return 1 unless $git->is_reference_enabled($branch);
 
-    my $errors = 0;
+    my $commit = $opts->{'--commit'};
 
-    $errors += check_new_files($git, $opts->{'--commit'}, $git->filter_files_in_commit('AM', $opts->{'--commit'}));
-    $errors += deny_case_conflicts($git, $opts->{'--commit'}, sub { $git->filter_files_in_commit('ACR', $opts->{'--commit'}) });
-    $errors += deny_token($git, $opts->{'--commit'});
-
-    return $errors == 0;
+    return 0 == check_everything(
+        $git,
+        {ref => $branch, commit => $commit},
+        "$commit^",
+        $commit,
+        $git->filter_name_status_in_commit('ACMD', $commit),
+    );
 }
 
 INIT: {
@@ -412,7 +512,7 @@ INIT: {
 1;
 
 __END__
-=for Pod::Coverage check_command check_new_files deny_case_conflicts deny_token check_affected_refs check_commit check_patchset
+=for Pod::Coverage check_command check_new_files deny_case_conflicts deny_token check_acls check_everything grok_acls check_affected_refs check_commit check_patchset
 
 =head1 NAME
 
@@ -424,10 +524,20 @@ As a C<Git::Hooks> plugin you don't use this Perl module directly. Instead, you
 may configure it in a Git configuration file like this:
 
   [githooks]
+
+    # Enable the plugin
     plugin = CheckFile
+
+    # These users are exempt from all checks
     admin = joe molly
 
+    # These groups are used in ACL specs below
+    groups = architects = tiago juliana
+    groups = dbas       = joao maria
+
   [githooks "checkfile"]
+
+    # Check specific files with specific commands
     name = *.p[lm] perlcritic --stern --verbose 10
     name = *.pp    puppet parser validate --verbose --debug
     name = *.pp    puppet-lint --no-variable_scope-check --no-documentation-check
@@ -436,53 +546,36 @@ may configure it in a Git configuration file like this:
     name = *.yml   yamllint
     name = *.js    eslint -c ~/.eslintrc.json
 
+    # Reject files bigger than 1MiB
     sizelimit = 1M
 
-    path.deny = ^.
-    path.allow = ^[a-zA-Z0-1/_.-]$
-
+    # Reject files with names that would conflict with other files in the
+    # repository in case-insensitive filesystems, such as the ones on Windows.
     deny-case-conflict = true
 
+    # Reject files containing the strings FIXME or TODO.
     deny-token = \\b(FIXME|TODO)\\b
 
+    # Reject commits adding scripts without the executable bit set.
     executable = *.sh
     executable = *.csh
     executable = *.ksh
     executable = *.zsh
+
+    # Reject commits adding source files with the executable bit set.
     not-executable = qr/\\.(?:c|cc|java|pl|pm|txt)$/
 
-The first section enables the plugin and defines the users C<joe> and C<molly>
-as administrators, effectivelly exempting them from any restrictions the plugin
-may impose.
+    # Only architects may add, modify, or delete pom.xml files.
+    acl = deny  AMD ^(?i).*pom\\.xml
+    acl = allow AMD ^(?i).*pom\\.xml by @architects
 
-The second instance enables C<some> of the options specific to this plugin.
+    # Only dbas may add or delete SQL files under database/
+    acl = deny  AD ^database/.*\\.sql$
+    acl = allow AD ^database/.*\\.sql$ by @dba
 
-The C<name> options associate filenames with commands so that any file added or
-modified in the commit which name maches the glob pattern is checked with the
-associated command. The commands usually check the files's syntax and style.
-
-The C<sizelimit> option denies the addition or modification of any file bigger
-than 1MiB, preventing careless users to commit huge binary files.
-
-The C<path.deny> and C<path.allow> options conspire to only allow the addition
-of files which names comprised of only a small set of characters, avoiding names
-which may cause problems.
-
-The C<deny-case-conflict> option rejects commits which add files with names that
-would conflict with each other or with the names of other files already in the
-repository in case-insensitive filesystems, such as the ones on Windows.
-
-The C<deny-token> option rejects commits which introduces lines
-containing the strings C<FIXME> or C<TODO>, as they are often committed by
-mistake.
-
-The C<executable> option rejects commits adding or modifying scripts (filenames
-with extensions F<.sh>, F<.csh>, F<.ksh>, and F<.zsh>) B<without> the executable
-permission, which is a common source of errors.
-
-The C<not-executable> option rejects commits adding or modifying source files
-(filenames with extensions F<.c>, F<.cc>, F<.java>, F<.pl>, F<.pm>, and F<.txt>)
-B<with> the executable permission.
+    # Reject new files containing dangerous characters, avoiding names which may
+    # cause problems.
+    acl = deny  A   ^.*[^a-zA-Z0-1/_.-]
 
 =head1 DESCRIPTION
 
@@ -614,39 +707,10 @@ repository. If set explicitly to 0 (zero), no limit is imposed, which is the
 default. But it can be useful to override a global specification in a particular
 repository.
 
-=head2 githooks.checkfile.basename.deny REGEXP
-
-This directive denies files which basenames match REGEXP.
-
-=head2 githooks.checkfile.basename.allow REGEXP
-
-This directive allows files which basenames match REGEXP. Since by default
-all basenames are allowed this directive is useful only to prevent a
-B<githooks.checkfile.basename.deny> directive to deny the same basename.
-
-The basename checks are evaluated so that a file is denied only if it's
-basename matches any B<basename.deny> directive and none of the
-B<basename.allow> directives.  So, for instance, you would apply it like
-this to allow the versioning of F<.gitignore> file while denying any other
-file with a name beginning with a dot.
-
-    [githooks "checkfile"]
-        basename.allow ^\\.gitignore
-        basename.deny  ^\\.
-
 =head2 githooks.checkfile.basename.sizelimit BYTES REGEXP
 
 This directive takes precedence over the C<githooks.checkfile.sizelimit> for
 files which basename matches REGEXP.
-
-=head2 githooks.checkfile.path.deny REGEXP
-
-This directive denies files which full paths match REGEXP.
-
-=head2 githooks.checkfile.path.allow REGEXP
-
-This directive allows files which full paths match REGEXP. It's useful in
-the same way that B<githooks.checkfile.basename.deny> is.
 
 =head2 githooks.checkfile.deny-case-conflict BOOL
 
@@ -698,3 +762,113 @@ above.
 
 You can specify this option multiple times so that all PATTERNs are considered.
 
+=head2 githooks.checkfile.acl RULE
+
+This multi-valued option specifies rules allowing or denying specific users to
+perform specific actions on specific files. By default any user can perform any
+action on any file. So, the rules are used to impose restrictions.
+
+When a hook is invoked it groks all files that were affected in any way by the
+commits involved and tries to match each file to a RULE to see if the action
+performed on it is allowed or denied.
+
+A RULE takes three or four parts, like this:
+
+  (allow|deny) [AMD]+ <filespec> (by <userspec>)?
+
+=over 4
+
+=item * B<(allow|deny)>
+
+The first part tells if the rule allows or denies an action.
+
+=item * B<[AMD]+>
+
+The second part specifies which actions are being considered by a combination of
+letters: (A) for files added, (M) for files modified, and (D) for files
+deleted. (These are the same letters used in the C<--diff-filter> option of the
+C<git diff-tree> command.) You can specify one, two, or the three letters.
+
+=item * B<< <filespec> >>
+
+The third part specifies which files are being considered. In its simplest form,
+a C<filespec> is a complete path beginning at the repository root, without a
+leading slash (e.g. F<lib/Git/Hooks.pm>). These filespecs match a single file
+exactly.
+
+If the C<filespec> starts with a caret (^) it's interpreted as a Perl regular
+expression, the caret being kept as part of the regexp. These filespecs match
+potentially many files (e.g. F<^lib/.*\\.pm$>).
+
+=item * B<< by <userspec> >>
+
+The fourth part is optional. It specifies which users are being considered. It
+can be the name of a single user (e.g. C<james>) or the name of a group
+(e.g. C<@devs>).
+
+If not specified, the RULE matches any user.
+
+=back
+
+The RULEs B<are matched in the reverse of the order> as they appear as the
+result of the command C<git config githooks.checkfile.acl>, so that later rules
+take precedence. This way you can have general rules in the global context and
+more specific rules in the repository context, naturally.
+
+So, the B<last> RULE matching the action, the file and the user tells if the
+operation is allowed or denied.
+
+If no RULE matches the operation, it is allowed by default.
+
+See the L</SYNOPSIS> section for some examples.
+
+=head2 [DEPRECATED] githooks.checkfile.basename.deny REGEXP
+
+This option is deprecated. Please, use an C<acl> option like this, instead:
+
+  [githooks "checkfile"]
+    acl = deny A ^.*<REGEXP>$
+
+This directive denies files which basenames match REGEXP.
+
+=head2 [DEPRECATED] githooks.checkfile.basename.allow REGEXP
+
+This option is deprecated. Please, use an C<acl> option like this, instead:
+
+  [githooks "checkfile"]
+    acl = allow A ^.*<REGEXP>$
+
+This directive allows files which basenames match REGEXP. Since by default
+all basenames are allowed this directive is useful only to prevent a
+B<githooks.checkfile.basename.deny> directive to deny the same basename.
+
+The basename checks are evaluated so that a file is denied only if it's
+basename matches any B<basename.deny> directive and none of the
+B<basename.allow> directives.  So, for instance, you would apply it like
+this to allow the versioning of F<.gitignore> file while denying any other
+file with a name beginning with a dot.
+
+    [githooks "checkfile"]
+        basename.allow ^\\.gitignore
+        basename.deny  ^\\.
+
+=head2 [DEPRECATED] githooks.checkfile.path.deny REGEXP
+
+This option is deprecated. Please, use an C<acl> option like this, instead:
+
+  [githooks "checkfile"]
+    acl = deny A ^<REGEXP>
+
+This directive denies files which full paths match REGEXP.
+
+=head2 [DEPRECATED] githooks.checkfile.path.allow REGEXP
+
+This option is deprecated. Please, use an C<acl> option like this, instead:
+
+  [githooks "checkfile"]
+    acl = allow A ^<REGEXP>
+
+This directive allows files which full paths match REGEXP. It's useful in
+the same way that B<githooks.checkfile.basename.deny> is.
+
+=cut

@@ -370,8 +370,8 @@ push to the repository and affect which Git refs.
 
 =item * L<Git::Hooks::CheckFile>
 
-Check if the contents of newly added or modified files comply with specified
-policies.
+Check if the names and contents of added, modified, or deleted files comply with
+specified policies.
 
 =item * L<Git::Hooks::CheckJira>
 
