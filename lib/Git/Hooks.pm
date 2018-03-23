@@ -363,11 +363,6 @@ own documentation for more details.
 
 =over
 
-=item * L<Git::Hooks::CheckAcls>
-
-Allow you to specify Access Control Lists to tell who can commit or
-push to the repository and affect which Git refs.
-
 =item * L<Git::Hooks::CheckFile>
 
 Check if the names and contents of added, modified, or deleted files comply with
@@ -801,8 +796,8 @@ below. Each plugin may define other specific options which are
 described in their own documentation. The options specific to a plugin
 usually are contained in a configuration subsection of section
 C<githooks>, named after the plugin base name. For example, the
-C<Git::Hooks::CheckAcls> plugin has its options contained in the
-configuration subsection C<githooks.checkacls>.
+C<Git::Hooks::CheckFile> plugin has its options contained in the
+configuration subsection C<githooks.checkfile>.
 
 You should get comfortable with C<git config> command (read C<git help
 config>) to know how to configure Git::Hooks.
@@ -827,7 +822,7 @@ configuration files by using Git's inclusion mechanism. Please, read the
 To enable one or more plugins you must add them to this configuration
 option, like this:
 
-    $ git config --add githooks.plugin CheckAcls CheckJira
+    $ git config --add githooks.plugin CheckFile CheckJira
 
 You can add another list to the same variable to enable more plugins,
 like this:
@@ -1006,7 +1001,7 @@ user performing the git action.
 =head2 githooks.admin USERSPEC
 
 There are several hooks that perform access control checks before
-allowing a git action, such as the ones installed by the C<CheckAcls>
+allowing a git action, such as the ones installed by the C<CheckFile>
 and the C<CheckJira> plugins. It's useful to allow some people (the
 "administrators") to bypass those checks. These hooks usually allow
 the users specified by this variable to do whatever they want to the

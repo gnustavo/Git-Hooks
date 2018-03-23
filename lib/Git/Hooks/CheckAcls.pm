@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 package Git::Hooks::CheckAcls;
-# ABSTRACT: Git::Hooks plugin for branch/tag access control
+# ABSTRACT: [DEPRECATED] Git::Hooks plugin for branch/tag access control
 
 use 5.010;
 use utf8;
@@ -86,7 +86,7 @@ EOS
     # Assign meaningful names to op codes.
     my %op = (
         C => 'create',
-        R => 'rewind/rebase',
+        R => 'rewrite',
         U => 'update',
         D => 'delete',
     );
@@ -136,7 +136,7 @@ __END__
 
 =head1 NAME
 
-Git::Hooks::CheckAcls - Git::Hooks plugin for branch/tag access control
+Git::Hooks::CheckAcls - [DEPRECATED] Git::Hooks plugin for branch/tag access control
 
 =head1 SYNOPSIS
 
@@ -152,10 +152,13 @@ may configure it in a Git configuration file like this:
     acl = ^.      U    ^refs/heads/
 
 This allows users C<joe> and C<molly> do anything. Every other user can create,
-rewind, update, and delete branches prefixed with their own usernames, but they
+rewrite, update, and delete branches prefixed with their own usernames, but they
 can only update other branches.
 
 =head1 DESCRIPTION
+
+This plugin is deprecated. Please, use the L<Git::Hooks::CheckReference> plugin
+instead.
 
 This L<Git::Hooks> plugin hooks itself to the hooks below to guarantee that
 only allowed users can push commits and tags to specific branches.
@@ -222,7 +225,7 @@ specified as a string of one or more of the following opcodes:
 
 =item * B<C> - Create a new ref.
 
-=item * B<R> - Rewind/Rebase an existing ref. (With commit loss.)
+=item * B<R> - Rewrite an existing ref. (With commit loss.)
 
 =item * B<U> - Update an existing ref. (A fast-forward with no commit loss.)
 

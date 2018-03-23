@@ -268,30 +268,40 @@ supersede the global configuration. This is an example F<.git/config> file:
 
     [githooks]
             disable = CheckJira
-            plugin = CheckAcls
+            plugin = CheckReference
             groups = integrators = tiago juliana
-    [githooks "checkacls"]
-            acl = @integrators CRUD ^refs/(heads|tags)/
-            acl = ^.           CRUD ^refs/heads/user/{USER}/'
-            acl = ^.           U    ^refs/heads
+    [githooks "checkreference"]
+            acl = deny  CRUD ^refs/
+            acl = allow   U  ^refs/heads/
+            acl = allow CRUD ^refs/heads/user/{USER}/
+            acl = allow CRUD ^refs/                   by @integrators
 
 In this repository the C<CheckJira> plugin is disabled, even though it is
 enabled globally.
 
-The C<CheckAcls> plugin is enabled and configured in the C<githooks.checkacls>
-section with three ACLs.
+The C<CheckReference> plugin is enabled and configured in the
+C<githooks.checkreference> section with three ACLs.
 
-The first ACL allows the two users belonging to the C<integrators> group to
-create, rewrite, update, and delete any branch or tag.
+The githooks.checkreference.acl options are used to restrict who can do what to
+which referece in the remote repository during a git-push. The rules are
+processed in reverse order and are (almost) self explanatory. The four acls
+above mean that:
 
-The second ACL allows any user to create, rewrite, update, and delete any branch
-with a name beginning with C<user/USER>, where USER is the username with which
-she authenticated herself with Git. This is useful to allow developers to backup
-their own local branches in the server while they aren't good enough to be
-shared.
+=over
 
-The third ACL allows any user to update any branch, which means, to push to any
-branch and have it be fast-forwarded.
+=item * The users in the C<integrators> group can (C) create, (R) rewrite, (U)
+update, and (D) delete any branch or tag.
+
+=item * Any user can create, rewrite, update, and delete any branch prefixed with
+F<user/{USER}>, where C<{USER}> is replaced by the username she used to
+authenticate during the git-push.
+
+=item * Any user can update any branch.
+
+=item * No other change is allowed. (The first acl is important because any
+action not matching any acl is allowed by default.)
+
+=back
 
 =head3 Distributed configuration
 
@@ -299,7 +309,7 @@ By default you only get a single global and one local configuration file for
 each repository in the server. Sometimes it's useful to factor out some
 configuration in specific files. If you have, say, three development teams
 holding their repositories in a single server but each one of them wants
-different C<CheckAcls> configuration you may separate these configurations in
+different C<CheckReference> configuration you may separate these configurations in
 three files and include one of them in each repository using Git's C<include>
 section. For example, team A's repositories could have this in their
 F<.git/config> files:

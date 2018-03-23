@@ -47,8 +47,6 @@ plugins provided by the distrubution are these:
 
 =over
 
-=item * L<Git::Hooks::CheckAcls> - branch/tag access control
-
 =item * L<Git::Hooks::CheckCommit> - enforce commit policies
 
 =item * L<Git::Hooks::CheckFile> - check file names and contents

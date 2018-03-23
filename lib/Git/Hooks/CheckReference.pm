@@ -333,3 +333,14 @@ denying all others.
         allow = ^refs/heads/(?:feature|release|hotfix)/
 
 Note that the order of the directives is irrelevant.
+
+=head1 REFERENCES
+
+=over
+
+=item * L<update-paranoid|https://github.com/git/git/blob/master/contrib/hooks/update-paranoid>
+
+This module is inspired from the example hook which comes with the Git
+distribution.
+
+=back
