@@ -12,42 +12,6 @@ use List::MoreUtils qw/any none/;
 
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
-sub grok_acls {
-    my ($git) = @_;
-
-    my @acls;
-
-  ACL:
-    foreach ($git->get_config($CFG => 'acl')) {
-        my %acl;
-        if (/^\s*(allow|deny)\s+([CRUD]+)\s+(\S+)/) {
-            $acl{allow}  = $1 eq 'allow';
-            $acl{action} = $2;
-            my $spec     = $3;
-
-            # Interpolate environment variables embedded as "{VAR}".
-            $spec =~ s/{(\w+)}/$ENV{$1}/ige;
-            # Pre-compile regex
-            $acl{spec} = substr($spec, 0, 1) eq '^' ? qr/$spec/ : $spec;
-        } else {
-            die "invalid acl syntax: $_\n";
-        }
-
-        if (substr($_, $+[0]) =~ /^\s*by\s+(\S+)\s*$/) {
-            $acl{who} = $1;
-            # Discard this ACL if it doesn't match the user
-            next ACL unless $git->match_user($acl{who});
-        } elsif (substr($_, $+[0]) !~ /^\s*$/) {
-            die "invalid acl syntax: $_\n";
-        }
-
-        # Create a list in reverse order
-        unshift @acls, \%acl;
-    }
-
-    return @acls;
-}
-
 # Assign meaningful names to action codes.
 my %ACTION = (
     C => 'create',
@@ -82,7 +46,7 @@ sub check_ref {
         };
     }
 
-    my @acls = eval { grok_acls($git) };
+    my @acls = eval { $git->grok_acls($CFG, 'CRUD') };
     if ($@) {
         $git->fault($@, {ref => $ref});
         return 1;
@@ -158,7 +122,7 @@ INIT: {
 1;
 
 __END__
-=for Pod::Coverage grok_acls check_ref check_affected_refs
+=for Pod::Coverage check_ref check_affected_refs
 
 =head1 NAME
 
@@ -238,19 +202,16 @@ and tags, but an ACL may refer to any reference under the F<refs/> namespace.)
 By default any user can perform any action on any reference. So, the rules are
 used to impose restrictions.
 
-When a hook is invoked it groks all references that were affected in any way by
-the commits involved and tries to match each reference to a RULE to see if the
-action performed on it is allowed or denied.
+The acls are grokked by the L<Git::Repository::Plugin::GitHooks>'s C<grok_acls>
+method. Please read its documentation for the general documentation.
 
 A RULE takes three or four parts, like this:
 
   (allow|deny) [CRUD]+ <refspec> (by <userspec>)?
 
+Some parts are described below:
+
 =over 4
-
-=item * B<(allow|deny)>
-
-The first part tells if the rule allows or denies an action.
 
 =item * B<[CRUD]+>
 
@@ -274,25 +235,7 @@ form C<{VAR}> is replaced by C<$ENV{VAR}>. This is useful, for example, to
 interpolate the committer's username in the refspec, in order to create
 reference namespaces for users.
 
-=item * B<< by <userspec> >>
-
-The fourth part is optional. It specifies which users are being considered. It
-can be the name of a single user (e.g. C<james>) or the name of a group
-(e.g. C<@devs>).
-
-If not specified, the RULE matches any user.
-
 =back
-
-The RULEs B<are matched in the reverse of the order> as they appear as the
-result of the command C<git config githooks.checkreference.acl>, so that later
-rules take precedence. This way you can have general rules in the global context
-and more specific rules in the repository context, naturally.
-
-So, the B<last> RULE matching the action, the reference and the user tells if
-the operation is allowed or denied.
-
-If no RULE matches the operation, it is allowed by default.
 
 See the L</SYNOPSIS> section for some examples.
 

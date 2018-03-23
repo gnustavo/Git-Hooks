@@ -478,36 +478,36 @@ As a C<Git::Hooks> plugin you don't use this Perl module directly. Instead, you
 may configure it in a Git configuration file like this:
 
   [githooks]
+
+    # Enable the plugin
     plugin = CheckCommit
+
+    # These users are exempt from all checks
     admin = joe molly
+
+    # The @mergers group is used below
     groups = mergers = larry sally
 
   [githooks "checkcommit"]
+
+    # Reject commits if the author or committer name contains any characters
+    # other then lowercase letters.
     name = !^[a-z]+$
+
+    # Reject commits if the author or committer email does not belong to the
+    # @cpqd.com.br domain.
     email = @cpqd\.com\.br$
+
+    # Enable several integrity checks on the author and committer emails using
+    # the Email::Valid Perl module.
     email-valid = true
+
+    # Only users in the @mergers group can push merge commits.
     merger = @mergers
+
+    # Rejects pushes with more than two commits in a single branch, in order to
+    # avoid careless pushes.
     push-limit = 2
-
-The first section enables the plugin and defines the users C<joe> and C<molly>
-as administrators, effectivelly exempting them from any restrictions the plugin
-may impose. It also defines a user group called C<mergers> containing two users.
-
-The second instance enables C<some> of the options specific to this plugin. The
-C<name> option requires that the user.name configuration must be anything other
-than a sequence of lower-case letters, trying to detect and deny commits made by
-users without proper configuration.
-
-The C<email> option requires that the user.email must be of a specific domain.
-
-The C<email-valid> option enables several integrity checks of the user.email
-using the L<Email::Valid> module.
-
-The C<merger> option only accepts pushes of merge commits performed by the users
-in the C<@mergers> group.
-
-The C<push-limit> option denies pushes with more than two commits in a single
-branch, in order to avoid careless pushes.
 
 =head1 DESCRIPTION
 

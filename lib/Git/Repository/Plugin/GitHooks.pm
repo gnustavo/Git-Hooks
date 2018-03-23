@@ -39,7 +39,7 @@ sub _keywords {                 ## no critic (ProhibitUnusedPrivateSubroutines)
 
           blob file_size file_mode
 
-          is_reference_enabled is_ref_enabled match_user im_admin
+          is_reference_enabled is_ref_enabled match_user im_admin grok_acls
       /;
 }
 
@@ -1466,6 +1466,41 @@ sub im_admin {
     return 0;
 }
 
+sub grok_acls {
+    my ($git, $cfg, $actions) = @_;
+
+    my @acls;
+
+  ACL:
+    foreach ($git->get_config($cfg => 'acl')) {
+        my %acl;
+        if (/^\s*(allow|deny)\s+([$actions]+)\s+(\S+)/) {
+            $acl{allow}  = $1 eq 'allow';
+            $acl{action} = $2;
+            my $spec     = $3;
+
+            # Interpolate environment variables embedded as "{VAR}".
+            $spec =~ s/{(\w+)}/$ENV{$1}/ige;
+            # Pre-compile regex
+            $acl{spec} = substr($spec, 0, 1) eq '^' ? qr/$spec/ : $spec;
+        } else {
+            die "invalid acl syntax for actions '$actions': $_\n";
+        }
+
+        if (substr($_, $+[0]) =~ /^\s*by\s+(\S+)\s*$/) {
+            $acl{who} = $1;
+            # Discard this ACL if it doesn't match the user
+            next ACL unless $git->match_user($acl{who});
+        } elsif (substr($_, $+[0]) !~ /^\s*$/) {
+            die "invalid acl syntax for actions '$actions: $_\n";
+        }
+
+        unshift @acls, \%acl;
+    }
+
+    return @acls;
+}
+
 
 1; # End of Git::Repository::Plugin::GitHooks
 __END__
@@ -2113,6 +2148,78 @@ Checks if the authenticated user (again, as returned by the
 C<authenticated_user> method) matches the specifications given by the
 C<githooks.admin> configuration variable. This is useful to exempt
 "administrators" from the restrictions imposed by the hooks.
+
+=head2 grok_acls CFG ACTIONS
+
+This method returns a list of ACLs (Access Control Lists) grokked from the
+C<CFG.acl> options, where CFG is a configuration session like
+C<githooks.checkfile>.
+
+The C<CFG.acl> is a multi-valued option specifying rules allowing or denying
+specific users to perform specific actions on specific "things". (Commons such
+things are references and files). By default any user can perform any action on
+any thing. So, the rules are used to impose restrictions.
+
+When a hook is invoked it groks all things that were affected in any way by the
+commits involved and tries to match each of them to a RULE to see if the action
+performed on it is allowed or denied.
+
+A RULE takes three or four parts, like this:
+
+  (allow|deny) [ACTIONS]+ <spec> (by <userspec>)?
+
+=over 4
+
+=item * B<(allow|deny)>
+
+The first part tells if the rule allows or denies an action.
+
+=item * B<[ACTIONS]+>
+
+The second part specifies which actions are being considered by a combination of
+letters. The ACTIONS argument is a string containing all valid letters for the
+corresponding ACLs.
+
+See the documentation of the C<acl> option in the L<Git::Hooks::CheckFile> and
+the L<Git::Hooks::CheckReference> plugins for two examples of this.
+
+=item * B<< <spec> >>
+
+The third part specifies which things are being considered. In its simplest
+form, a C<spec> is taken as a literal string matching the thing exactly by name.
+
+If the C<spec> starts with a caret (^) it's interpreted as a Perl regular
+expression, the caret being kept as part of the regexp. These specs match
+potentially many things.
+
+Before being interpreted as a string or as a regexp, any substring of it in the
+form C<{VAR}> is replaced by C<$ENV{VAR}>. This is useful, for example, to
+interpolate the committer's username in the spec, in order to create personal
+namespaces for users.
+
+(See the documentation of the C<acl> option in the L<Git::Hooks::CheckFile> and
+the L<Git::Hooks::CheckReference> plugins for examples things as files and
+references, respectively.)
+
+=item * B<< by <userspec> >>
+
+The fourth part is optional. It specifies which users are being considered. It
+can be the name of a single user (e.g. C<james>) or the name of a group
+(e.g. C<@devs>).
+
+If not specified, the RULE matches any user.
+
+=back
+
+The RULEs B<are matched in the reverse order> as they appear in the result of
+the command C<git config CFG.acl>, so that later rules take precedence. This way
+you can have general rules in the global context and more specific rules in the
+repository context, naturally.
+
+So, the B<last> RULE matching the action, the file, and the user, tells if the
+operation is allowed or denied.
+
+If no RULE matches the operation, it is allowed by default.
 
 =head1 SEE ALSO
 

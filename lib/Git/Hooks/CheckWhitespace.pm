@@ -146,7 +146,11 @@ As a C<Git::Hooks> plugin you don't use this Perl module directly. Instead, you
 may configure it in a Git configuration file like this:
 
   [githooks]
+
+    # Enable the plugin
     plugin = CheckWhitespace
+
+    # These users are exempt from all checks
     admin = joe molly
 
 The first section enables the plugin and defines the users C<joe> and C<molly>

@@ -427,38 +427,35 @@ As a C<Git::Hooks> plugin you don't use this Perl module directly. Instead, you
 may configure it in a Git configuration file like this:
 
   [githooks]
+
+    # Enable the plugin
     plugin = CheckLog
+
+    # These users are exempt from all checks
     admin = joe molly
 
   [githooks "checklog"]
+
+    # The title line of commit messages must have at most 60 characters.
     title-max-width = 60
+
+    # The title line of commit messages must not end in a period.
     title-period = deny
+
+    # The lines in the body of commit messages must have at most 80 characters.
     body-max-width = 80
+
+    # Enable spell checking of the commit messages.
     spelling = true
+
+    # Use Brazilian Portuguese dictionary for spell checking
     spelling-lang = pt_BR
+
+    # Rejects commits with messages containing the string "This reverts commit
+    # <SHA-1>", if SHA-1 refers to a merge commit. Reverting a merge commit has
+    # unexpected consequences, so that it's better to avoid it if at all
+    # possible.
     deny-merge-revert = true
-
-The first section enables the plugin and defines the users C<joe> and C<molly>
-as administrators, effectivelly exempting them from any restrictions the plugin
-may impose.
-
-The second instance enables C<some> of the options specific to this plugin.
-
-The C<title-max-width> and the C<body-max-width> options specify the maxmimum
-width allowed for the lines in the commit message's title and body,
-respectively. Note that indented lines in the body aren't checked against this
-limit.
-
-The C<title-period> option denies commits which message title ends in a
-period. This is a commom practice among the most mature Git projects out there.
-
-The C<spelling> and C<spelling-lang> options spell checks the commit message
-expecting it to be in Brazilian Portuguese.
-
-The C<deny-merge-revert> option denies commits which messages contain the string
-"This reverts commit <SHA-1>", if SHA-1 refers to a merge commit. Reverting a
-merge commit has unexpected consequences, so that it's better to avoid it if at
-all possible.
 
 =head1 DESCRIPTION
 

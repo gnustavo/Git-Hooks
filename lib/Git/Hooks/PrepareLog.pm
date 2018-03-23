@@ -145,22 +145,19 @@ As a C<Git::Hooks> plugin you don't use this Perl module directly. Instead, you
 may configure it in a Git configuration file like this:
 
   [githooks]
+
+    # Enable the plugin
     plugin = PrepareLog
 
   [githooks "preparelog"]
+
+    # Grok issue names from the part of the branch name matching this regular
+    # expression, which matches JIRA issue IDs.
     issue-branch-regex = [A-Z]+-\\d+
+
+    # The grokked issue ID should be inserted as a message trailer, keyed by
+    # "JIRA".
     issue-place = key Jira
-
-The first section enables the plugin.
-
-The second section makes the message include an issue ID grokked by the current
-branch name. If the current branch matches the C<issue-branch-regex> option it's
-name will be used as the issue ID. In this case, it matches a
-L<JIRA|https://www.atlassian.com/software/jira> ID. The C<issue-place> option
-specifies that the JIRA ID should be inserted as a message trailer, keyed by
-"JIRA". For example:
-
-  Jira: PRJ-123
 
 =head1 DESCRIPTION
 

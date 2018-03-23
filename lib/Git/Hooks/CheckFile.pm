@@ -334,33 +334,6 @@ EOS
     return scalar @diff;
 }
 
-sub grok_acls {
-    my ($git) = @_;
-
-    my @acls;
-
-    foreach ($git->get_config($CFG => 'acl')) {
-        my %acl;
-        if (/^\s*(allow|deny)\s+([AMD]+)\s+(\S+)/) {
-            $acl{allow}  = $1 eq 'allow';
-            $acl{action} = $2;
-            $acl{spec}   = substr($3, 0, 1) eq '^' ? qr/$3/ : $3;
-        } else {
-            die "invalid acl syntax: $_\n";
-        }
-
-        if (substr($_, $+[0]) =~ /^\s*by\s+(\S+)\s*$/) {
-            $acl{who} = $1;
-        } elsif (substr($_, $+[0]) !~ /^\s*$/) {
-            die "invalid acl syntax: $_\n";
-        }
-
-        unshift @acls, \%acl;
-    }
-
-    return @acls;
-}
-
 # Assign meaningful names to action codes.
 my %ACTION = (
     A => 'add',
@@ -371,7 +344,7 @@ my %ACTION = (
 sub check_acls {
     my ($git, $ctx, $commit, $name_status) = @_;
 
-    my @acls = eval { grok_acls($git) };
+    my @acls = eval { $git->grok_acls($CFG, 'AMD') };
     if ($@) {
         $git->fault($@, $ctx);
         return 1;
@@ -512,7 +485,7 @@ INIT: {
 1;
 
 __END__
-=for Pod::Coverage check_command check_new_files deny_case_conflicts deny_token check_acls check_everything grok_acls check_affected_refs check_commit check_patchset
+=for Pod::Coverage check_command check_new_files deny_case_conflicts deny_token check_acls check_everything check_affected_refs check_commit check_patchset
 
 =head1 NAME
 
@@ -768,19 +741,16 @@ This multi-valued option specifies rules allowing or denying specific users to
 perform specific actions on specific files. By default any user can perform any
 action on any file. So, the rules are used to impose restrictions.
 
-When a hook is invoked it groks all files that were affected in any way by the
-commits involved and tries to match each file to a RULE to see if the action
-performed on it is allowed or denied.
+The acls are grokked by the L<Git::Repository::Plugin::GitHooks>'s C<grok_acls>
+method. Please read its documentation for the general documentation.
 
 A RULE takes three or four parts, like this:
 
   (allow|deny) [AMD]+ <filespec> (by <userspec>)?
 
+Some parts are described below:
+
 =over 4
-
-=item * B<(allow|deny)>
-
-The first part tells if the rule allows or denies an action.
 
 =item * B<[AMD]+>
 
@@ -800,25 +770,7 @@ If the C<filespec> starts with a caret (^) it's interpreted as a Perl regular
 expression, the caret being kept as part of the regexp. These filespecs match
 potentially many files (e.g. F<^lib/.*\\.pm$>).
 
-=item * B<< by <userspec> >>
-
-The fourth part is optional. It specifies which users are being considered. It
-can be the name of a single user (e.g. C<james>) or the name of a group
-(e.g. C<@devs>).
-
-If not specified, the RULE matches any user.
-
 =back
-
-The RULEs B<are matched in the reverse of the order> as they appear as the
-result of the command C<git config githooks.checkfile.acl>, so that later rules
-take precedence. This way you can have general rules in the global context and
-more specific rules in the repository context, naturally.
-
-So, the B<last> RULE matching the action, the file and the user tells if the
-operation is allowed or denied.
-
-If no RULE matches the operation, it is allowed by default.
 
 See the L</SYNOPSIS> section for some examples.
 

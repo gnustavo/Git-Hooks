@@ -144,16 +144,21 @@ As a C<Git::Hooks> plugin you don't use this Perl module directly. Instead, you
 may configure it in a Git configuration file like this:
 
   [githooks]
+
+    # Enable the plugin
     plugin = CheckAcls
+
+    # These users are exempt from all checks
     admin = joe molly
 
   [githooks "checkacls"]
-    acl = ^.      CRUD ^refs/heads/{USER}/
-    acl = ^.      U    ^refs/heads/
 
-This allows users C<joe> and C<molly> do anything. Every other user can create,
-rewrite, update, and delete branches prefixed with their own usernames, but they
-can only update other branches.
+    # Any user can create, rewrite, update, and delete branches prefixed with
+    # their own usernames.
+    acl = ^.      CRUD ^refs/heads/{USER}/
+
+    # Any user can update any branch.
+    acl = ^.      U    ^refs/heads/
 
 =head1 DESCRIPTION
 
