@@ -397,9 +397,8 @@ already pushed.
 
 =item * L<Git::Hooks::CheckReference>
 
-Check if newly added reference names (branches, tags are just the most
-common Git references) comply with specified policies, so that you can
-impose a strict structure to the repository's reference hierarchies.
+Restrict who can do what (create, rewrite, update, or delete) to which
+references (branches and tags are just the most common Git references).
 
 =item * L<Git::Hooks::GerritChangeId>
 

@@ -6,7 +6,7 @@ use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
 use Path::Tiny;
-use Test::More tests => 9;
+use Test::More tests => 13;
 
 my ($repo, $clone);
 
@@ -26,9 +26,14 @@ sub check_can_push {
 }
 
 sub check_cannot_push {
-    my ($testname, $reference) = @_;
+    my ($testname, $reference, $error) = @_;
     $repo->run(branch => $reference, 'master');
-    test_nok_match($testname, qr/not allowed/, $repo,
+    if ($error) {
+        $error = qr/$error/;
+    } else {
+        $error = qr/not allowed/;
+    }
+    test_nok_match($testname, $error, $repo,
                    'push', $clone->git_dir(), "$reference:$reference");
 }
 
@@ -69,3 +74,23 @@ test_nok_match('require-annotated-tag deny lightweight tag',
 
 $repo->run(qw/tag -f -a -mmessage mytag2 HEAD/);
 test_ok('require-annotated-tag allow annotated', $repo, 'push', $clone->git_dir(), 'tag', 'mytag2');
+
+# Check ACLs
+
+$clone->run(qw/config --remove-section githooks.checkreference/);
+
+$clone->run(qw/config githooks.checkreference.acl/, 'deny CRUD ^refs/');
+check_cannot_push('deny CRUD ^refs/', 'any');
+
+$ENV{USER} = 'pusher';
+$clone->run(qw/config githooks.userenv USER/);
+
+$clone->run(qw/config --add githooks.checkreference.acl/, 'allow CRUD ^refs/heads/user/{USER}/');
+check_can_push('allow CRUD ^refs/heads/user/{USER}/', 'user/pusher/master');
+
+$clone->run(qw/config --add githooks.checkreference.acl/, 'allow CRUD ^refs/heads/other$ by other');
+check_cannot_push('allow CRUD ^refs/heads/other$ by other', 'other');
+
+$clone->run(qw/config --add githooks.checkreference.acl/, 'allow CRUD refs/heads/pusher by pusher');
+check_can_push('allow CRUD refs/heads/pusher by pusher', 'pusher');
+
