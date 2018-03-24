@@ -2,6 +2,35 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.9.0     2018-03-23 21:49:01-03:00 America/Sao_Paulo
+
+  [New features]
+
+  - CheckFile: a new option 'acl' allows one to restrict who can do what (add,
+    modify, or delete) to specific files in a very general way.
+
+  - CheckReference: a new option 'acl' allows one to restrict who can do what
+    (create, rewrite, update, or delete) to which references in a very general
+    way.
+
+  - GitHooks: a new method 'grok_acls' is used by the plugins CheckFile and
+    CheckReference to pre-process their respective 'acl' multi-valued options.
+
+  - Notify: a new placeholder (%R) can be used in the option 'commit-url'. It's
+    replaced by the repository name.
+
+  [Deprecations]
+
+  - CheckFile: the options 'basename.deny', 'basename.allow', 'path.deny', and
+    'path.allow' are deprecated because they can be implemented more generally
+    with the new 'acl' option.
+
+  - CheckReference: the options 'allow' and 'deny' are deprecated because they
+    can be implemented more generally with the new 'acl' option.
+
+  - CheckAcls: this plugin is deprecated because its funcionality can now be
+    implemented with the new 'githooks.checkreference.acl' option.
+
 2.8.1     2018-03-13 15:53:42-03:00 America/Sao_Paulo
 
   [Fix]
