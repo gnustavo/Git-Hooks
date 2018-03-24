@@ -559,17 +559,19 @@ commit signatures.
 To enable this plugin you should add it to the githooks.plugin configuration
 option:
 
-    git config --add githooks.plugin CheckCommit
+    [githooks]
+      plugin = CheckCommit
 
 =head1 CONFIGURATION
 
-The plugin is configured by the following git options.
+The plugin is configured by the following git options under the
+C<githooks.checkcommit> subsection.
 
 It can be disabled for specific references via the C<githooks.ref> and
 C<githooks.noref> options about which you can read in the L<Git::Hooks>
 documentation.
 
-=head2 githooks.checkcommit.name [!]REGEXP
+=head2 name [!]REGEXP
 
 This multi-valued option impose restrictions on the valid author and
 committer names using regular expressions.
@@ -586,7 +588,7 @@ least a first and a last name, separated by spaces:
   [githooks "checklog"]
     name = .\\s+.
 
-=head2 githooks.checkcommit.email [!]REGEXP
+=head2 email [!]REGEXP
 
 This multi-valued option impose restrictions on the valid author and
 committer emails using regular expressions.
@@ -597,7 +599,7 @@ negative regular expressions (the ones prefixed by "!").
 
 This check is performed by the C<pre-commit> local hook.
 
-=head2 githooks.checkcommit.email-valid BOOL
+=head2 email-valid BOOL
 
 This option uses the L<Email::Valid> module' C<address> method to validate
 author and committer email addresses.
@@ -633,7 +635,7 @@ Species whether addresses must contain a fully qualified domain name
 Specifies whether a "domain literal" is acceptable as the domain part.  That
 means addresses like: C<rjbs@[1.2.3.4]>. The default is true.
 
-=head2 githooks.checkcommit.canonical MAILMAP
+=head2 canonical MAILMAP
 
 This option requires the use of canonical names and emails for authors and
 committers, as configured in a F<MAILMAP> file and checked by the
@@ -659,7 +661,7 @@ to temporarily configure it to use the F<MAILMAP> file.
 
 These checks are performed by the C<pre-commit> local hook.
 
-=head2 githooks.checkcommit.signature {nocheck|optional|good|trusted}
+=head2 signature {nocheck|optional|good|trusted}
 
 This option allows one to check commit signatures according to these values:
 
@@ -688,14 +690,14 @@ signatures.
 
 This check is performed by the C<post-commit> local hook.
 
-=head2 githooks.checkcommit.merger WHO
+=head2 merger WHO
 
 This multi-valued option restricts who can push commit merges to the
 repository. WHO may be specified as a username, a groupname, or a regex,
 like the C<githooks.admin> option (see L<Git::Hooks/CONFIGURATION>) so that
 only users matching WHO may push merge commits.
 
-=head2 githooks.checkcommit.push-limit INT
+=head2 push-limit INT
 
 This limits the number of commits that may be pushed at once on top of any
 reference. Set it to 1 to force developers to squash their commits before
@@ -703,7 +705,7 @@ pushing them. Or set it to a low number (such as 3) to deny long chains of
 commits to be pushed, which are usually made by Git newbies who don't know
 yet how to amend commits. ;-)
 
-=head2 githooks.checkcommit.check-code CODESPEC
+=head2 check-code CODESPEC
 
 If the above checks aren't enough you can use this option to define a custom
 code to check your commits. The code may be specified directly as the

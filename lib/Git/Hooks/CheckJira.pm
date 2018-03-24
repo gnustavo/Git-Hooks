@@ -702,60 +702,35 @@ digits. E.g., C<CDS-123>, C<RT-1>, and C<GIT-97>.
 To enable it you should add it to the githooks.plugin configuration
 option:
 
-    git config --add githooks.plugin CheckJira
+    [githooks]
+      plugin = CheckJira
 
 =head1 CONFIGURATION
 
-The plugin is configured by the following git options.
+The plugin is configured by the following git options under the
+C<githooks.checkacls> subsection.
 
 It can be disabled for specific references via the C<githooks.ref> and
 C<githooks.noref> options about which you can read in the L<Git::Hooks>
 documentation.
 
-=head2 githooks.checkjira.ref REFSPEC
-
-This option is DEPRECATED. Please, use the C<githooks.ref> option instead.
-
-By default, the message of every commit is checked. If you want to
-have them checked only for some refs (usually some branch under
-refs/heads/), you may specify them with one or more instances of this
-option.
-
-The refs can be specified as a complete ref name
-(e.g. "refs/heads/master") or by a regular expression starting with a
-caret (C<^>), which is kept as part of the regexp
-(e.g. "^refs/heads/(master|fix)").
-
-=head2 githooks.checkjira.noref REFSPEC
-
-This option is DEPRECATED. Please, use the C<githooks.noref> option instead.
-
-By default, the message of every commit is checked. If you want to exclude
-some refs (usually some branch under refs/heads/), you may specify them with
-one or more instances of this option.
-
-The refs can be specified as in the same way as to the C<ref> option above.
-
-Note that the C<ref> option has precedence over the C<noref> option, i.e.,
-if a reference matches both options it will be checked.
-
-=head2 githooks.checkjira.jiraurl URL
+=head2 jiraurl URL
 
 This option specifies the JIRA server HTTP URL, used to construct the
 C<JIRA::REST> object which is used to interact with your JIRA
 server. Please, see the JIRA::REST documentation to know about them.
 
-=head2 githooks.checkjira.jirauser USERNAME
+=head2 jirauser USERNAME
 
 This option specifies the JIRA server username, used to construct the
 C<JIRA::REST> object.
 
-=head2 githooks.checkjira.jirapass PASSWORD
+=head2 jirapass PASSWORD
 
 This option specifies the JIRA server password, used to construct the
 C<JIRA::REST> object.
 
-=head2 githooks.checkjira.matchkey REGEXP
+=head2 matchkey REGEXP
 
 By default, JIRA keys are matched with the regex
 C</\b[A-Z][A-Z]+-\d+\b/>, meaning, a sequence of two or more capital
@@ -765,7 +740,7 @@ keys|https://confluence.atlassian.com/display/JIRA/Configuring+Project+Keys>,
 you may need to customize how this hook is going to match them. Set
 this option to a suitable regex to match a complete JIRA issue key.
 
-=head2 githooks.checkjira.matchlog REGEXP
+=head2 matchlog REGEXP
 
 By default, JIRA keys are looked for in all of the commit message. However,
 this can lead to some false positives, since the default issue pattern can
@@ -803,7 +778,7 @@ regexes are tried and JIRA keys are looked for in all of them. This allows
 you to more easily accommodate more than one way of specifying JIRA keys if
 you wish.
 
-=head2 githooks.checkjira.jql JQL
+=head2 jql JQL
 
 By default, any cited issue must exist on the server and be unresolved. You
 can specify other restrictions (and even allow for resolved issues) by
@@ -828,7 +803,7 @@ which must match all cited issues. For example, you may want to:
 This is a scalar option. Only the last JQL expression will be used to check the
 issues.
 
-=head2 githooks.checkjira.ref-jql REF JQL
+=head2 ref-jql REF JQL
 
 You may impose restrictions on specific branches (or, more broadly, any
 reference) by mentioning them before the JQL expression. REF can be
@@ -847,18 +822,18 @@ Note, though, that if there is a global JQL specified by the
 B<githooks.checkjira.jql> option it will be checked separately and both
 expressions must validate the issues matching REF.
 
-=head2 githooks.checkjira.require BOOL
+=head2 require BOOL
 
 By default, the log must reference at least one JIRA issue. You can
 make the reference optional by setting this option to false.
 
-=head2 githooks.checkjira.unresolved BOOL
+=head2 unresolved BOOL
 
 By default, every issue referenced must be unresolved, i.e., it must
 not have a resolution. You can relax this requirement by setting this
 option to false.
 
-=head2 githooks.checkjira.fixversion BRANCH FIXVERSION
+=head2 fixversion BRANCH FIXVERSION
 
 This multi-valued option allows you to specify that commits affecting BRANCH
 must cite only issues that have their C<Fix For Version> field matching
@@ -894,14 +869,14 @@ the C<future> version. Also, commits affecting any branch which name begins
 with a version number (e.g. C<1.0.3>) be assigned to the corresponding JIRA
 version (e.g. C<1.0>).
 
-=head2 githooks.checkjira.by-assignee BOOL
+=head2 by-assignee BOOL
 
 By default, the committer can reference any valid JIRA issue. Setting
 this value to true requires that the user doing the push/commit (as
 specified by the C<userenv> configuration variable) be the current
 issue's assignee.
 
-=head2 githooks.checkjira.check-code CODESPEC
+=head2 check-code CODESPEC
 
 If the above checks aren't enough you can use this option to define a
 custom code to check your commits. The code may be specified directly
@@ -952,7 +927,7 @@ If the subroutine returns undef it's considered to have succeeded.
 If it raises an exception (e.g., by invoking B<die>) it's considered
 to have failed and a proper message is produced to the user.
 
-=head2 githooks.checkjira.comment VISIBILITY
+=head2 comment VISIBILITY
 
 If this option is set and the C<post-receive> hook is enabled, for every
 pushed commit, every cited JIRA issue receives a comment showing the result
@@ -983,12 +958,12 @@ In this case, the visibility isn't restricted at all.
 
 =back
 
-=head2 githooks.checkjira.skip-merges BOOL
+=head2 skip-merges BOOL
 
 By default, all commits are checked. You can exempt merge commits from being
 checked by setting this option to true.
 
-=head2 githooks.checkjira.project KEY
+=head2 [DEPRECATED] project KEY
 
 This option is B<DEPRECATED>. Please, use a JQL expression such the
 following to restrict by project key:
@@ -1003,7 +978,7 @@ project by specifying this option multiple times, once per project key.
 If you set this option, then any cited JIRA issue that doesn't belong to one
 of the specified projects causes an error.
 
-=head2 githooks.checkjira.status STATUSNAME
+=head2 [DEPRECATED] status STATUSNAME
 
 This option is B<DEPRECATED>. Please, use a JQL expression such the
 following to restrict by status:
@@ -1014,7 +989,7 @@ By default, it doesn't matter in which status the JIRA issues are. By
 setting this multi-valued option you can restrict the valid statuses for the
 issues.
 
-=head2 githooks.checkjira.issuetype ISSUETYPENAME
+=head2 [DEPRECATED] issuetype ISSUETYPENAME
 
 This option is B<DEPRECATED>. Please, use a JQL expression such the
 following to restrict by issue type:
@@ -1023,6 +998,33 @@ following to restrict by issue type:
 
 By default, it doesn't matter what type of JIRA issues are cited. By setting
 this multi-valued option you can restrict the valid issue types.
+
+=head2 [DEPRECATED] ref REFSPEC
+
+This option is DEPRECATED. Please, use the C<githooks.ref> option instead.
+
+By default, the message of every commit is checked. If you want to
+have them checked only for some refs (usually some branch under
+refs/heads/), you may specify them with one or more instances of this
+option.
+
+The refs can be specified as a complete ref name
+(e.g. "refs/heads/master") or by a regular expression starting with a
+caret (C<^>), which is kept as part of the regexp
+(e.g. "^refs/heads/(master|fix)").
+
+=head2 [DEPRECATED] noref REFSPEC
+
+This option is DEPRECATED. Please, use the C<githooks.noref> option instead.
+
+By default, the message of every commit is checked. If you want to exclude
+some refs (usually some branch under refs/heads/), you may specify them with
+one or more instances of this option.
+
+The refs can be specified as in the same way as to the C<ref> option above.
+
+Note that the C<ref> option has precedence over the C<noref> option, i.e.,
+if a reference matches both options it will be checked.
 
 =head1 SEE ALSO
 

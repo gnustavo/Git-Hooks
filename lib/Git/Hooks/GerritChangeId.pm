@@ -168,7 +168,8 @@ existing change viewed on the web.
 To enable the plugin you should add it to the githooks.plugin
 configuration option:
 
-    git config --add githooks.plugin GerritChangeId
+    [githooks]
+      plugin = GerritChangeId
 
 =head1 CONFIGURATION
 

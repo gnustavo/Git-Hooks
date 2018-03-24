@@ -212,7 +212,8 @@ provide a way to detect unsafe amends before committing them.
 To enable it you should add it to the githooks.plugin configuration
 option:
 
-    git config --add githooks.plugin CheckRewrite
+    [githooks]
+      plugin = CheckRewrite
 
 =head1 CONFIGURATION
 

@@ -185,7 +185,8 @@ commit/push is aborted.
 To enable it you should add it to the githooks.plugin configuration
 option:
 
-    git config --add githooks.plugin CheckWhitespace
+    [githooks]
+      plugin = CheckWhitespace
 
 =head1 CONFIGURATION
 

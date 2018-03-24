@@ -797,10 +797,11 @@ described in their own documentation. The options specific to a plugin
 usually are contained in a configuration subsection of section
 C<githooks>, named after the plugin base name. For example, the
 C<Git::Hooks::CheckFile> plugin has its options contained in the
-configuration subsection C<githooks.checkfile>.
+configuration subsection C<githooks.checkfile>. Note that the subsection
+name must be all in lowercase.
 
-You should get comfortable with C<git config> command (read C<git help
-config>) to know how to configure Git::Hooks.
+You should get comfortable with C<git config> command and the config file syntax
+(read C<git help config>) to know how to configure Git::Hooks.
 
 When you invoke C<run_hook>, the command C<git config --list> is
 invoked to grok all configuration affecting the current
@@ -817,17 +818,23 @@ C<refs/meta/config> branch. But you can implement a hierarchy of
 configuration files by using Git's inclusion mechanism. Please, read the
 "Includes" section of C<git help config> to know how.
 
-=head2 githooks.plugin PLUGIN...
+The sections below describe the options of the C<githooks> configuration
+section.
+
+=head2 plugin PLUGIN...
 
 To enable one or more plugins you must add them to this configuration
 option, like this:
 
-    $ git config --add githooks.plugin CheckFile CheckJira
+    [githooks]
+      plugin CheckFile CheckJira
 
 You can add another list to the same variable to enable more plugins,
 like this:
 
-    $ git config --add githooks.plugin CheckLog
+    [githooks]
+      plugin CheckFile CheckJira
+      plugin CheckLog
 
 This is useful, for example, to enable some plugins globally and
 others locally, per repository.
@@ -858,7 +865,7 @@ your hooks.
 
 =item 3.
 
-In the Git::Hooks installation.
+In the L<Git::Hooks> installation.
 
 =back
 
@@ -871,17 +878,22 @@ However, if you use the fully qualified module name of the plugin in
 the configuration, then it will be simply C<required> as a normal
 module. For example:
 
-    $ git config --add githooks.plugin My::Hook::CheckSomething
+    [githooks]
+      plugin = My::Hook::CheckSomething
 
-=head2 githooks.disable PLUGIN...
+=head2 disable PLUGIN...
 
 This option disables plugins enabled by the C<githooks.plugin>
 option. It's useful if you want to enable a plugin globally and only
 disable it for some repositories. For example:
 
-    $ git config --global --add githooks.plugin  CheckJira
+    # In ~/.gitconfig:
+    [githooks]
+      plugin = CheckJira
 
-    $ git config --local  --add githooks.disable CheckJira
+    # In .git/config:
+    [githooks]
+      disable = CheckJira
 
 You may also temporarily disable a plugin by assigning to "0" an
 environment variable with its name. This is useful sometimes, when you
@@ -904,19 +916,19 @@ up the server so that it defines the appropriate variable, but this
 isn't so useful as for the local hooks, as it's intended for
 once-in-a-while events.
 
-=head2 githooks.plugins DIR
+=head2 plugins DIR
 
 This option specify a list of directories where plugins are looked for
 besides the default locations, as explained in the C<githooks.plugin>
 option above.
 
-=head2 githooks.externals BOOL
+=head2 externals BOOL
 
 By default the driver script will look for external hooks after
 executing every enabled plugins. You may disable external hooks
 invocation by setting this option to 0.
 
-=head2 githooks.hooks DIR
+=head2 hooks DIR
 
 You can tell this plugin to look for external hooks in other
 directories by specifying them with this option. The directories
@@ -927,7 +939,7 @@ external hooks shared by all of your repositories.
 Please, see the plugins documentation to know about their own
 configuration options.
 
-=head2 githooks.groups GROUPSPEC
+=head2 groups GROUPSPEC
 
 You can define user groups in order to make it easier to configure access
 control plugins. A group is specified by a GROUPSPEC, which is a multiline
@@ -935,7 +947,10 @@ string containing a sequence of group definitions, one per line. Each line
 defines a group like this, where spaces are significant only between users
 and group references:
 
-    groupA = userA userB @groupB userC
+    [githooks]
+      groups = \
+        groupA = userX \
+        groupB = userA userB @groupA userC
 
 Note that a group can reference other groups by name. To make a group
 reference, simply prefix its name with an at sign (@). Group references must
@@ -952,7 +967,7 @@ exemplified above.
 The may be multiple definitions of this variable, each one defining
 different groups. You can't redefine a group.
 
-=head2 githooks.userenv STRING
+=head2 userenv STRING
 
 When Git is performing its chores in the server to serve a push
 request it's usually invoked via the SSH or a web service, which take
@@ -998,7 +1013,7 @@ sign, you can configure it like this:
 This variable is useful for any hook that need to authenticate the
 user performing the git action.
 
-=head2 githooks.admin USERSPEC
+=head2 admin USERSPEC
 
 There are several hooks that perform access control checks before
 allowing a git action, such as the ones installed by the C<CheckFile>
@@ -1030,9 +1045,9 @@ anchored at the start of the username.
 
 =back
 
-=head2 githooks.ref REFSPEC
+=head2 ref REFSPEC
 
-=head2 githooks.noref REFSPEC
+=head2 noref REFSPEC
 
 These multivalued options are meant to selectively enable/disable hook
 processing for commits in particular references (usually branches). Hook
@@ -1046,7 +1061,7 @@ The REFSPECs can be specified as complete ref names (e.g. "refs/heads/master")
 or by regular expressions starting with a caret (C<^>), which is kept as part of
 the regexp (e.g. "^refs/heads/(master|fix)").
 
-=head2 githooks.abort-commit BOOL
+=head2 abort-commit BOOL
 
 This option is true by default, meaning that the C<pre-commit> and
 the C<commit-msg> hooks will abort the commit if they detect anything
@@ -1060,17 +1075,17 @@ STDERR but let the commit succeed. This way, the user can correct any
 mistake with a simple C<git commit --amend> and doesn't run the risk
 of losing the commit message.
 
-=head2 githooks.gerrit.url URL
+=head2 gerrit.url URL
 
-=head2 githooks.gerrit.username USERNAME
+=head2 gerrit.username USERNAME
 
-=head2 githooks.gerrit.password PASSWORD
+=head2 gerrit.password PASSWORD
 
 These three options are required if you enable Gerrit hooks. They are
 used to construct the C<Gerrit::REST> object that is used to interact
 with Gerrit.
 
-=head2 githooks.gerrit.votes-to-approve VOTES
+=head2 gerrit.votes-to-approve VOTES
 
 This option defines which votes should be cast in which
 L<labels|https://gerrit-review.googlesource.com/Documentation/config-labels.html>
@@ -1088,7 +1103,7 @@ If not specified, the default VOTES is:
 
   Code-Review+1
 
-=head2 githooks.gerrit.votes-to-reject VOTES
+=head2 gerrit.votes-to-reject VOTES
 
 This option defines which votes should be cast in which
 L<labels|https://gerrit-review.googlesource.com/Documentation/config-labels.html>
@@ -1102,7 +1117,7 @@ If not specified, the default VOTES is:
 
   Code-Review-1
 
-=head2 githooks.gerrit.comment-ok COMMENT
+=head2 gerrit.comment-ok COMMENT
 
 By default, when approving a review Git::Hooks simply casts a positive vote
 but does not add any comment to the change. If you set this option, it adds
@@ -1112,7 +1127,7 @@ a comment like this in addition to casting the vote:
 
 You may want to use a simple comment like 'OK'.
 
-=head2 githooks.gerrit.auto-submit BOOL
+=head2 gerrit.auto-submit BOOL
 
 If this option is enabled, Git::Hooks will try to automatically submit a
 change if all verification hooks pass.
@@ -1127,7 +1142,7 @@ This may be useful to provide a gentle introduction to Gerrit for people who
 don't want to start doing code reviews but want to use Gerrit simply as a
 Git server.
 
-=head2 githooks.gerrit.notify WHO
+=head2 gerrit.notify WHO
 
 Notify handling that defines to whom email notifications should be sent
 after the review is stored.
@@ -1136,7 +1151,7 @@ Allowed values are NONE, OWNER, OWNER_REVIEWERS, and ALL.
 
 If not set, the default is ALL.
 
-=head2 githooks.error-header CMD
+=head2 error-header CMD
 
 This option specifies a command that should produce a multi-line string
 which will be used as a header prefixing the error messages, if there are
@@ -1160,22 +1175,23 @@ The following commands may give you an idea as to which commands to use:
 
 =back
 
-=head2 githooks.error-footer CMD
+=head2 error-footer CMD
 
 This option is similar to the C<githooks.error-header> above, but produces a
 footer to the error messages generated by Git::Hooks, if any.
 
-=head2 githooks.help-on-error MESSAGE
+=head2 help-on-error MESSAGE
 
 This option allows you to specify a helpful message that will be shown if
 any hook fails. This may be useful, for instance, to provide information to
 users about how to get help from your site's Git gurus.
 
-=head2 githooks.PLUGIN.help-on-error MESSAGE
+=head2 <PLUGIN>.help-on-error MESSAGE
 
-You can also provide helpful messages specific to each enabled PLUGIN.
+You can also provide helpful messages specific to each enabled PLUGIN in its own
+subsection.
 
-=head2 githooks.color [never|auto|always]
+=head2 color [never|auto|always]
 
 This option tells if Git::Hooks's output should be colorized. It accepts the
 same values as Git's own C<color.ui> option. If it's not set, the C<color.ui>
@@ -1198,7 +1214,7 @@ Do use colors.
 
 =back
 
-=head2 githooks.color.<slot> COLOR
+=head2 color.<slot> COLOR
 
 Use customized colors for the Git::Hooks output colorization. B<< <slot> >>
 specifies which part of the output to use the specified color, as shown below.

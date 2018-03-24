@@ -181,13 +181,15 @@ with a suitable message.
 To enable the plugin you should add it to the githooks.plugin configuration
 option:
 
-    git config --add githooks.plugin PrepareLog
+    [githooks]
+      plugin = PrepareLog
 
 =head1 CONFIGURATION
 
-The plugin is configured by the following git options.
+The plugin is configured by the following git options under the
+C<githooks.checkacls> subsection.
 
-=head2 githooks.preparelog.issue-branch-regex REGEX
+=head2 issue-branch-regex REGEX
 
 This option enables the issue inserting feature, which inserts an issue ID (aka
 bug-id) in the message, making the commit refer to the project issue which
@@ -223,7 +225,7 @@ understand that the issue ID is just what matched the first group in the regex.
 If your branch does not match the regex, the plugin will not prepare the log
 message.
 
-=head2 githooks.preparelog.issue-place SPEC
+=head2 issue-place SPEC
 
 This options specifies where in the log message the issue ID should be
 inserted. For now there are two possibilities which you may specify with SPECs

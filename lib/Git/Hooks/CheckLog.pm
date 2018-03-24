@@ -506,57 +506,32 @@ default configuration already enforces the most common one.
 To enable it you should add it to the githooks.plugin configuration
 option:
 
-    git config --add githooks.plugin CheckLog
+    [githooks]
+      plugin = CheckLog
 
 =head1 CONFIGURATION
 
-The plugin is configured by the following git options.
+The plugin is configured by the following git options under the
+C<githooks.checkacls> subsection.
 
 It can be disabled for specific references via the C<githooks.ref> and
 C<githooks.noref> options about which you can read in the L<Git::Hooks>
 documentation.
 
-=head2 githooks.checklog.ref REFSPEC
-
-This option is DEPRECATED. Please, use the C<githooks.ref> option instead.
-
-By default, the message of every commit is checked. If you want to
-have them checked only for some refs (usually some branch under
-refs/heads/), you may specify them with one or more instances of this
-option.
-
-The refs can be specified as a complete ref name
-(e.g. "refs/heads/master") or by a regular expression starting with a
-caret (C<^>), which is kept as part of the regexp
-(e.g. "^refs/heads/(master|fix)").
-
-=head2 githooks.checklog.noref REFSPEC
-
-This option is DEPRECATED. Please, use the C<githooks.noref> option instead.
-
-By default, the message of every commit is checked. If you want to exclude
-some refs (usually some branch under refs/heads/), you may specify them with
-one or more instances of this option.
-
-The refs can be specified as in the same way as to the C<ref> option above.
-
-Note that the C<ref> option has precedence over the C<noref> option, i.e.,
-if a reference matches both options it will be checked.
-
-=head2 githooks.checklog.title-required BOOL
+=head2 title-required BOOL
 
 The first line of a Git commit log message is usually called the
 'title'. It must be separated by the rest of the message (it's 'body')
 by one empty line. This option, which is true by default, makes the
 plugin check if there is a proper title in the log message.
 
-=head2 githooks.checklog.title-max-width INT
+=head2 title-max-width INT
 
 This option specifies a limit to the width of the title's in
 characters. It's 50 by default. If you set it to 0 the plugin imposes
 no limit on the title's width.
 
-=head2 githooks.checklog.title-period [deny|allow|require]
+=head2 title-period [deny|allow|require]
 
 This option defines the policy regarding the title's ending in a
 period ('.'). It can take three values:
@@ -579,7 +554,7 @@ This means that the title SHOULD end in a period.
 
 =back
 
-=head2 githooks.checklog.title-match [!]REGEXP
+=head2 title-match [!]REGEXP
 
 This option may be specified more than once. It defines a list of regular
 expressions that will be matched against the title.  If the '!' prefix is used,
@@ -591,7 +566,7 @@ letter:
   [githooks "checklog"]
     title-match = ^[A-Z]
 
-=head2 githooks.checklog.body-max-width INT
+=head2 body-max-width INT
 
 This option specifies a limit to the width of the commit log message's
 body lines, in characters. It's 72 by default. If you set it to 0 the
@@ -602,7 +577,7 @@ limit. It's a common style to quote things with indented lines and we like
 to make those lines free of any restriction in order to keep the quoted text
 authentic.
 
-=head2 githooks.checklog.match [!]REGEXP
+=head2 match [!]REGEXP
 
 This option may be specified more than once. It defines a list of
 regular expressions that will be matched against the commit log
@@ -618,7 +593,7 @@ This allows you, for example, to disallow hard-tabs in your log messages:
   [githooks "checklog"]
     match = !\\t
 
-=head2 githooks.checklog.spelling BOOL
+=head2 spelling BOOL
 
 This option makes the plugin spell check the commit log message using
 C<Text::SpellChecker>. Any spelling error will cause the commit or push to
@@ -630,13 +605,13 @@ check. Please, refer to the module's own documentation to see how to
 install it and its own dependencies (which are C<Text::Hunspell> or
 C<Text::Aspell>).
 
-=head2 githooks.checklog.spelling-lang ISOCODE
+=head2 spelling-lang ISOCODE
 
 The Text::SpellChecker module uses defaults to infer which language it
 must use to spell check the message. You can make it use a particular
 language passing its ISO code to this option.
 
-=head2 githooks.checklog.signed-off-by BOOL
+=head2 signed-off-by BOOL
 
 This option requires the commit to have at least one C<Signed-off-by>
 footer.
@@ -644,7 +619,7 @@ footer.
 Despite of the value of this option, the plugin checks and complains if there
 are duplicate C<Signed-off-by> footers in the commit.
 
-=head2 githooks.checklog.deny-merge-revert BOOL
+=head2 deny-merge-revert BOOL
 
 This boolean option allows you to deny commits that revert merge commits, since
 such beasts introduce complications in the repository which you may want to
@@ -666,6 +641,33 @@ Note also that the C<git-revert> command, which creates the reverting commits
 doesn't invoke the C<commit-msg> hook, so that this check can't be performed at
 commit time. The checking will be performed at push time by a C<pre-receive> or
 C<update> hook though.
+
+=head2 [DEPRECATED] ref REFSPEC
+
+This option is DEPRECATED. Please, use the C<githooks.ref> option instead.
+
+By default, the message of every commit is checked. If you want to
+have them checked only for some refs (usually some branch under
+refs/heads/), you may specify them with one or more instances of this
+option.
+
+The refs can be specified as a complete ref name
+(e.g. "refs/heads/master") or by a regular expression starting with a
+caret (C<^>), which is kept as part of the regexp
+(e.g. "^refs/heads/(master|fix)").
+
+=head2 [DEPRECATED] noref REFSPEC
+
+This option is DEPRECATED. Please, use the C<githooks.noref> option instead.
+
+By default, the message of every commit is checked. If you want to exclude
+some refs (usually some branch under refs/heads/), you may specify them with
+one or more instances of this option.
+
+The refs can be specified as in the same way as to the C<ref> option above.
+
+Note that the C<ref> option has precedence over the C<noref> option, i.e.,
+if a reference matches both options it will be checked.
 
 =head1 REFERENCES
 

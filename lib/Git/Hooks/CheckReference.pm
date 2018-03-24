@@ -188,13 +188,14 @@ option:
 
 =head1 CONFIGURATION
 
-The plugin is configured by the following git options.
+The plugin is configured by the following git options under the
+C<githooks.checkacls> subsection.
 
 It can be disabled for specific references via the C<githooks.ref> and
 C<githooks.noref> options about which you can read in the L<Git::Hooks>
 documentation.
 
-=head2 githooks.checkreference.acl RULE
+=head2 acl RULE
 
 This multi-valued option specifies rules allowing or denying specific users to
 perform specific actions on specific references. (Common references are branches
@@ -239,13 +240,13 @@ reference namespaces for users.
 
 See the L</SYNOPSIS> section for some examples.
 
-=head2 githooks.checkreference.require-annotated-tags BOOL
+=head2 require-annotated-tags BOOL
 
 By default one can push lightweight or annotated tags but if you want to require
 that only annotated tags be pushed to the repository you can set this option to
 true.
 
-=head2 [DEPRECATED] githooks.checkreference.deny REGEXP
+=head2 [DEPRECATED] deny REGEXP
 
 This option is deprecated. Please, use an C<acl> option like this instead:
 
@@ -254,7 +255,7 @@ This option is deprecated. Please, use an C<acl> option like this instead:
 
 This directive denies references with names matching REGEXP.
 
-=head2 [DEPRECATED] githooks.checkreference.allow REGEXP
+=head2 [DEPRECATED] allow REGEXP
 
 This option is deprecated. Please, use an C<acl> option like this instead:
 

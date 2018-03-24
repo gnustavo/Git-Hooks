@@ -193,17 +193,19 @@ in question.
 To enable it you should add it to the githooks.plugin configuration
 option:
 
-    git config --add githooks.plugin CheckAcls
+    [githooks]
+      plugin = CheckAcls
 
 =head1 CONFIGURATION
 
-The plugin is configured by the following git options.
+The plugin is configured by the following git options under the
+C<githooks.checkacls> subsection.
 
 It can be disabled for specific references via the C<githooks.ref> and
 C<githooks.noref> options about which you can read in the L<Git::Hooks>
 documentation.
 
-=head2 githooks.checkacls.acl ACL
+=head2 acl ACL
 
 The authorization specification for a repository is defined by the set
 of ACLs defined by this option. Each ACL specify 'who' has 'what' kind
@@ -271,8 +273,9 @@ This is useful, for instance, if you want developers to be restricted
 in what they can do to official branches but to have complete control
 with their own branch namespace.
 
-    git config githooks.CheckAcls.acl '^. CRUD ^refs/heads/{USER}/'
-    git config githooks.CheckAcls.acl '^. U    ^refs/heads'
+    [githooks "checkacls"]
+      acl = ^. CRUD ^refs/heads/{USER}/
+      acl = ^. U    ^refs/heads
 
 In this example, every user (^.) has complete control (CRUD) to the
 branches below "refs/heads/{USER}". Supposing the environment variable
