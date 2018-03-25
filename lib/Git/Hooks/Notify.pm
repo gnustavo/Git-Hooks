@@ -11,9 +11,9 @@ use Carp;
 use Git::Hooks;
 use Git::Repository::Log;
 use Encode qw/decode/;
-use Set::Scalar;
-use List::MoreUtils qw/any/;
 use Try::Tiny;
+use Email::Sender::Simple;
+use Email::Simple;
 
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
@@ -130,9 +130,6 @@ sub notify {
     if (my $from = $git->get_config($CFG, 'from')) {
         push @headers, (From => $from);
     }
-
-    require Email::Sender::Simple;
-    require Email::Simple;
 
     my $body = $git->get_config($CFG, 'preamble') || '';
 
