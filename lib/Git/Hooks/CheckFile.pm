@@ -12,7 +12,6 @@ use Git::Hooks;
 use Text::Glob qw/glob_to_regex/;
 use Path::Tiny;
 use List::MoreUtils qw/any none/;
-use Data::Dump;
 
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
