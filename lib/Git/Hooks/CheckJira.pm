@@ -11,7 +11,6 @@ use Git::Hooks;
 use Git::Repository::Log;
 use Path::Tiny;
 use List::MoreUtils qw/uniq/;
-use Set::Scalar;
 
 my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
@@ -236,27 +235,14 @@ EOS
 
         @issues{keys %$issues} = values %$issues; # cache all matched issues
 
-        my $cited_set   = Set::Scalar->new(@keys);
-        my $matched_set = Set::Scalar->new(keys %$issues);
+        if (my @issues_not_found  = sort grep { ! exists $issues->{$_} } @keys) {
+            # Some issue keys were cited but not found in JIRA
+            ++$errors;
+            local $, = ' ';
+            $git->fault(<<EOS, {commit => $commit});
+The commit cites the following invalid issues:
 
-        if (my $missed_set = $cited_set - $matched_set) {
-            if ($missed_set->size == 1) {
-                $git->fault(<<EOS, {commit => $commit});
-The commit cites an invalid issue:
-
-  @{[$missed_set]}
-
-The issue does not match the following JQL expression:
-
-  $JQL
-
-Please, update your issue or fix your $CFG git configuration.
-EOS
-            } else {
-                $git->fault(<<EOS, {commit => $commit});
-The commit cites invalid issues:
-
-  @{[$missed_set]}
+  @issues_not_found
 
 The issues do not match the following JQL expression:
 
@@ -264,8 +250,6 @@ The issues do not match the following JQL expression:
 
 Please, update your issues or fix your $CFG git configuration.
 EOS
-            }
-            ++$errors;
         }
     }
 
