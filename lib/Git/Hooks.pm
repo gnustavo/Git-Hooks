@@ -6,7 +6,6 @@ use strict;
 use warnings;
 use Carp;
 use Exporter qw/import/;
-use Sub::Util qw/subname/;
 use Git::Repository qw/GitHooks Log/;
 
 our @EXPORT; ## no critic (Modules::ProhibitAutomaticExportation)
@@ -28,7 +27,12 @@ BEGIN {
         my $hook = $installer;
         $hook =~ tr/A-Z_/a-z-/;
         no strict 'refs';       ## no critic (ProhibitNoStrict)
-        *{"Git::Hooks::$installer"} = sub (&) { push @{$Hooks{$hook}}, shift }
+        *{"Git::Hooks::$installer"} = sub (&) {
+            push @{$Hooks{$hook}}, {
+                package => scalar(caller(1)),
+                sub     => shift(@_),
+            };
+        }
     }
 
     @EXPORT = (@installers, 'run_hook');
@@ -50,8 +54,7 @@ sub run_hook {
 
     # Call every hook function installed by the hook scripts before.
     for my $hook (@{$Hooks{$hook_basename}}) {
-        my ($package) = subname($hook) =~ m/^(.+)::/;
-        my $ok = eval { $hook->($git, @args) };
+        my $ok = eval { $hook->{sub}->($git, @args) };
         if (defined $ok) {
             # Modern hooks return a boolean value indicating their success.
             # If they fail they invoke
@@ -59,9 +62,9 @@ sub run_hook {
             unless ($ok) {
                 # Let's see if there is a help-on-error message configured
                 # specifically for this plugin.
-                (my $CFG = $package) =~ s/.*::/githooks./;
+                (my $CFG = $hook->{package}) =~ s/.*::/githooks./;
                 if (my $help = $git->get_config(lc $CFG => 'help-on-error')) {
-                    $git->fault($help, {prefix => $package});
+                    $git->fault($help, {prefix => $hook->{package}});
                 }
             }
         } elsif (length $@) {
