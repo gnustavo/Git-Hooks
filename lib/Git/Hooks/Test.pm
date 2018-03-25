@@ -11,7 +11,6 @@ use Config;
 use Exporter qw/import/;
 use Path::Tiny;
 use File::pushd;
-use URI::file;
 use Git::Repository 'GitHooks';
 use Try::Tiny;
 use Test::More;
