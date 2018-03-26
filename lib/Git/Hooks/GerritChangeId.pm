@@ -11,7 +11,6 @@ use Git::Hooks;
 use Git::Message;
 use Path::Tiny;
 use Carp;
-use Try::Tiny;
 
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
@@ -32,9 +31,7 @@ sub gen_change_id {
         [ committer => [qw/var GIT_COMMITTER_IDENT/] ],
     ) {
         # It's OK if we can't find info.
-        try {
-            $fh->print($info->[0], ' ', scalar($git->run(@{$info->[1]})));
-        };
+        eval { $fh->print($info->[0], ' ', scalar($git->run(@{$info->[1]}))) };
     }
 
     $fh->print("\n", $msg);

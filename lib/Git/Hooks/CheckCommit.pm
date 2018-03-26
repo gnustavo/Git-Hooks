@@ -7,7 +7,6 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
-use Try::Tiny;
 use Git::Hooks;
 use Git::Repository::Log;
 use List::MoreUtils qw/any none/;
@@ -174,23 +173,8 @@ sub _canonical_identity {
     my $cache = $git->cache($PKG);
 
     unless (exists $cache->{canonical}{$identity}) {
-        $cache->{canonical}{$identity} =
-            try {
-                chomp(my $canonical = $git->run(
-                    '-c', "mailmap.file=$mailmap",
-                    'check-mailmap',
-                    $identity,
-                ));
-                $canonical;
-            } catch {
-                $git->fault(<<'EOS', {option => 'canonical'});
-The command git-check-mailmap wasn't found.
-The configuration option requires it.
-It's available since Git 1.8.4.
-Please, either upgrade your Git or disable this option.
-EOS
-                $identity;
-        };
+        chomp($cache->{canonical}{$identity} = 
+                  $git->run('-c', "mailmap.file=$mailmap", 'check-mailmap', $identity));
     }
 
     return $cache->{canonical}{$identity};
@@ -206,7 +190,16 @@ sub canonical_errors {
             my $who_name  = "${who}_name";
             my $who_email = "${who}_email";
             my $identity  = $commit->$who_name . ' <' . $commit->$who_email . '>';
-            my $canonical = _canonical_identity($git, $mailmap, $identity);
+            my $canonical = eval {_canonical_identity($git, $mailmap, $identity) };
+            unless (defined $canonical) {
+                $git->fault(<<'EOS', {option => 'canonical'});
+Git error: could not run command git-check-mailmap.
+The configuration option requires it.
+It's available since Git 1.8.4.
+Please, either upgrade your Git or disable this option.
+EOS
+                ++$errors;
+            }
 
             if ($identity ne $canonical) {
                 $git->fault(<<EOS, {commit => $commit, option => 'canonical'});

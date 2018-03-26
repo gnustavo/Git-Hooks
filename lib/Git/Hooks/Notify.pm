@@ -11,7 +11,6 @@ use Carp;
 use Git::Hooks;
 use Git::Repository::Log;
 use Encode qw/decode/;
-use Try::Tiny;
 use Email::Sender::Simple;
 use Email::Simple;
 
@@ -244,10 +243,8 @@ sub notify_affected_refs {
 
             my $message = pretty_log($git, \@commits);
 
-            try {
-                notify($git, $ref, $old_commit, $new_commit, $rule, $message);
-            } catch {
-                my $error = $_;
+            eval { notify($git, $ref, $old_commit, $new_commit, $rule, $message) };
+            if (my $error = $@) {
                 $git->fault(
                     sprintf('I could not send mail to the following recipients: %s\n',
                             join(", ", $error->recipients)),
