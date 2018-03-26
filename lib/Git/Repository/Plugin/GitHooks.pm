@@ -1284,9 +1284,7 @@ sub blob {
 sub file_size {
     my ($git, $rev, $file) = @_;
 
-    chomp(my $size = $git->run(qw/cat-file -s/, "$rev:$file"));
-
-    return $size;
+    return $git->run(qw/cat-file -s/, "$rev:$file");
 }
 
 sub file_mode {

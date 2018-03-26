@@ -173,8 +173,8 @@ sub _canonical_identity {
     my $cache = $git->cache($PKG);
 
     unless (exists $cache->{canonical}{$identity}) {
-        chomp($cache->{canonical}{$identity} = 
-                  $git->run('-c', "mailmap.file=$mailmap", 'check-mailmap', $identity));
+        $cache->{canonical}{$identity} =
+            $git->run('-c', "mailmap.file=$mailmap", 'check-mailmap', $identity);
     }
 
     return $cache->{canonical}{$identity};

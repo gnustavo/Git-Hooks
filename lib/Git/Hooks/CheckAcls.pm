@@ -56,7 +56,7 @@ sub check_ref {
     } else {
         # This is an U if "merge-base(old, new) == old". Otherwise it's an R.
         $op = eval {
-            chomp(my $merge_base = $git->run('merge-base' => $old_commit, $new_commit));
+            my $merge_base = $git->run('merge-base' => $old_commit, $new_commit);
             ($merge_base eq $old_commit) ? 'U' : 'R';
         } || 'R'; # Probably $old_commit and $new_commit do not have a common ancestor.
     }
