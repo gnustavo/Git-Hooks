@@ -18,8 +18,8 @@ exit 0;
 warn "### $0\n";
 use Data::Dumper;
 warn "+++ \@ARGV = ", Dumper(\@ARGV);
-use Cwd;
-warn "+++ CWD = ", getcwd();
+use Path::Tiny;
+warn "+++ CWD = ", Path::Tiny->cwd();
 foreach my $var (sort grep {/GIT/} keys %ENV) {
     warn "+++ \$ENV{$var} = $ENV{$var}\n";
 }

@@ -12,7 +12,6 @@ use Exporter qw/import/;
 use Path::Tiny;
 use Git::Repository 'GitHooks';
 use Test::More;
-use Cwd;
 
 our @EXPORT_OK = qw/
 	install_hooks
@@ -33,7 +32,7 @@ our %EXPORT_TAGS = (
 # Make sure the git messages come in English.
 local $ENV{LC_ALL} = 'C';
 
-my $cwd = path(cwd);
+my $cwd = Path::Tiny->cwd;
 
 # It's better to perform all tests in a temporary directory because
 # otherwise the author runs the risk of messing with its local
