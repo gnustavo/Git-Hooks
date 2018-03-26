@@ -10,7 +10,6 @@ use Carp;
 use Config;
 use Exporter qw/import/;
 use Path::Tiny;
-use File::pushd;
 use Git::Repository 'GitHooks';
 use Test::More;
 use Cwd;
@@ -167,22 +166,12 @@ sub new_repos {
     my $stderr = $T->child('stderr');
 
     my @result = eval {
-        my ($repo, $clone);
+        Git::Repository->run(qw/init -q/, "--template=$tmpldir", $repodir);
 
-        {
-            # It would be easier to pass a directory argument to
-            # git-init but it started to accept it only on v1.6.5. To
-            # support previous gits we chdir to $repodir to avoid the
-            # need to pass the argument. Then we have to go back to
-            # where we were.
-            my $dir = pushd($repodir);
-            Git::Repository->run(qw/init -q/, "--template=$tmpldir");
+        my $repo = Git::Repository->new(work_tree => $repodir);
 
-            $repo = Git::Repository->new();
-
-            $repo->run(qw/config user.email myself@example.com/);
-            $repo->run(qw/config user.name/, 'My Self');
-        }
+        $repo->run(qw/config user.email myself@example.com/);
+        $repo->run(qw/config user.name/, 'My Self');
 
         {
             my $cmd = Git::Repository->command(
@@ -202,7 +191,7 @@ sub new_repos {
             croak "Can't git-clone $repodir into $clonedir" unless $cmd->exit() == 0;
         }
 
-        $clone = Git::Repository->new(git_dir => $clonedir);
+        my $clone = Git::Repository->new(git_dir => $clonedir);
 
         $repo->run(qw/remote add clone/, $clonedir);
 

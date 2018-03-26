@@ -6,7 +6,6 @@ use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
 use Test::More tests => 44;
-use File::pushd;
 use Path::Tiny;
 
 use Git::Hooks::GerritChangeId;
@@ -158,6 +157,8 @@ my $SOB2 = 'Signed-off-by: J Committer <jc@example.com>';
 # hook.
 $ENV{GIT_AUTHOR_DATE} = $ENV{GIT_COMMITTER_DATE} = '1356828164 -0200';
 
+chdir $repo->git_dir();
+
 foreach my $test (
     [ 'no-CID',              "\n" ],
     [ 'single-line',         "\n\n$CID\n" ],
@@ -178,7 +179,6 @@ foreach my $test (
     [ 'with-false-tags',     "\n\nFakeLine:\n  foo\n  bar\n\n$CID\nRealTag: abc\n" ],
 ) {
     my $msg = join('', @$test);
-    my $dir = pushd($repo->git_dir());
     my $expected = expected($msg);
     my $produced = produced($msg);
     compare("compare: $test->[0]", $expected, $produced);
