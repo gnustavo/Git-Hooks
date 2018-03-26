@@ -10,7 +10,6 @@ use warnings;
 use Git::Hooks;
 use Git::Message;
 use Path::Tiny;
-use Carp;
 
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 

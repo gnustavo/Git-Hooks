@@ -4,7 +4,6 @@ package Git::Hooks;
 use 5.010;
 use strict;
 use warnings;
-use Carp;
 use Exporter qw/import/;
 use Git::Repository qw/GitHooks Log/;
 

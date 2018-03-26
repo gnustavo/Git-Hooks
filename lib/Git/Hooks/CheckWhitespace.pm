@@ -8,7 +8,6 @@ use utf8;
 use strict;
 use warnings;
 use Git::Hooks;
-use Text::Glob qw/glob_to_regex/;
 
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 

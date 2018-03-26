@@ -9,7 +9,6 @@ use strict;
 use warnings;
 use Git::Hooks;
 use Path::Tiny;
-use Carp;
 
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
