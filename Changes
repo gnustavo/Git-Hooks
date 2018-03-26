@@ -2,6 +2,28 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.9.1     2018-03-26 09:34:31-03:00 America/Sao_Paulo
+
+  [Documentation]
+
+  - The secion headings about configuration options now mention their basename
+    only, so that instead of 'githooks.checkfile.acl' it's just 'acl'. This
+    makes the HTML index easier to read.
+
+  - Replaced every use of the 'git config' command by a snipped of the
+    configuration file which it would produce. I think most people aren't
+    familiar with the git-config command and they will have an easier time
+    understanding the configuration file.
+
+  [Internal changes]
+
+  - Removed some bogus dependencies and some dependencies that weren't that
+    necessary. This allowed me to avoid the following previously required
+    modules: Data::Dumper, Authen::SASL, Email::Sender, MIME::Base64, Cwd,
+    Data::Dump, Email::Valid, File::pushd, HTML::Entities, Set::Scalar,
+    Sub::Util, Try::Tiny, URI::file. Hopefully, this will make the module
+    smoother to install and faster to load.
+
 2.9.0     2018-03-23 21:49:01-03:00 America/Sao_Paulo
 
   [New features]
