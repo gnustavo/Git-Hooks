@@ -2,6 +2,15 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.9.2     2018-03-28 16:24:51-03:00 America/Sao_Paulo
+
+  [Fixes]
+
+  - CheckReference: Remove a try/catch block that was missed when we removed the
+    dependency on Try::Tiny.
+
+  - Notify: Skip a test which requires HTML::Entities.
+
 2.9.1     2018-03-26 09:34:31-03:00 America/Sao_Paulo
 
   [Documentation]
