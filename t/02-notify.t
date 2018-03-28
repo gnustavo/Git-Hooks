@@ -70,7 +70,7 @@ $clone->run(qw{config githooks.notify.rule to@example.net});
 
 SKIP: {
     unless (eval { require Email::Sender::Transport::Mbox; }) {
-        skip "Module Email::Sender::Transport::Mbox is needed to test but not installed", 9;
+        skip "Tests requiring Email::Sender::Transport::Mbox", 9;
     }
 
     check_push_notify('default subject', qr/Subject: \[Git::Hooks::Notify\]/);
@@ -100,8 +100,14 @@ SKIP: {
 
     check_push_notify('do notify if match pathspec', qr/$basename/);
 
-    $clone->run(qw{config --replace-all githooks.notify.rule to@example.net});
-    $clone->run(qw{config githooks.notify.html 1});
+  SKIP: {
+        unless (eval { require HTML::Entities; }) {
+            skip "Tests requiring HTML::Entities", 1;
+        }
 
-    check_push_notify('html', qr/href=/);
+        $clone->run(qw{config --replace-all githooks.notify.rule to@example.net});
+        $clone->run(qw{config githooks.notify.html 1});
+
+        check_push_notify('html', qr/href=/);
+    };
 };
