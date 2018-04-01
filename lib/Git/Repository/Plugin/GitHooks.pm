@@ -725,7 +725,7 @@ sub fault {
     my $msg;
 
     {
-        my $prefix = $info->{prefix} || caller(1);
+        my $prefix = $info->{prefix} || caller;
         my @context;
         if (my $commit = $info->{commit}) {
             $commit = $commit->commit
