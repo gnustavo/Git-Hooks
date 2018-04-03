@@ -836,7 +836,7 @@ sub get_commits {
 
         # We're going to use the "git rev-list" command for that. As you can
         # read on its documentation, the syntax to specify this set of
-        # commits is this: "--not --all $new_commit ^$old_commit".
+        # commits is this: "$new_commit ^$old_commit --not --all".
 
         # However, there are some special cases...
 
@@ -876,11 +876,11 @@ sub get_commits {
                     @excludes = grep {$_ ne "^$new_commit"} @excludes;
                 }
             } else {
-                # I couldn't find a direct way to see how many refs point to
-                # $new_commit in older Gits. So, I use the porcelain git-log
-                # command with a format that shows the decoration for a single
-                # commit, which returns something like:
-                # (HEAD -> next, tag: v2.2.0, origin/next)
+                # KLUDGE: I couldn't find a direct way to see how many refs
+                # point to $new_commit in older Gits. So, I use the porcelain
+                # git-log command with a format that shows the decoration for a
+                # single commit, which returns something like: (HEAD -> next,
+                # tag: v2.2.0, origin/next)
                 my $decoration = $git->run(qw/log -n1 --format=%d/, $new_commit);
                 $decoration =~ s/HEAD,\s*//;
 
@@ -891,13 +891,13 @@ sub get_commits {
                     @excludes = grep {$_ ne "^$new_commit"} @excludes;
                 }
             }
+
+            # And we have to make sure $old_commit is on the list, as --not
+            # --all wouldn't bring it when we're being called in a post-receive
+            # or post-update hook.
+
+            push @excludes, "^$old_commit" unless $old_commit eq $git->undef_commit;
         }
-
-        # And we have to make sure $old_commit is on the list, as --not
-        # --all wouldn't bring it when we're being called in a post-receive
-        # or post-update hook.
-
-        push @excludes, "^$old_commit" unless $old_commit eq $git->undef_commit;
 
         my @arguments;
 
