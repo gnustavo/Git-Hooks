@@ -19,7 +19,7 @@ sub setup_repos {
 }
 
 sub modify_file {
-    my ($testname, $file, $truncate, $data) = @_;
+    my ($testname, $file, $action, $data) = @_;
     my @path = split '/', $file;
     my $wcpath = path($repo->work_tree());
     my $filename = $wcpath->child(@path);
@@ -30,50 +30,60 @@ sub modify_file {
         $dirname->mkpath;
     }
 
-    if ($truncate) {
-        unless ($filename->spew($data || 'data')) {
-            fail($testname);
-            diag("[TEST FRAMEWORK INTERNAL ERROR] Cannot write to file: $filename; $!\n");
-        }
-    } else {
-        unless ($filename->append($data || 'data')) {
+    if (! defined $action) {
+        if ($filename->append($data || 'data')) {
+            $repo->run(add => $filename);
+        } else {
             fail($testname);
             diag("[TEST FRAMEWORK INTERNAL ERROR] Cannot append to file: $filename; $!\n");
         }
+    } elsif ($action eq 'truncate') {
+        if ($filename->append({truncate => 1}, $data || 'data')) {
+            $repo->run(add => $filename);
+        } else {
+            fail($testname);
+            diag("[TEST FRAMEWORK INTERNAL ERROR] Cannot write to file: $filename; $!\n");
+        }
+    } elsif ($action eq 'rm') {
+        $repo->run(rm => $filename);
+    } else {
+        fail($testname);
+        diag("[TEST FRAMEWORK INTERNAL ERROR] Invalid action: $action; $!\n");
     }
 
-    $repo->run(add => $filename);
     return $filename;
 }
 
 sub check_can_commit {
-    my ($testname, $file, $truncate, $data) = @_;
-    modify_file($testname, $file, $truncate, $data);
+    my ($testname, $file, $action, $data) = @_;
+    modify_file($testname, $file, $action, $data);
     test_ok($testname, $repo, 'commit', '-m', $testname);
 }
 
 sub check_cannot_commit {
-    my ($testname, $regex, $file, $truncate, $data) = @_;
-    my $filename = modify_file($testname, $file, $truncate, $data);
+    my ($testname, $regex, $file, $action, $data) = @_;
+    my $filename = modify_file($testname, $file, $action, $data);
     my $exit = $regex
 	? test_nok_match($testname, $regex, $repo, 'commit', '-m', $testname)
         : test_nok($testname, $repo, 'commit', '-m', $testname);
-    $repo->run(rm => '--cached', $filename);
+    $repo->run(qw/reset --hard/);
     return $exit;
 }
 
 sub check_can_push {
-    my ($testname, $file, $truncate, $data) = @_;
-    modify_file($testname, $file, $truncate, $data);
+    my ($testname, $file, $action, $data) = @_;
+    modify_file($testname, $file, $action, $data);
     $repo->run(commit => '-m', $testname);
     test_ok($testname, $repo, 'push', $clone->git_dir(), 'master');
 }
 
 sub check_cannot_push {
-    my ($testname, $regex, $file, $truncate, $data) = @_;
-    modify_file($testname, $file, $truncate, $data);
+    my ($testname, $regex, $file, $action, $data) = @_;
+    modify_file($testname, $file, $action, $data);
+    my $head = $repo->run(qw/rev-parse --verify HEAD/);
     $repo->run(commit => '-m', $testname);
     test_nok_match($testname, $regex, $repo, 'push', $clone->git_dir(), 'master');
+    $repo->run(qw/reset --hard/, $head);
 }
 
 
@@ -181,7 +191,7 @@ SKIP: {
     check_cannot_commit('Deny commit if match FIXME',
                         qr/Invalid tokens detected in added lines/,
                         'file.txt',
-                        0,
+                        undef,
                         "FIXME: something\n",
                     );
 
@@ -200,7 +210,7 @@ $wc->child('script.sh')->touch()->chmod(0644);
 
 check_cannot_commit('executable fail', qr/is not executable but should be/, 'script.sh');
 
-$wc->child('script.sh')->chmod(0755);
+$wc->child('script.sh')->touch()->chmod(0755);
 
 check_can_commit('executable succeed', 'script.sh');
 
@@ -208,7 +218,7 @@ $wc->child('doc.txt')->touch()->chmod(0755);
 
 check_cannot_commit('not-executable fail', qr/is executable but should not be/, 'doc.txt');
 
-$wc->child('doc.txt')->chmod(0644);
+$wc->child('doc.txt')->touch()->chmod(0644);
 
 check_can_commit('not-executable succeed', 'doc.txt');
 
@@ -227,11 +237,10 @@ check_cannot_commit('deny M thefile', qr/Authorization error/, 'thefile');
 $repo->run(qw/config --add githooks.checkfile.acl/, 'allow M thefile');
 check_can_commit('allow M thefile', 'thefile');
 
-$repo->run(qw/rm -- thefile/);
-check_cannot_commit('deny D thefile', qr/Authorization error/, 'file');
+check_cannot_commit('deny D thefile', qr/Authorization error/, 'thefile', 'rm');
 
 $repo->run(qw/config --add githooks.checkfile.acl/, 'allow D thefile');
-check_can_commit('allow D thefile', 'file');
+check_can_commit('allow D thefile', 'thefile', 'rm');
 
 $repo->run(qw/config --replace-all githooks.checkfile.acl/, 'WRONG ACL');
 check_cannot_commit('deny ACL config error', qr/invalid acl syntax/, 'file');
@@ -285,7 +294,7 @@ SKIP: {
     check_cannot_push('Deny push if match FIXME',
                       qr/Invalid tokens detected in added lines/,
                       'file.txt',
-                      0,
+                      undef,
                       "FIXME: something\n",
                   );
 }
