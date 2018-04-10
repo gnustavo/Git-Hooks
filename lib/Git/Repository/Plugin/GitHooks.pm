@@ -836,7 +836,8 @@ sub get_commits {
 
         # We're going to use the "git rev-list" command for that. As you can
         # read on its documentation, the syntax to specify this set of
-        # commits is this: "$new_commit ^$old_commit --not --all".
+        # commits is this:
+        # "--not --branches --tags --not $new_commit ^$old_commit".
 
         # However, there are some special cases...
 
@@ -847,25 +848,34 @@ sub get_commits {
 
         return if $new_commit eq $git->undef_commit;
 
-        # When we're called in a post-receive or post-update hook, the
-        # pushed references already point to $new_commit. So, in these cases
-        # the "--not --all" options to git-rev-list would exclude from the
-        # results all commits reachable from $new_commit, which is exactly
-        # what we don't want... In order to avoid that we can't use these
-        # options directly with git-rev-list. Instead, we use the
-        # git-rev-parse command to get a list of all commits directly
-        # reachable by existing references. Then we'll see if we have to
-        # remove any commit from that list.
+        # The @excludes list will contain the arguments to git-log necessary to
+        # exclude from $new_commit history all commits already reachable by any
+        # other reference.
+        my @excludes;
 
-        my @excludes = $git->run(qw/rev-parse --not --all/);
+        if ($git->{_plugin_githooks}{hookname} !~ /^post-/) {
+            # In pre-* hooks (e.g., pre-receive, update) we can use the '--not
+            # --branches --tags' arguments.
+            @excludes = qw/--not --branches --tags --not/;
+        } else {
+            # When we're called in a post-receive or post-update hook, the
+            # pushed references already point to $new_commit. So, in these cases
+            # the "--not --branches --tags" options would exclude from the
+            # results all commits reachable from $new_commit, which is exactly
+            # what we don't want... In order to avoid that we can't use these
+            # options directly with git-log. Instead, we use the git-rev-parse
+            # command to get a list of all commits directly reachable by
+            # existing references.  Then we'll see if we have to remove any
+            # commit from that list.
 
-        if ($git->{_plugin_githooks}{hookname} =~ /^post-(?:receive|update)$/) {
-            # We can't simply remove $new_commit from @excludes because it
+            @excludes = $git->run(qw/rev-parse --not --branches --tags/);
+
+            # But we can't simply remove $new_commit from @excludes because it
             # can be reachable by other references. This can happen, for
             # instance, when one creates a new branch and pushes it before
-            # making any commits to it. So, we only remove it if it's
-            # reachable by a single reference, which must be the reference
-            # being pushed.
+            # making any commits to it or when one pushes a branch after a
+            # fast-forward merge. So, we only remove it if it's reachable by a
+            # single reference, which must be the reference being pushed.
 
             if ($git->version_ge('2.7.0')) {
                 # The --points-at option was implemented in this version of Git
@@ -893,8 +903,8 @@ sub get_commits {
             }
 
             # And we have to make sure $old_commit is on the list, as --not
-            # --all wouldn't bring it when we're being called in a post-receive
-            # or post-update hook.
+            # --branches --tags wouldn't bring it when we're being called in a
+            # post-receive or post-update hook.
 
             push @excludes, "^$old_commit" unless $old_commit eq $git->undef_commit;
         }
@@ -902,7 +912,7 @@ sub get_commits {
         my @arguments;
 
         push @arguments, @$options if defined $options;
-        push @arguments, $new_commit, @excludes;
+        push @arguments, @excludes, $new_commit;
         push @arguments, '--', @$paths if defined $paths;
 
         $cache->{$range} = [$git->log(@arguments)];
