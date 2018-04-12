@@ -342,9 +342,6 @@ sub check_acls {
         return 1;
     }
 
-    # Keep only ACLs matching the current user
-    @acls = grep {! exists $_->{who} || $git->match_user($_->{who})} @acls;
-
     return 0 unless @acls;
 
     my $errors = 0;

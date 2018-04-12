@@ -2257,6 +2257,9 @@ The name of a user or of a group.
 
 =back
 
+As an optimization, only ACLs matching the current user, either explicitly or by
+not having a WHO part, are returned in the list.
+
 =head1 SEE ALSO
 
 C<Git::Repository::Plugin>, C<Git::Hooks>.
