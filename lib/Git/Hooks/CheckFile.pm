@@ -344,7 +344,9 @@ sub check_acls {
 
     return 0 unless @acls;
 
-    my $errors = 0;
+    # Collect the ACL errors and group them by ACL/ACTION so that we can produce
+    # more compact error messages.
+    my %acl_errors;
 
   FILE:
     foreach my $file (sort keys %$name2status) {
@@ -359,25 +361,34 @@ sub check_acls {
             next unless any {index($acl->{action}, $_) != -1} split //, $statuses;
 
             unless ($acl->{allow}) {
-                ++$errors;
-                my $myself = $git->authenticated_user();
                 my $action = $ACTION{$statuses} || $statuses;
-                $git->fault(<<EOS, {%$ctx, option => 'acl'});
-Authorization error: you ($myself) cannot $action this file:
-
-  $file
-
-Due to the following acl:
-
-  $acl->{acl}
-EOS
+                push @{$acl_errors{$acl->{acl}}{$action}}, $file;
             }
 
             next FILE;
         }
     }
 
-    return $errors;
+    if (%acl_errors) {
+        my $myself = $git->authenticated_user();
+        my %context = (%$ctx, option => 'acl');
+        while (my ($acl, $actions) = each %acl_errors) {
+            while (my ($action, $files) = each %$actions) {
+                my $these_files = scalar(@$files) > 1 ? 'these files' : 'this file';
+                $git->fault(<<EOS, \%context);
+Authorization error: you ($myself) cannot $action $these_files:
+
+  @{[join("\n  ", @$files)]}
+
+Due to the following acl:
+
+  $acl
+EOS
+            }
+        }
+    }
+
+    return scalar %acl_errors;
 }
 
 sub check_everything {
