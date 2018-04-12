@@ -1483,6 +1483,7 @@ sub grok_acls {
     foreach ($git->get_config($cfg => 'acl')) {
         my %acl;
         if (/^\s*(allow|deny)\s+([$actions]+)\s+(\S+)/) {
+            $acl{acl}    = $_;
             $acl{allow}  = $1 eq 'allow';
             $acl{action} = $2;
             my $spec     = $3;
@@ -2228,6 +2229,33 @@ So, the B<last> RULE matching the action, the file, and the user, tells if the
 operation is allowed or denied.
 
 If no RULE matches the operation, it is allowed by default.
+
+In the returned list, each ACL is represented by a hash with the following keys:
+
+=over
+
+=item * B<acl>
+
+Contains the original representation of the ACL, which is useful in producing
+error messages.
+
+=item * B<allow>
+
+A boolean telling if the ACL is an "allow".
+
+=item * B<action>
+
+The string representation of the action (e.g. 'AMD' or 'CRUD').
+
+=item * B<spec>
+
+The spec, which can be either a string or a pre-compiled regex object.
+
+=item * B<who>
+
+The name of a user or of a group.
+
+=back
 
 =head1 SEE ALSO
 

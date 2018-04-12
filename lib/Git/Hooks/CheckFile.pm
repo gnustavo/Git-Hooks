@@ -370,7 +370,9 @@ Authorization error: you ($myself) cannot $action this file:
 
   $file
 
-Please, check your acl options.
+Due to the following acl:
+
+  $acl->{acl}
 EOS
             }
 

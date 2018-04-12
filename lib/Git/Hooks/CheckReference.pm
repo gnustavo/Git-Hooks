@@ -55,8 +55,9 @@ sub check_ref {
         if (index($acl->{action}, $action) != -1) {
             unless ($acl->{allow}) {
                 $git->fault(<<EOS, {ref => $ref, option => 'acl'});
-The reference name is not allowed.
-Please, check your ACL options.
+The reference name is not allowed due to the following acl:
+
+  $acl->{acl}
 EOS
                 ++$errors;
             }
