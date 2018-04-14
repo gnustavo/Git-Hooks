@@ -2,6 +2,14 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.9.3     2018-04-14 11:15:22-03:00 America/Sao_Paulo
+
+  [Enhancement]
+
+  - CheckFile: Group ACL errors per ACL/ACTION, so that all files denied by the
+    same reason are listed together. Also, show the ACL denying the files, to
+    make the error message more understandable.
+
 2.9.2     2018-03-28 16:24:51-03:00 America/Sao_Paulo
 
   [Fixes]
