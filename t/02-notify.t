@@ -77,7 +77,9 @@ SKIP: {
 
     $clone->run(qw{config githooks.notify.subject}, '%R, %B, %A');
 
-    check_push_notify('subject replace all placeholders', qr@Subject: clone, master, $ENV{USER}@);
+    my $user = $clone->authenticated_user() || '';
+
+    check_push_notify('subject replace all placeholders', qr@Subject: clone, master, $user@);
 
     check_push_notify('from header', qr/From: from\@example\.net/);
 

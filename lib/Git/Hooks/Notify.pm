@@ -110,7 +110,7 @@ sub notify {
     (my $branch = $ref) =~ s:refs/heads/::;
 
     my $repository_name = $git->repository_name;
-    my $pusher = $git->authenticated_user;
+    my $pusher = $git->authenticated_user || '';
 
     my $subject = $git->get_config($CFG => 'subject')
         || '[Git::Hooks::Notify] repo:%R branch:%B';
