@@ -1285,6 +1285,10 @@ sub blob {
 
         $tmp->close;
 
+        if (my $exit = $cmd->exit) {
+            croak "Command 'git cat-file blob $blob' exited with code $exit\n";
+        }
+
         $cache->{$blob} = $filepath;
     }
 
