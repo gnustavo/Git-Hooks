@@ -898,6 +898,10 @@ If you have code relying on the JIRA::Client module you're advised to
 rewrite it using the JIRA::REST module. As a stopgap measure you can
 disregard the JIRA::REST object and create your own JIRA::Client object.
 
+The routine must return a true value to signal success. It may return a false
+value or throw an exception to signal failure. It's best if it uses the 'fault'
+method to produce error messages.
+
 =item * B<ISSUES...>
 
 The remaining arguments are RemoteIssue objects representing the
