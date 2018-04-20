@@ -253,6 +253,9 @@ EOS
         }
     }
 
+    # Return prematurely if there are no issues to check
+    return $errors == 0 unless %issues;
+
     ################
     # Non-JQL checks
     {
