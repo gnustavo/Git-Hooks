@@ -2,6 +2,24 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.9.4     2018-04-29 10:42:54-03:00 America/Sao_Paulo
+
+  [Fixes]
+
+  - GitHooks: The blob method wasn't throwing an exception when the git cat-file
+    command failed.
+
+  - CheckJira: Do not invoke 'code-check' checks when none of the cited JIRAs
+    match the JQL expression.
+
+  [Documentation]
+
+  - CheckJira: Tell what a 'code-check' routine must return to signal successes
+    and failures.
+
+  - Hooks: Quote the here-document delimiter used to create the git-hooks.pl
+    script to avoid variable interpolation.
+
 2.9.3     2018-04-14 11:15:22-03:00 America/Sao_Paulo
 
   [Enhancement]
