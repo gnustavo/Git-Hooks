@@ -241,7 +241,7 @@ C<git-hooks.pl>, in this directory like this:
 
         $ cd /path/to/repo/.git/hooks
 
-        $ cat >git-hooks.pl <<EOT
+        $ cat >git-hooks.pl <<'EOT'
         #!/usr/bin/env perl
         use Git::Hooks;
         run_hook($0, @ARGV);
