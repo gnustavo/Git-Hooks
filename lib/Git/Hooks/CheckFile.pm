@@ -308,7 +308,7 @@ EOS
     }
 
     # Extract only the lines showing addition of the $regex
-    my @diff = grep {/^+.*?(?:$regex)/}
+    my @diff = grep {/^\+.*?(?:$regex)/}
         ($commit ne ':0'
          ? $git->run(qw/diff-tree  -p --diff-filter=AM --ignore-submodules/,
                      "-G$regex", $commit)
