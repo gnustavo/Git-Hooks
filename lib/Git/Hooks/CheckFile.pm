@@ -459,12 +459,15 @@ sub check_commit {
 
     return 1 unless $git->is_reference_enabled($current_branch);
 
+    my $extra = $git->run(qw/diff-index --name-status --ignore-submodules --no-commit-id --cached -r/,
+                          $git->get_head_or_empty_tree);
+
     return 0 == check_everything(
         $git,
         $current_branch,
         ':0',                   # mark to signify the index
-        $git->run(qw/diff-index --name-status --ignore-submodules --no-commit-id --cached -r/,
-                  $git->get_head_or_empty_tree));
+        $extra,
+    );
 }
 
 sub check_patchset {
