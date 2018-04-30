@@ -312,7 +312,7 @@ EOS
         ($commit ne ':0'
          ? $git->run(qw/diff-tree  -p --diff-filter=AM --ignore-submodules/,
                      "-G$regex", $commit)
-         : $git->run(qw/diff-index -p --diff-filter=AM --ignore-submodules/,
+         : $git->run(qw/diff-index --cached -p --diff-filter=AM --ignore-submodules/,
                      "-G$regex", $git->get_head_or_empty_tree));
 
     if (@diff) {
