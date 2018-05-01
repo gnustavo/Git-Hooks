@@ -2,6 +2,20 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.9.5     2018-04-30 21:49:42-03:00 America/Sao_Paulo
+
+  [Fixes]
+
+  - CheckFile: Fix the pre-commit hook which was broken on v2.9.3.
+
+  - CheckFile: Fix the deny-token option processing on pre-commit hooks. It
+    should search for tokens on the index but it was searching for them on the
+    working copy.
+
+  [Thanks]
+
+  - Kudos to @Eluminae who reported the above issues.
+
 2.9.4     2018-04-29 10:42:54-03:00 America/Sao_Paulo
 
   [Fixes]
