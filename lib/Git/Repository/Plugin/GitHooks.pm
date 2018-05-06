@@ -8,6 +8,7 @@ use strict;
 use warnings;
 use Carp;
 use Path::Tiny;
+use IO::Interactive 'is_interactive';
 
 sub _keywords {                 ## no critic (ProhibitUnusedPrivateSubroutines)
 
@@ -694,7 +695,7 @@ sub _githooks_colors {
         # Git::Repository's constructor deletes it by default. (Se discussion in
         # https://rt.cpan.org/Ticket/Display.html?id=124711.)
 
-        my $stdout_is_tty = -t STDOUT ? 'true' : 'false';
+        my $stdout_is_tty = is_interactive() ? 'true' : 'false';
         my $githooks_color = $git->run(qw/config --get-colorbool githooks.color/, $stdout_is_tty,
                                        {env => {TERM => $ENV{TERM}}});
         if ($githooks_color eq 'true') {
