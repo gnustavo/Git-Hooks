@@ -12,7 +12,7 @@ our @EXPORT; ## no critic (Modules::ProhibitAutomaticExportation)
 
 my %Hooks;
 
-BEGIN {
+BEGIN {                         ## no critic (RequireArgUnpacking)
     my @installers =
         qw/ APPLYPATCH_MSG PRE_APPLYPATCH POST_APPLYPATCH
             PRE_COMMIT PREPARE_COMMIT_MSG COMMIT_MSG

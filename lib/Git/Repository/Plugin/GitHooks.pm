@@ -676,7 +676,8 @@ sub error {
 
 # DEPRECATED: use get_faults instead!
 sub get_errors {
-    return get_faults(@_);
+    my @args = @_;
+    return get_faults(@args);
 }
 
 sub _githooks_colors {
@@ -1155,21 +1156,21 @@ sub filter_name_status_in_commit {
 }
 
 sub filter_files_in_index {
-    my $git = shift;
-
-    return sort keys %{$git->filter_name_status_in_index(@_)};
+    my ($git, $filter) = @_;
+    my @files = sort keys %{$git->filter_name_status_in_index($filter)};
+    return @files;
 }
 
 sub filter_files_in_range {
-    my $git = shift;
-
-    return sort keys %{$git->filter_name_status_in_range(@_)};
+    my ($git, @args) = @_;
+    my @files = sort keys %{$git->filter_name_status_in_range(@args)};
+    return @files;
 }
 
 sub filter_files_in_commit {
-    my $git = shift;
-
-    return sort keys %{$git->filter_name_status_in_commit(@_)};
+    my ($git, $commit) = @_;
+    my @files = sort keys %{$git->filter_name_status_in_commit($commit)};
+    return @files;
 }
 
 sub authenticated_user {
