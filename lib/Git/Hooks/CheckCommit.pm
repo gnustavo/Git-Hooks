@@ -1,12 +1,11 @@
-#!/usr/bin/env perl
+use strict;
+use warnings;
 
 package Git::Hooks::CheckCommit;
 # ABSTRACT: Git::Hooks plugin to enforce commit policies
 
 use 5.010;
 use utf8;
-use strict;
-use warnings;
 use Carp;
 use Git::Hooks;
 use Git::Repository::Log;

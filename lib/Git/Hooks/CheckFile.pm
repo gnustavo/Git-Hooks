@@ -1,12 +1,11 @@
-#!/usr/bin/env perl
+use strict;
+use warnings;
 
 package Git::Hooks::CheckFile;
 # ABSTRACT: Git::Hooks plugin for checking files
 
 use 5.010;
 use utf8;
-use strict;
-use warnings;
 use Carp;
 use Git::Hooks;
 use Text::Glob qw/glob_to_regex/;

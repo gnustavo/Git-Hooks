@@ -1,12 +1,11 @@
-#!/usr/bin/env perl
+use strict;
+use warnings;
 
 package Git::Hooks::CheckReference;
 # ABSTRACT: Git::Hooks plugin for checking references
 
 use 5.010;
 use utf8;
-use strict;
-use warnings;
 use Git::Hooks;
 use List::MoreUtils qw/any none/;
 

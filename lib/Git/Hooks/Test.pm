@@ -1,11 +1,11 @@
+use strict;
+use warnings;
+
 package Git::Hooks::Test;
 # ABSTRACT: Git::Hooks testing utilities
 
 ## no critic (RequireExplicitPackage)
 ## no critic (ErrorHandling::RequireCarping)
-use 5.010;
-use strict;
-use warnings;
 use Carp;
 use Config;
 use Exporter qw/import/;

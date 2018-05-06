@@ -1,12 +1,11 @@
-#!/usr/bin/env perl
+use strict;
+use warnings;
 
 package Git::Hooks::CheckRewrite;
 # ABSTRACT: Git::Hooks plugin for checking against unsafe rewrites
 
 use 5.010;
 use utf8;
-use strict;
-use warnings;
 use Path::Tiny;
 use Git::Hooks;
 

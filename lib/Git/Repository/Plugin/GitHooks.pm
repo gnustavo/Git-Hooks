@@ -1,11 +1,12 @@
+use strict;
+use warnings;
+
 package Git::Repository::Plugin::GitHooks;
 # ABSTRACT: A Git::Repository plugin with some goodies for hook developers
 
 use parent qw/Git::Repository::Plugin/;
 
 use 5.010;
-use strict;
-use warnings;
 use Carp;
 use Path::Tiny;
 use IO::Interactive 'is_interactive';

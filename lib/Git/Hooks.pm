@@ -1,9 +1,10 @@
+use strict;
+use warnings;
+
 package Git::Hooks;
 # ABSTRACT: Framework for implementing Git (and Gerrit) hooks
 
 use 5.010;
-use strict;
-use warnings;
 use Carp;
 use Exporter qw/import/;
 use Git::Repository qw/GitHooks Log/;

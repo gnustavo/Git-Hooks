@@ -1,12 +1,11 @@
-#!/usr/bin/env perl
+use strict;
+use warnings;
 
 package Git::Hooks::Notify;
 # ABSTRACT: Git::Hooks plugin to notify users via email
 
 use 5.010;
 use utf8;
-use strict;
-use warnings;
 use Git::Hooks;
 use Encode qw/decode/;
 use Email::Sender::Simple;
