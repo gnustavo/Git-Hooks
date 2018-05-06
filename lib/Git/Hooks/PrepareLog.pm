@@ -88,8 +88,14 @@ EOS
 
     # Try to grok the issue id from the current branch name. Do not continue if
     # we cannot grok it.
-    my $issue = $branch =~ $branch_rx ? $1 || ${^MATCH} : undef;
-    return 0 unless defined $issue and length $issue;
+    my $issue;
+    if ($branch =~ $branch_rx) {
+        $issue = $1 || $ {^MATCH};
+    } else {
+        return 0;
+    }
+
+    return 0 unless length $issue;
 
     my $place = $git->get_config($CFG => 'issue-place');
     if ($place =~ /^trailer\s+(?<key>[A-Za-z]+)\b/) {
