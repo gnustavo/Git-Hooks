@@ -359,7 +359,7 @@ sub check_acls {
             # letters if we grokked affected files in a merge commit. So, we
             # consider a match if the intersection of the two strings ($statuses
             # and $acl->{action}) is not empty.
-            next unless any {index($acl->{action}, $_) != -1} split //, $statuses;
+            next if none {index($acl->{action}, $_) >= 0} split //, $statuses;
 
             unless ($acl->{allow}) {
                 my $action = $ACTION{$statuses} || $statuses;
