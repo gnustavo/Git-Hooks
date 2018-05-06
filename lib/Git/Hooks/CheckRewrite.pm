@@ -155,12 +155,10 @@ EOS
     return 1;
 }
 
-INIT: {
-    # Install hooks
-    PRE_COMMIT  \&record_commit_parents;
-    POST_COMMIT \&check_commit_amend;
-    PRE_REBASE  \&check_rebase;
-}
+# Install hooks
+PRE_COMMIT  \&record_commit_parents;
+POST_COMMIT \&check_commit_amend;
+PRE_REBASE  \&check_rebase;
 
 1;
 

@@ -110,12 +110,10 @@ sub check_affected_refs {
     return $errors == 0;
 }
 
-INIT: {
-    # Install hooks
-    UPDATE       \&check_affected_refs;
-    PRE_RECEIVE  \&check_affected_refs;
-    REF_UPDATE   \&check_affected_refs;
-}
+# Install hooks
+UPDATE       \&check_affected_refs;
+PRE_RECEIVE  \&check_affected_refs;
+REF_UPDATE   \&check_affected_refs;
 
 1;
 

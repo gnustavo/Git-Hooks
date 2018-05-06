@@ -574,17 +574,16 @@ EOS
     return $errors == 0;
 }
 
-INIT: {
-    # Install hooks
-    APPLYPATCH_MSG   \&check_message_file;
-    COMMIT_MSG       \&check_message_file;
-    UPDATE           \&check_affected_refs;
-    PRE_RECEIVE      \&check_affected_refs;
-    REF_UPDATE       \&check_affected_refs;
-    POST_RECEIVE     \&notify_affected_refs;
-    PATCHSET_CREATED \&check_patchset;
-    DRAFT_PUBLISHED  \&check_patchset;
-}
+# Install hooks
+APPLYPATCH_MSG   \&check_message_file;
+COMMIT_MSG       \&check_message_file;
+UPDATE           \&check_affected_refs;
+PRE_RECEIVE      \&check_affected_refs;
+REF_UPDATE       \&check_affected_refs;
+POST_RECEIVE     \&notify_affected_refs;
+PATCHSET_CREATED \&check_patchset;
+DRAFT_PUBLISHED  \&check_patchset;
+
 1;
 
 

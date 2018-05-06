@@ -119,16 +119,14 @@ EOS
     };
 }
 
-INIT: {
-    # Install hooks
-    PRE_APPLYPATCH   \&check_commit;
-    PRE_COMMIT       \&check_commit;
-    UPDATE           \&check_affected_refs;
-    PRE_RECEIVE      \&check_affected_refs;
-    REF_UPDATE       \&check_affected_refs;
-    PATCHSET_CREATED \&check_patchset;
-    DRAFT_PUBLISHED  \&check_patchset;
-}
+# Install hooks
+PRE_APPLYPATCH   \&check_commit;
+PRE_COMMIT       \&check_commit;
+UPDATE           \&check_affected_refs;
+PRE_RECEIVE      \&check_affected_refs;
+REF_UPDATE       \&check_affected_refs;
+PATCHSET_CREATED \&check_patchset;
+DRAFT_PUBLISHED  \&check_patchset;
 
 1;
 
