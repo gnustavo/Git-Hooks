@@ -1115,7 +1115,7 @@ sub filter_name_status_in_commit {
                 ++$parents;
                 $expect = 'sha1 or action';
             } else {
-                die;
+                croak;
             }
         } elsif ($expect eq 'sha1 or action') {
             if ($output[0] =~ /^[0-9a-f]{40}$/) {
@@ -1125,13 +1125,13 @@ sub filter_name_status_in_commit {
                 $action = shift @output;
                 $expect = 'file';
             } else {
-                die;
+                croak;
             }
         } elsif ($expect eq 'file') {
             $actions{shift @output}{$sha1} = $action;
             $expect = 'sha1 or action';
         } else {
-            die;
+            croak;
         }
     }
 
@@ -1310,10 +1310,10 @@ sub file_mode {
             if (my ($src_mode, $dst_mode, $rest) = $diff_index[0] =~ /^:(\d+) (\d+) (.*)/) {
                 return oct $dst_mode;
             } else {
-                die "Internal error: cannot parse output of git-diff-idex:\n\n  $diff_index[0]";
+                croak "Internal error: cannot parse output of git-diff-idex:\n\n  $diff_index[0]";
             }
         } else {
-            die "Internal error: git-diff-index should return a single line";
+            croak "Internal error: git-diff-index should return a single line";
         }
     } else {
         my $path = path($file);
@@ -1324,14 +1324,14 @@ sub file_mode {
                     $ls_tree[0] =~ /^(\d+) ([a-z]+) ([a-z0-9]{40})\t(.+)/) {
                 return oct $mode;
             } else {
-                die "Internal error: cannot parse output of git-ls-tree:\n\n  $ls_tree[0]";
+                croak "Internal error: cannot parse output of git-ls-tree:\n\n  $ls_tree[0]";
             }
         } else {
-            die "Internal error: $rev:$file should be a blob";
+            croak "Internal error: $rev:$file should be a blob";
         }
     }
 
-    die "Can't happen!";
+    croak "Can't happen!";
 }
 
 ## DEPRECATED
@@ -1496,7 +1496,7 @@ sub grok_acls {
             # Pre-compile regex
             $acl{spec} = substr($spec, 0, 1) eq '^' ? qr/$spec/ : $spec;
         } else {
-            die "invalid acl syntax for actions '$actions': $_\n";
+            croak "invalid acl syntax for actions '$actions': $_\n";
         }
 
         if (substr($_, $+[0]) =~ /^\s*by\s+(\S+)\s*$/) {
@@ -1504,7 +1504,7 @@ sub grok_acls {
             # Discard this ACL if it doesn't match the user
             next ACL unless $git->match_user($acl{who});
         } elsif (substr($_, $+[0]) !~ /^\s*$/) {
-            die "invalid acl syntax for actions '$actions: $_\n";
+            croak "invalid acl syntax for actions '$actions: $_\n";
         }
 
         unshift @acls, \%acl;

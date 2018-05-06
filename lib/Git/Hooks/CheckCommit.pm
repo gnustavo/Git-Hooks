@@ -7,6 +7,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
+use Carp;
 use Git::Hooks;
 use Git::Repository::Log;
 use List::MoreUtils qw/any none/;
@@ -41,7 +42,7 @@ sub _amend_help {
     } elsif ($who eq 'committer') {
         return 'Please, amend your commit after fixing your user.name and/or user.email configuration options.';
     } else {
-        die "Internal error: invalid who ($who)";
+        croak "Internal error: invalid who ($who)";
     }
 }
 

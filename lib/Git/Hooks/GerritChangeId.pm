@@ -7,6 +7,7 @@ use 5.010;
 use utf8;
 use strict;
 use warnings;
+use Carp;
 use Git::Hooks;
 use Git::Message;
 use Path::Tiny;
@@ -21,7 +22,7 @@ sub gen_change_id {
     my $filename = Path::Tiny->tempfile(UNLINK => 1);
     open my $fh, '>', $filename ## no critic (RequireBriefOpen)
         or $git->fault("Internal error: can't open '$filename' for writing:", {details => $!})
-        and die;
+        and croak;
 
     foreach my $info (
         [ tree      => [qw/write-tree/] ],
