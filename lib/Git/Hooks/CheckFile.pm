@@ -90,7 +90,8 @@ sub check_command {
     return 1;
 }
 
-sub check_new_files {
+sub check_new_files {           ## no critic (ProhibitExcessComplexity)
+    # This routine should be broken in smaller pieces.
     my ($git, $ctx, $commit, $name2status) = @_;
 
     return 0 unless %$name2status; # No new file to check
