@@ -54,7 +54,7 @@ sub check_ref {
         next unless ref $acl->{spec} ? $ref =~ $acl->{spec} : $ref eq $acl->{spec};
         if (index($acl->{action}, $action) != -1) {
             unless ($acl->{allow}) {
-                $git->fault(<<EOS, {ref => $ref, option => 'acl'});
+                $git->fault(<<"EOS", {ref => $ref, option => 'acl'});
 The reference name is not allowed due to the following acl:
 
   $acl->{acl}
@@ -69,7 +69,7 @@ EOS
     if ($action eq 'C') {
         if (any  {$ref =~ qr/$_/} $git->get_config($CFG => 'deny') and
             none {$ref =~ qr/$_/} $git->get_config($CFG => 'allow')) {
-            $git->fault(<<EOS, {ref => $ref, option => 'deny'});
+            $git->fault(<<'EOS', {ref => $ref, option => 'deny'});
 The reference name is not allowed.
 Please, check your configuration option.
 EOS
@@ -81,7 +81,7 @@ EOS
             && $git->get_config_boolean($CFG => 'require-annotated-tags')) {
         my $rev_type = $git->run('cat-file', '-t', $new_commit);
         if ($rev_type ne 'tag') {
-            $git->fault(<<EOS, {ref => $ref, option => 'require-annotated-tags'});
+            $git->fault(<<'EOS', {ref => $ref, option => 'require-annotated-tags'});
 This is a lightweight tag.
 The option in your configuration accepts only annotated tags.
 Please, recreate your tag as an annotated tag (option -a).

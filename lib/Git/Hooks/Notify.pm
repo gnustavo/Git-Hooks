@@ -43,7 +43,7 @@ sub pretty_log {
 
         my $message = decode($encoding, $commit->raw_message . $commit->extra);
 
-        push @log, <<EOS;
+        push @log, <<"EOS";
 
 commit $sha1$merge
 Author: $author
@@ -132,7 +132,7 @@ sub notify {
 
     $body .= "\n" if length $body;
 
-    $body .= <<EOS;
+    $body .= <<"EOS";
 REPOSITORY: $repository_name
 BRANCH: $branch
 PUSHED BY: $pusher
@@ -170,7 +170,7 @@ EOS
             $2 .
             '&nbsp;' x (8 - length($2))]egm;
 
-        $body = <<EOS;
+        $body = <<"EOS";
 <html>
 <body style="font-family: monospace">
 $html

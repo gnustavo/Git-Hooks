@@ -777,7 +777,7 @@ sub get_faults {
 
     if ($git->{_plugin_githooks}{hookname} =~ /^commit-msg|pre-commit$/
             && ! $git->get_config_boolean(githooks => 'abort-commit')) {
-        $faults .= <<EOS;
+        $faults .= <<'EOS';
 
 ATTENTION: To fix the problems in this commit, please consider amending it:
 

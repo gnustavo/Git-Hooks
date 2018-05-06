@@ -151,7 +151,7 @@ sub check_new_files {
 
         if (any  {$basename =~ $_} @{$re_checks{basename}{deny}} and
             none {$basename =~ $_} @{$re_checks{basename}{allow}}) {
-            $git->fault(<<EOS, {%$ctx, option => 'basename.{allow,deny}'});
+            $git->fault(<<"EOS", {%$ctx, option => 'basename.{allow,deny}'});
 The file '$file' basename is not allowed.
 Please, check your configuration options.
 EOS
@@ -161,7 +161,7 @@ EOS
 
         if (any  {$file =~ $_} @{$re_checks{path}{deny}} and
             none {$file =~ $_} @{$re_checks{path}{allow}}) {
-            $git->fault(<<EOS, {%$ctx, option => 'path.{allow,deny}'});
+            $git->fault(<<"EOS", {%$ctx, option => 'path.{allow,deny}'});
 The file '$file' path is not allowed.
 Please, check your configuration options.
 EOS
@@ -180,7 +180,7 @@ EOS
         }
 
         if ($file_sizelimit && $file_sizelimit < $size) {
-            $git->fault(<<EOS, {%$ctx, option => '[basename.]sizelimit'});
+            $git->fault(<<"EOS", {%$ctx, option => '[basename.]sizelimit'});
 The file '$file' is too big.
 
 It has $size bytes but the current limit is $file_sizelimit bytes.
@@ -200,7 +200,7 @@ EOS
         if (any {$basename =~ $_} @{$executable_checks{'executable'}}) {
             $mode = $git->file_mode($commit, $file);
             unless ($mode & 0b1) {
-                $git->fault(<<EOS, {%$ctx, option => 'executable'});
+                $git->fault(<<"EOS", {%$ctx, option => 'executable'});
 The file '$file' is not executable but should be.
 Please, check your configuration options.
 EOS
@@ -210,7 +210,7 @@ EOS
 
         if (any {$basename =~ $_} @{$executable_checks{'not-executable'}}) {
             if (defined $mode) {
-                git->fault(<<EOS, {%$ctx, option => '[not-]executable'});
+                git->fault(<<"EOS", {%$ctx, option => '[not-]executable'});
 Configuration error: The file '$file' matches a 'executable' and a
 'not-executable' option simultaneously, which is inconsistent.
 Please, fix your configuration so that it matches only one of these options.
@@ -219,7 +219,7 @@ EOS
             }
             $mode = $git->file_mode($commit, $file);
             if ($mode & 0b1) {
-                $git->fault(<<EOS, {%$ctx, option => 'not-executable'});
+                $git->fault(<<"EOS", {%$ctx, option => 'not-executable'});
 The file '$file' is executable but should not be.
 Please, check your configuration options.
 EOS
@@ -255,7 +255,7 @@ sub deny_case_conflicts {
         for (my $j = $i + 1; $j <= $#names; ++$j) {
             if (lc($names[$i]) eq lc($names[$j]) && $names[$i] ne $names[$j]) {
                 ++$errors;
-                $git->fault(<<EOS, {%$ctx, option => 'deny-case-conflict'});
+                $git->fault(<<"EOS", {%$ctx, option => 'deny-case-conflict'});
 This commit adds two files with names that will conflict
 with each other in the repository in case-insensitive
 filesystems:
@@ -276,7 +276,7 @@ EOS
             my $lc_name = lc $name;
             if ($lc_name eq $lc_file && $name ne $file) {
                 ++$errors;
-                $git->fault(<<EOS, {%$ctx, option => 'deny-case-conflict'});
+                $git->fault(<<"EOS", {%$ctx, option => 'deny-case-conflict'});
 This commit adds a file with a name that will conflict
 with the name of another file already existing in the repository
 in case-insensitive filesystems:
@@ -300,7 +300,7 @@ sub deny_token {
         or return 0;
 
     if ($git->version_lt('1.7.4')) {
-        $git->fault(<<EOS, {option => 'deny-token'});
+        $git->fault(<<'EOS', {option => 'deny-token'});
 This option requires Git 1.7.4 or later but your Git is older.
 Please, upgrade your Git or disable this option.
 EOS
@@ -316,7 +316,7 @@ EOS
                      "-G$regex", $git->get_head_or_empty_tree));
 
     if (@diff) {
-        $git->fault(<<EOS, {%$ctx, option => 'deny-token', details => join("\n", @diff)});
+        $git->fault(<<"EOS", {%$ctx, option => 'deny-token', details => join("\n", @diff)});
 Invalid tokens detected in added lines.
 This option rejects lines matching $regex.
 Please, amend these lines and try again.
@@ -375,7 +375,7 @@ sub check_acls {
         while (my ($acl, $actions) = each %acl_errors) {
             while (my ($action, $files) = each %$actions) {
                 my $these_files = scalar(@$files) > 1 ? 'these files' : 'this file';
-                $git->fault(<<EOS, \%context);
+                $git->fault(<<"EOS", \%context);
 Authorization error: you ($myself) cannot $action $these_files:
 
   @{[join("\n  ", @$files)]}

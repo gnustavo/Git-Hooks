@@ -71,7 +71,7 @@ sub match_errors {
                     my $data     = $commit->$who_info;
 
                     if (none { $data =~ $_ } @{$checks->{''}}) {
-                        $git->fault(<<EOS, {commit => $commit, option => $info});
+                        $git->fault(<<"EOS", {commit => $commit, option => $info});
 The commit $who $info ($data) is invalid.
 It must match at least one positive option.
 @{[_amend_help($who)]}
@@ -80,7 +80,7 @@ EOS
                     }
 
                     if (any { $data =~ $_ } @{$checks->{'!'}}) {
-                        $git->fault(<<EOS, {commit => $commit, option => $info});
+                        $git->fault(<<"EOS", {commit => $commit, option => $info});
 The commit $who $info ($data) is invalid.
 It matches some negative option.
 @{[_amend_help($who)]}
@@ -101,7 +101,7 @@ sub merge_errors {
     if ($commit->parent() > 1) { # it's a merge commit
         if (my @mergers = $git->get_config($CFG => 'merger')) {
             if (none {$git->match_user($_)} @mergers) {
-                $git->fault(<<EOS, {commit => $commit, option => 'merger'});
+                $git->fault(<<"EOS", {commit => $commit, option => 'merger'});
 Authorization error: you cannot push this commit.
 
 I'm sorry, but you (@{[$git->authenticated_user]}) are not authorized to push
@@ -137,7 +137,7 @@ sub email_valid_errors {
                 }
                 $cache->{email_valid} = Email::Valid->new(@checks);
             } else {
-                $git->fault(<<EOS, {option => 'email-valid.*'});
+                $git->fault(<<'EOS', {option => 'email-valid.*'});
 I could not load the Email::Valid Perl module.
 
 I need it to validate your commit's author and committer as requested by your
@@ -155,7 +155,7 @@ EOS
                 my $email     = $commit->$who_email;
                 unless ($ev->address($email)) {
                     my $details = $ev->details();
-                    $git->fault(<<EOS, {commit => $commit});
+                    $git->fault(<<"EOS", {commit => $commit});
 The commit $who email ($email) failed the $details check.
 @{[_amend_help($who)]}
 EOS
@@ -203,7 +203,7 @@ EOS
             }
 
             if ($identity ne $canonical) {
-                $git->fault(<<EOS, {commit => $commit, option => 'canonical'});
+                $git->fault(<<"EOS", {commit => $commit, option => 'canonical'});
 The commit $who identity isn't canonical.
 It's '$identity' but its canonical form is '$canonical'.
 @{[_amend_help($who)]}
@@ -227,19 +227,19 @@ sub signature_errors {
         my $status = $git->run(qw/log -1 --format='%G?'/, $commit->commit);
 
         if ($status eq 'B') {
-            $git->fault(<<EOS, {commit => $commit, option => 'signature'});
+            $git->fault(<<'EOS', {commit => $commit, option => 'signature'});
 The commit has a BAD GPG signature.
 Please, amend your commit with the -S option to fix it.
 EOS
             ++$errors;
         } elsif ($status eq 'N' && $signature ne 'optional') {
-            $git->fault(<<EOS, {commit => $commit, option => 'signature'});
+            $git->fault(<<'EOS', {commit => $commit, option => 'signature'});
 The commit has NO GPG signature.
 Please, amend your commit with the -S option to add one.
 EOS
             ++$errors;
         } elsif ($status eq 'U' && $signature eq 'trusted') {
-            $git->fault(<<EOS, {commit => $commit, option => 'signature'});
+            $git->fault(<<'EOS', {commit => $commit, option => 'signature'});
 The commit has an UNTRUSTED GPG signature.
 Please, amend your commit with the -S option to add another one.
 EOS
@@ -336,7 +336,7 @@ sub check_ref {
 
     if (my $limit = $git->get_config_integer($CFG => 'push-limit')) {
         if (@commits > $limit) {
-            $git->fault(<<EOS, {ref => $ref, option => 'push-limit'});
+            $git->fault(<<"EOS", {ref => $ref, option => 'push-limit'});
 Are you sure you want to push @{[scalar @commits]} commits to this reference at
 once?
 

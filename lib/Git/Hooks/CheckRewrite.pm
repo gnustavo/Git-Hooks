@@ -59,7 +59,7 @@ sub check_commit_amend {
     my $record_file = _record_filename($git);
 
     -r $record_file
-        or $git->fault(<<EOS)
+        or $git->fault(<<'EOS')
 I cannot read $record_file.
 Please, check if you forgot to create the pre-commit hook.
 EOS
@@ -87,7 +87,7 @@ EOS
         # $old_commit is reachable by at least one branch, which means
         # the amend was unsafe.
         my $branches = join "\n  ", @branches;
-        $git->fault(<<EOS);
+        $git->fault(<<"EOS");
 You just performed an unsafe "git commit --amend" because your
 original HEAD ($old_commit) is still reachable by the following
 branch(es):
@@ -135,7 +135,7 @@ sub check_rebase {
         # The base commit is reachable by more than one branch, which
         # means the rewrite is unsafe.
         my $branches = join("\n  ", grep {$_ ne $branch} @branches);
-        $git->fault(<<EOS);
+        $git->fault(<<"EOS");
 You just performed an unsafe rebase because it would rewrite commits shared
 by $branch and the following other branch(es):
 

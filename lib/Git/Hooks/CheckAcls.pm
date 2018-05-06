@@ -66,7 +66,7 @@ sub check_ref {
         next unless $git->match_user($who);
         next unless match_ref($ref, $refspec);
         if ($what =~ /[^CRUD-]/) {
-            $git->fault(<<EOS, {option => 'acl', ref => $ref});
+            $git->fault(<<"EOS", {option => 'acl', ref => $ref});
 Configuration error: It has an invalid second argument:
 
   acl = $who *$what* $refspec
@@ -88,12 +88,12 @@ EOS
     );
 
     if (my $myself = eval { $git->authenticated_user() }) {
-        $git->fault(<<EOS, {option => 'acl', ref => $ref});
+        $git->fault(<<"EOS", {option => 'acl', ref => $ref});
 Authorization error: you ($myself) cannot $op{$op} this reference.
 Please, check the your configuration options.
 EOS
     } else {
-        $git->fault(<<EOS, {details => $@});
+        $git->fault(<<'EOS', {details => $@});
 Internal error: I cannot get your username to authorize you.
 Please check your Git::Hooks configuration with regards to the function
 https://metacpan.org/pod/Git::Repository::Plugin::GitHooks#authenticated_user
