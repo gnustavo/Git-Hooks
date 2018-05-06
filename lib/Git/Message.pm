@@ -4,6 +4,8 @@ use warnings;
 package Git::Message;
 # ABSTRACT: A Git commit message
 
+use 5.010;
+use utf8;
 use Carp;
 
 sub new {

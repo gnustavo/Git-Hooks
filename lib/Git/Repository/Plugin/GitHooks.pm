@@ -7,6 +7,7 @@ package Git::Repository::Plugin::GitHooks;
 use parent qw/Git::Repository::Plugin/;
 
 use 5.010;
+use utf8;
 use Carp;
 use Path::Tiny;
 use IO::Interactive 'is_interactive';

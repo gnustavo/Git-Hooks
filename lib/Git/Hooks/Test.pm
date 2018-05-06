@@ -6,6 +6,8 @@ package Git::Hooks::Test;
 
 ## no critic (RequireExplicitPackage)
 ## no critic (ErrorHandling::RequireCarping)
+use 5.010;
+use utf8;
 use Carp;
 use Config;
 use Exporter qw/import/;

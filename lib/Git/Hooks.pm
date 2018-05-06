@@ -5,6 +5,7 @@ package Git::Hooks;
 # ABSTRACT: Framework for implementing Git (and Gerrit) hooks
 
 use 5.010;
+use utf8;
 use Carp;
 use Exporter qw/import/;
 use Git::Repository qw/GitHooks Log/;
