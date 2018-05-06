@@ -894,10 +894,9 @@ sub get_commits {
                 my $decoration = $git->run(qw/log -n1 --format=%d/, $new_commit);
                 $decoration =~ s/HEAD,\s*//;
 
-                # Now I simply count how many commas there are in the decoration
-                # to see if there is more than one reference.
-                my $commas = ($decoration =~ tr/,/,/);
-                if ($commas == 0) {
+                # If there are commas in $decoration it means that there are
+                # more than one reference.
+                if ($decoration !~ /,/) {
                     @excludes = grep {$_ ne "^$new_commit"} @excludes;
                 }
             }

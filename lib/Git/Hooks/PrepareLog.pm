@@ -108,7 +108,7 @@ EOS
 }
 
 sub prepare_message {
-    my ($git, $msg_file, $source, $sha1) = @_;
+    my ($git, $msg_file, $source) = @_;
 
     # Do not mess up with messages if there is already a previous source for it.
     return 0 if defined $source;

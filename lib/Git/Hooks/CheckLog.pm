@@ -67,14 +67,14 @@ EOS
 
         my $checker = Text::SpellChecker->new(text => 'a', %extra_options);
 
-        my $word = eval { $checker->next_word(); };
-        length $@
-            and $git->fault(<<EOS, {option => 'spelling', details => $@})
+        unless (defined eval { $checker->next_word(); }) {
+            $git->fault(<<EOS, {option => 'spelling', details => $@});
 There was an error while I tried to spell check your commits using the
 Text::SpellChecker module. If you cannot fix it consider disabling this
 your configuration option.
 EOS
-                and return;
+            return;
+        }
 
         $tried_to_check = 1;
     }
@@ -238,7 +238,6 @@ sub body_errors {
 
     if (my $max_width = $git->get_config_integer($CFG => 'body-max-width')) {
         if (my @biggies = grep {/^\S/} grep {length > $max_width} split(/\n/, $body)) {
-            my $theseare = @biggies == 1 ? "this is" : "these are";
             $git->fault(<<EOS, {commit => $id, option => 'body-max-width', details => join("\n", @biggies)});
 This commit log body has lines that are too long.
 The configuration option limits body lines to $max_width characters.
