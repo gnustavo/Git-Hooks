@@ -570,14 +570,14 @@ sub get_config {
             while ($config =~ /([^\cJ]+)(\cJ[^\c@]*|)\c@/sg) {
                 my ($option, $value) = ($1, $2);
                 if ($option =~ /(.+)\.(.+)/) {
-                    my ($section, $key) = (lc $1, lc $2);
+                    my ($osection, $okey) = (lc $1, lc $2);
                     if ($value =~ s/^\cJ//) {
-                        push @{$config{$section}{$key}}, $value;
+                        push @{$config{$osection}{$okey}}, $value;
                     } else {
                         # An option without a value is considered a boolean
                         # true. We mark it explicitly so instead of leaving it
                         # undefined because Perl would consider it false.
-                        push @{$config{$section}{$key}}, 'true';
+                        push @{$config{$osection}{$okey}}, 'true';
                     }
                 } else {
                     croak __PACKAGE__, ": Cannot grok config variable name '$option'.\n";
@@ -1321,7 +1321,7 @@ sub file_mode {
         my @ls_tree = $git->run('ls-tree', "$rev:" . $path->dirname, $path->basename);
 
         if (@ls_tree == 1) {
-            if (my ($mode, $type, $object, $file) =
+            if (my ($mode, $type, $object, $filename) =
                     $ls_tree[0] =~ /^(\d+) ([a-z]+) ([a-z0-9]{40})\t(.+)/) {
                 return oct $mode;
             } else {
