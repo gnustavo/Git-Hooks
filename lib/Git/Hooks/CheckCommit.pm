@@ -34,8 +34,10 @@ sub _setup_config {
 
 ##########
 
-# Return common help messages to fix author or committer name/email.
-sub _amend_help {
+# Return common help messages to fix author or committer name/email.  This
+# routine is used to compose some error messages in the routine match_errors
+# below. The "no critic" exemption below is a false positive.
+sub _amend_help {               ## no critic (ProhibitUnusedPrivateSubroutines)
     my ($who) = @_;
     if ($who eq 'author') {
         return 'Please, amend your commit using the --author option to fix the author name/email.';
