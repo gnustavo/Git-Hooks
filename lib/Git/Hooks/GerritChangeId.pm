@@ -30,8 +30,11 @@ sub gen_change_id {
         [ author    => [qw/var GIT_AUTHOR_IDENT/] ],
         [ committer => [qw/var GIT_COMMITTER_IDENT/] ],
     ) {
-        # It's OK if we can't find info.
-        eval { $fh->print($info->[0], ' ', scalar($git->run(@{$info->[1]}))) };
+        my $value = eval { $git->run(@{$info->[1]}) };
+        if (defined $value) {
+            # It's OK if we can't find value.
+            $fh->print("$info->[0] $value");
+        }
     }
 
     $fh->print("\n", $msg);

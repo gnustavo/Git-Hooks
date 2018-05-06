@@ -74,9 +74,14 @@ sub get_transport {
         $args{$arg} = $value;
     }
 
-    eval "require Email::Sender::Transport::$transport";
+    my $transport_module = "Email::Sender::Transport::$transport";
 
-    return "Email::Sender::Transport::$transport"->new(\%args);
+    if (eval "require $transport_module") { ## no critic (ProhibitStringyEval)
+        return "$transport_module"->new(\%args);
+    } else {
+        return;
+    }
+
 }
 
 sub sha1_link {
@@ -241,14 +246,16 @@ sub notify_affected_refs {
 
             my $message = pretty_log($git, \@commits);
 
-            eval { notify($git, $ref, $old_commit, $new_commit, $rule, $message) };
-            if (my $error = $@) {
-                $git->fault(
-                    sprintf('I could not send mail to the following recipients: %s\n',
-                            join(", ", $error->recipients)),
-                    {ref => $ref, details => $error->message}
-                );
-                ++$errors;
+            my $success = eval { notify($git, $ref, $old_commit, $new_commit, $rule, $message) };
+            unless (defined $success) {
+                if (my $error = $@) {
+                    $git->fault(
+                        sprintf('I could not send mail to the following recipients: %s\n',
+                                join(", ", $error->recipients)),
+                        {ref => $ref, details => $error->message}
+                    );
+                    ++$errors;
+                };
             };
         }
     }
