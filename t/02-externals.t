@@ -30,9 +30,9 @@ sub check_cannot_commit {
     $file->append($testname);
     $repo->run(add => $file);
     if ($regex) {
-	test_nok_match($testname, $regex, $repo, 'commit', '-m', $testname);
+        test_nok_match($testname, $regex, $repo, 'commit', '-m', $testname);
     } else {
-	test_nok($testname, $repo, 'commit', '-m', $testname);
+        test_nok($testname, $repo, 'commit', '-m', $testname);
     }
 }
 

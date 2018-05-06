@@ -16,10 +16,10 @@ sub setup_repos_for {
     ($repo, $file, $clone, $T) = new_repos();
 
     foreach my $git ($repo, $clone) {
-	# Inject a fake JIRA::REST class definition in order to be able
-	# to test this without a real JIRA server.
+        # Inject a fake JIRA::REST class definition in order to be able
+        # to test this without a real JIRA server.
 
-	install_hooks($git, <<'EOF', qw/commit-msg update pre-receive/);
+        install_hooks($git, <<'EOF', qw/commit-msg update pre-receive/);
 package JIRA::REST;
 
 sub new {
@@ -69,12 +69,12 @@ sub GET {
     if ($endpoint =~ m:/issue/(.*):) {
         $key = $1;
     } else {
-	die "JIRA::Client(fake): no such endpoint ($endpoint)\n";
+        die "JIRA::Client(fake): no such endpoint ($endpoint)\n";
     }
     if (exists $issues{$key}) {
-	return $issues{$key};
+        return $issues{$key};
     } else {
-	die "JIRA::Client(fake): no such issue ($key)\n";
+        die "JIRA::Client(fake): no such issue ($key)\n";
     }
 }
 
@@ -136,9 +136,9 @@ sub check_cannot_commit {
     $file->append($testname);
     $repo->run(add => $file);
     if ($regex) {
-	test_nok_match($testname, $regex, $repo, 'commit', '-m', $testname);
+        test_nok_match($testname, $regex, $repo, 'commit', '-m', $testname);
     } else {
-	test_nok($testname, $repo, 'commit', '-m', $testname);
+        test_nok($testname, $repo, 'commit', '-m', $testname);
     }
 }
 
@@ -146,14 +146,14 @@ sub check_can_push {
     my ($testname, $ref) = @_;
     new_commit($repo, $file, $testname);
     test_ok($testname, $repo,
-	    'push', $clone->git_dir(), $ref || 'master');
+            'push', $clone->git_dir(), $ref || 'master');
 }
 
 sub check_cannot_push {
     my ($testname, $regex, $ref) = @_;
     new_commit($repo, $file, $testname);
     test_nok_match($testname, $regex, $repo,
-		   'push', $clone->git_dir(), $ref || 'master');
+                   'push', $clone->git_dir(), $ref || 'master');
 }
 
 
@@ -176,7 +176,7 @@ $repo->run(qw/checkout -q master/);
 
 $repo->run(qw/config githooks.checkjira.project OTHER/);
 check_cannot_commit('deny commit citing non-allowed projects [GIT-0]',
-		    qr/not match the following JQL expression/);
+                    qr/not match the following JQL expression/);
 
 $repo->run(qw/config githooks.checkjira.require 0/);
 check_can_commit('allow commit if JIRA is not required');
@@ -186,14 +186,14 @@ $repo->run(qw/config --replace-all githooks.checkjira.project GIT/);
 
 $repo->run(qw/config --replace-all githooks.checkjira.jirapass invalid/);
 check_cannot_commit('deny commit if cannot connect to JIRA [GIT-0]',
-		    qr/Cannot connect to the JIRA server/);
+                    qr/Cannot connect to the JIRA server/);
 $repo->run(qw/config --replace-all githooks.checkjira.jirapass valid/);
 
 check_cannot_commit('deny commit if cannot get issue [GIT-0]',
-		    qr/not match the following JQL expression/);
+                    qr/not match the following JQL expression/);
 
 check_cannot_commit('deny commit if issue is already resolved [GIT-1]',
-		    qr/which is already resolved/);
+                    qr/which is already resolved/);
 
 $repo->run(qw/config --replace-all githooks.checkjira.unresolved 0/);
 check_can_commit('allow commit if issue can be resolved [GIT-1]');
@@ -202,7 +202,7 @@ $repo->run(qw/config --unset-all githooks.checkjira.unresolved/);
 $repo->run(qw/config --replace-all githooks.checkjira.by-assignee 1/);
 $ENV{USER} = 'other';
 check_cannot_commit('deny commit if not by-assignee [GIT-2]',
-		    qr/which is assigned to 'user'/);
+                    qr/which is assigned to 'user'/);
 
 $ENV{USER} = 'user';
 check_can_commit('allow commit if by-assignee [GIT-2]');
@@ -212,13 +212,13 @@ check_can_commit('allow commit if valid issue cited [GIT-2]');
 
 $repo->run(qw/config --replace-all githooks.checkjira.status Taken/);
 check_cannot_commit('deny commit if not in valid status [GIT-2]',
-		    qr/not match the following JQL expression/);
+                    qr/not match the following JQL expression/);
 check_can_commit('allow commit if in valid status [GIT-3]');
 $repo->run(qw/config --unset-all githooks.checkjira.status/);
 
 $repo->run(qw/config --replace-all githooks.checkjira.issuetype Bug/);
 check_cannot_commit('deny commit if not with valid type [GIT-3]',
-		    qr/not match the following JQL expression/);
+                    qr/not match the following JQL expression/);
 check_can_commit('allow commit if with valid type [GIT-2]');
 $repo->run(qw/config --unset-all githooks.checkjira.issuetype/);
 
@@ -226,18 +226,18 @@ $repo->run(qw/config --replace-all githooks.checkjira.fixversion/, 'refs/heads/x
 check_can_commit('allow commit with fixversion if do not match branch [GIT-2]');
 $repo->run(qw/config --replace-all githooks.checkjira.fixversion/, 'refs/heads/master 1.2');
 check_cannot_commit('deny commit matching branch but not version [GIT-2]',
-		    qr/must cite issues associated with a fixVersion matching/);
+                    qr/must cite issues associated with a fixVersion matching/);
 check_can_commit('allow commit matching branch and version [GIT-3]');
 $repo->run(qw/config --replace-all githooks.checkjira.fixversion/, '^.+/master ^1.2');
 check_can_commit('allow commit matching branch and version [GIT-2]');
 $repo->run(qw/config --replace-all githooks.checkjira.fixversion/, '^.+/(master) ^1.2$');
 check_cannot_commit('deny commit matching branch but not regexp version [GIT-2]',
-		    qr/must cite issues associated with a fixVersion matching/);
+                    qr/must cite issues associated with a fixVersion matching/);
 $repo->run(qw/config --replace-all githooks.checkjira.fixversion/, '^refs/heads/m(aste)r m$+r');
 check_can_commit('allow commit matching capture branch [GIT-4]');
 $repo->run(qw/config --replace-all githooks.checkjira.fixversion/, '^refs/heads/m(aste)r $+');
 check_cannot_commit('deny commit matching not matching capture branch [GIT-4]',
-		    qr/must cite issues associated with a fixVersion matching/);
+                    qr/must cite issues associated with a fixVersion matching/);
 $repo->run(qw/config --replace-all githooks.checkjira.fixversion/, '^refs/heads/m(aste)r ^.$+.');
 check_can_commit('allow commit matching capture branch and fixversion [GIT-4]');
 $repo->run(qw/config --unset-all githooks.checkjira.fixversion/);
@@ -257,7 +257,7 @@ path($codefile)->spew($code)
 $repo->run(qw/config githooks.checkjira.check-code/, "file:$codefile");
 
 check_cannot_commit('deny commit if check_code does not pass [GIT-2]',
-		    qr/You must cite issues GIT-2 and GIT-3 only/);
+                    qr/You must cite issues GIT-2 and GIT-3 only/);
 
 check_can_commit('allow commit if check_code does pass [GIT-2 GIT-3]');
 
@@ -266,7 +266,7 @@ $repo->run(qw/config --unset-all githooks.checkjira.check-code/);
 $repo->run(qw/config githooks.checkjira.matchlog (?s)^\[([^]]+)\]/);
 
 check_cannot_commit('deny commit if cannot matchlog [GIT-2]',
-		    qr/must cite a JIRA/);
+                    qr/must cite a JIRA/);
 
 check_can_commit('[GIT-2] allow commit if can matchlog');
 
@@ -286,7 +286,7 @@ $repo->run(qw/config --unset-all githooks.checkjira.matchlog/);
 setup_repos_for(\$clone);
 
 check_cannot_push('deny push by update by default without JIRAs',
-		  qr/must cite a JIRA/);
+                  qr/must cite a JIRA/);
 
 setup_repos_for(\$clone);
 
@@ -296,7 +296,7 @@ check_can_push('allow push by update if valid issue cited [GIT-2]');
 setup_repos_for(\$clone);
 
 check_cannot_push('deny push by pre-receive by default without JIRAs',
-		  qr/must cite a JIRA/);
+                  qr/must cite a JIRA/);
 
 setup_repos_for(\$clone);
 

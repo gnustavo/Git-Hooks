@@ -22,8 +22,8 @@ sub add_file {
     my $filename = path($repo->work_tree())->child('file.txt');
 
     unless ($filename->spew($contents)) {
-	fail($testname);
-	diag("[TEST FRAMEWORK INTERNAL ERROR] Cannot create file: $filename; $!\n");
+        fail($testname);
+        diag("[TEST FRAMEWORK INTERNAL ERROR] Cannot create file: $filename; $!\n");
     }
 
     $repo->run(add => $filename);

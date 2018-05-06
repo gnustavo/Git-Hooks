@@ -18,7 +18,7 @@ EOF
 $file->append("new line\n");
 $repo->run(add => $file);
 test_nok('cannot commit', $repo,
-	 'commit', '-q', '-m', 'new commit');
+         'commit', '-q', '-m', 'new commit');
 
 $repo->run(qw/config githooks.error-header/, 'echo My Header');
 

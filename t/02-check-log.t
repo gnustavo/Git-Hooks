@@ -30,9 +30,9 @@ sub check_cannot_commit {
         or BAIL_OUT("check_cannot_commit: can't '$file'->append('$testname')\n");
     $repo->run(add => $file);
     if ($regex) {
-	test_nok_match($testname, $regex, $repo, 'commit', '-F', $msgfile);
+        test_nok_match($testname, $regex, $repo, 'commit', '-F', $msgfile);
     } else {
-	test_nok($testname, $repo, 'commit', '-F', $msgfile);
+        test_nok($testname, $repo, 'commit', '-F', $msgfile);
     }
 }
 
@@ -40,14 +40,14 @@ sub check_can_push {
     my ($testname, $ref) = @_;
     new_commit($repo, $file, $testname);
     test_ok($testname, $repo,
-	    'push', $clone->git_dir(), $ref || 'master');
+            'push', $clone->git_dir(), $ref || 'master');
 }
 
 sub check_cannot_push {
     my ($testname, $regex, $ref) = @_;
     new_commit($repo, $file, $testname);
     test_nok_match($testname, $regex, $repo,
-		   'push', $clone->git_dir(), $ref || 'master');
+                   'push', $clone->git_dir(), $ref || 'master');
 }
 
 

@@ -14,15 +14,15 @@ use Git::Repository 'GitHooks';
 use Test::More;
 
 our @EXPORT_OK = qw/
-	install_hooks
-	new_commit
-	newdir
-	new_repos
-	test_command
-	test_nok
-	test_nok_match
-	test_ok
-	test_ok_match
+        install_hooks
+        new_commit
+        newdir
+        new_repos
+        test_command
+        test_nok
+        test_nok_match
+        test_ok
+        test_ok_match
 /;
 
 our %EXPORT_TAGS = (

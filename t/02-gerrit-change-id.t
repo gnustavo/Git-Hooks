@@ -44,7 +44,7 @@ sub cannot_commit {
     $msgfile->spew($msg)
         or BAIL_OUT("cannot_commit: can't '$msgfile'->spew('$msg')\n");
     unless (test_nok($testname, $repo, 'commit', '-F', $msgfile)) {
-	diag_last_log();
+        diag_last_log();
     }
 }
 
@@ -81,14 +81,14 @@ foreach my $test (
     [ patch     => "\n# on branch master\ndiff --git a/src b/src\nnew file mode 100644\nindex 0000000..c78b7f0\n" ],
 ) {
     if (can_commit("comment: $test->[0]", $test->[1])) {
-	if (last_log() !~ /Change-Id:/i) {
-	    pass("comment: $test->[0] (msg ok)");
-	} else {
-	    fail("comment: $test->[0] (msg ok)");
-	    diag_last_log();
-	}
+        if (last_log() !~ /Change-Id:/i) {
+            pass("comment: $test->[0] (msg ok)");
+        } else {
+            fail("comment: $test->[0] (msg ok)");
+            diag_last_log();
+        }
     } else {
-	fail("comment: $test->[0] (msg fail)");
+        fail("comment: $test->[0] (msg fail)");
     }
 }
 
@@ -102,14 +102,14 @@ foreach my $test (
 ) {
     my ($testname, $message) = @$test;
     if (can_commit("preset: $testname", $message)) {
-	if (last_log() eq $message) {
-	    pass("preset: $testname (msg ok)");
-	} else {
-	    fail("preset: $testname (msg ok)");
-	    diag_last_log();
-	}
+        if (last_log() eq $message) {
+            pass("preset: $testname (msg ok)");
+        } else {
+            fail("preset: $testname (msg ok)");
+            diag_last_log();
+        }
     } else {
-	fail("preset: $testname (msg fail)");
+        fail("preset: $testname (msg fail)");
     }
 }
 
@@ -141,10 +141,10 @@ sub compare {
     $expected =~ s/\bI[0-9a-f]{40}\b/I0000000000000000000000000000000000000000/;
     $produced =~ s/\bI[0-9a-f]{40}\b/I0000000000000000000000000000000000000000/;
     if ($produced eq $expected) {
-	pass($testname);
+        pass($testname);
     } else {
-	fail($testname);
-	diag("Expected=<<<$expected>>>\nProduced=<<<$produced>>>");
+        fail($testname);
+        diag("Expected=<<<$expected>>>\nProduced=<<<$produced>>>");
     }
 }
 
@@ -213,150 +213,150 @@ MSG="$1"
 # Check for, and add if missing, a unique Change-Id
 #
 add_ChangeId() {
-	clean_message=`sed -e '
-		/^diff --git a\/.*/{
-			s///
-			q
-		}
-		/^Signed-off-by:/d
-		/^#/d
-	' "$MSG" | git stripspace`
-	if test -z "$clean_message"
-	then
-		return
-	fi
+        clean_message=`sed -e '
+                /^diff --git a\/.*/{
+                        s///
+                        q
+                }
+                /^Signed-off-by:/d
+                /^#/d
+        ' "$MSG" | git stripspace`
+        if test -z "$clean_message"
+        then
+                return
+        fi
 
-	# Does Change-Id: already exist? if so, exit (no change).
-	if grep -i '^Change-Id:' "$MSG" >/dev/null
-	then
-		return
-	fi
+        # Does Change-Id: already exist? if so, exit (no change).
+        if grep -i '^Change-Id:' "$MSG" >/dev/null
+        then
+                return
+        fi
 
-	id=`_gen_ChangeId`
-	T="$MSG.tmp.$$"
-	AWK=awk
-	if [ -x /usr/xpg4/bin/awk ]; then
-		# Solaris AWK is just too broken
-		AWK=/usr/xpg4/bin/awk
-	fi
+        id=`_gen_ChangeId`
+        T="$MSG.tmp.$$"
+        AWK=awk
+        if [ -x /usr/xpg4/bin/awk ]; then
+                # Solaris AWK is just too broken
+                AWK=/usr/xpg4/bin/awk
+        fi
 
-	# How this works:
-	# - parse the commit message as (textLine+ blankLine*)*
-	# - assume textLine+ to be a footer until proven otherwise
-	# - exception: the first block is not footer (as it is the title)
-	# - read textLine+ into a variable
-	# - then count blankLines
-	# - once the next textLine appears, print textLine+ blankLine* as these
-	#   aren't footer
-	# - in END, the last textLine+ block is available for footer parsing
-	$AWK '
-	BEGIN {
-		# while we start with the assumption that textLine+
-		# is a footer, the first block is not.
-		isFooter = 0
-		footerComment = 0
-		blankLines = 0
-	}
+        # How this works:
+        # - parse the commit message as (textLine+ blankLine*)*
+        # - assume textLine+ to be a footer until proven otherwise
+        # - exception: the first block is not footer (as it is the title)
+        # - read textLine+ into a variable
+        # - then count blankLines
+        # - once the next textLine appears, print textLine+ blankLine* as these
+        #   aren't footer
+        # - in END, the last textLine+ block is available for footer parsing
+        $AWK '
+        BEGIN {
+                # while we start with the assumption that textLine+
+                # is a footer, the first block is not.
+                isFooter = 0
+                footerComment = 0
+                blankLines = 0
+        }
 
-	# Skip lines starting with "#" without any spaces before it.
-	/^#/ { next }
+        # Skip lines starting with "#" without any spaces before it.
+        /^#/ { next }
 
-	# Skip the line starting with the diff command and everything after it,
-	# up to the end of the file, assuming it is only patch data.
-	# If more than one line before the diff was empty, strip all but one.
-	/^diff --git a/ {
-		blankLines = 0
-		while (getline) { }
-		next
-	}
+        # Skip the line starting with the diff command and everything after it,
+        # up to the end of the file, assuming it is only patch data.
+        # If more than one line before the diff was empty, strip all but one.
+        /^diff --git a/ {
+                blankLines = 0
+                while (getline) { }
+                next
+        }
 
-	# Count blank lines outside footer comments
-	/^$/ && (footerComment == 0) {
-		blankLines++
-		next
-	}
+        # Count blank lines outside footer comments
+        /^$/ && (footerComment == 0) {
+                blankLines++
+                next
+        }
 
-	# Catch footer comment
-	/^\[[a-zA-Z0-9-]+:/ && (isFooter == 1) {
-		footerComment = 1
-	}
+        # Catch footer comment
+        /^\[[a-zA-Z0-9-]+:/ && (isFooter == 1) {
+                footerComment = 1
+        }
 
-	/]$/ && (footerComment == 1) {
-		footerComment = 2
-	}
+        /]$/ && (footerComment == 1) {
+                footerComment = 2
+        }
 
-	# We have a non-blank line after blank lines. Handle this.
-	(blankLines > 0) {
-		print lines
-		for (i = 0; i < blankLines; i++) {
-			print ""
-		}
+        # We have a non-blank line after blank lines. Handle this.
+        (blankLines > 0) {
+                print lines
+                for (i = 0; i < blankLines; i++) {
+                        print ""
+                }
 
-		lines = ""
-		blankLines = 0
-		isFooter = 1
-		footerComment = 0
-	}
+                lines = ""
+                blankLines = 0
+                isFooter = 1
+                footerComment = 0
+        }
 
-	# Detect that the current block is not the footer
-	(footerComment == 0) && (!/^\[?[a-zA-Z0-9-]+:/ || /^[a-zA-Z0-9-]+:\/\//) {
-		isFooter = 0
-	}
+        # Detect that the current block is not the footer
+        (footerComment == 0) && (!/^\[?[a-zA-Z0-9-]+:/ || /^[a-zA-Z0-9-]+:\/\//) {
+                isFooter = 0
+        }
 
-	{
-		# We need this information about the current last comment line
-		if (footerComment == 2) {
-			footerComment = 0
-		}
-		if (lines != "") {
-			lines = lines "\n";
-		}
-		lines = lines $0
-	}
+        {
+                # We need this information about the current last comment line
+                if (footerComment == 2) {
+                        footerComment = 0
+                }
+                if (lines != "") {
+                        lines = lines "\n";
+                }
+                lines = lines $0
+        }
 
-	# Footer handling:
-	# If the last block is considered a footer, splice in the Change-Id at the
-	# right place.
-	# Look for the right place to inject Change-Id by considering
-	# CHANGE_ID_AFTER. Keys listed in it (case insensitive) come first,
-	# then Change-Id, then everything else (eg. Signed-off-by:).
-	#
-	# Otherwise just print the last block, a new line and the Change-Id as a
-	# block of its own.
-	END {
-		unprinted = 1
-		if (isFooter == 0) {
-			print lines "\n"
-			lines = ""
-		}
-		changeIdAfter = "^(" tolower("'"$CHANGE_ID_AFTER"'") "):"
-		numlines = split(lines, footer, "\n")
-		for (line = 1; line <= numlines; line++) {
-			if (unprinted && match(tolower(footer[line]), changeIdAfter) != 1) {
-				unprinted = 0
-				print "Change-Id: I'"$id"'"
-			}
-			print footer[line]
-		}
-		if (unprinted) {
-			print "Change-Id: I'"$id"'"
-		}
-	}' "$MSG" > $T && mv $T "$MSG" || rm -f $T
+        # Footer handling:
+        # If the last block is considered a footer, splice in the Change-Id at the
+        # right place.
+        # Look for the right place to inject Change-Id by considering
+        # CHANGE_ID_AFTER. Keys listed in it (case insensitive) come first,
+        # then Change-Id, then everything else (eg. Signed-off-by:).
+        #
+        # Otherwise just print the last block, a new line and the Change-Id as a
+        # block of its own.
+        END {
+                unprinted = 1
+                if (isFooter == 0) {
+                        print lines "\n"
+                        lines = ""
+                }
+                changeIdAfter = "^(" tolower("'"$CHANGE_ID_AFTER"'") "):"
+                numlines = split(lines, footer, "\n")
+                for (line = 1; line <= numlines; line++) {
+                        if (unprinted && match(tolower(footer[line]), changeIdAfter) != 1) {
+                                unprinted = 0
+                                print "Change-Id: I'"$id"'"
+                        }
+                        print footer[line]
+                }
+                if (unprinted) {
+                        print "Change-Id: I'"$id"'"
+                }
+        }' "$MSG" > $T && mv $T "$MSG" || rm -f $T
 }
 _gen_ChangeIdInput() {
-	echo "tree `git write-tree`"
-	if parent=`git rev-parse "HEAD^0" 2>/dev/null`
-	then
-		echo "parent $parent"
-	fi
-	echo "author `git var GIT_AUTHOR_IDENT`"
-	echo "committer `git var GIT_COMMITTER_IDENT`"
-	echo
-	printf '%s' "$clean_message"
+        echo "tree `git write-tree`"
+        if parent=`git rev-parse "HEAD^0" 2>/dev/null`
+        then
+                echo "parent $parent"
+        fi
+        echo "author `git var GIT_AUTHOR_IDENT`"
+        echo "committer `git var GIT_COMMITTER_IDENT`"
+        echo
+        printf '%s' "$clean_message"
 }
 _gen_ChangeId() {
-	_gen_ChangeIdInput |
-	git hash-object -t commit --stdin
+        _gen_ChangeIdInput |
+        git hash-object -t commit --stdin
 }
 
 

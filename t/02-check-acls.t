@@ -16,21 +16,21 @@ sub check_can_push {
     my ($testname, $ref) = @_;
     new_commit($repo, $file);
     test_ok($testname, $repo,
-	    'push', '--tags', $clone->git_dir(), $ref || 'master');
+            'push', '--tags', $clone->git_dir(), $ref || 'master');
 }
 
 sub check_cannot_push {
     my ($testname, $ref, $error) = @_;
     new_commit($repo, $file);
     test_nok_match($testname, $error || qr/\) cannot \S+ this reference/, $repo,
-		   'push', '--tags', $clone->git_dir(), $ref || 'master');
+                   'push', '--tags', $clone->git_dir(), $ref || 'master');
 }
 
 # Enable plugin
 $clone->run(qw/config githooks.plugin CheckAcls/);
 
 # Without any specific configuration all pushes are denied
-$ENV{USER} //= 'someone';	# guarantee that the user is known, at least.
+$ENV{USER} //= 'someone';       # guarantee that the user is known, at least.
 check_cannot_push('deny by default');
 
 # Check if disabling by ENV is working

@@ -64,7 +64,7 @@ sub check_cannot_commit {
     my ($testname, $regex, $file, $action, $data) = @_;
     my $filename = modify_file($testname, $file, $action, $data);
     my $exit = $regex
-	? test_nok_match($testname, $regex, $repo, 'commit', '-m', $testname)
+        ? test_nok_match($testname, $regex, $repo, 'commit', '-m', $testname)
         : test_nok($testname, $repo, 'commit', '-m', $testname);
     $repo->run(qw/reset --hard/);
     return $exit;
