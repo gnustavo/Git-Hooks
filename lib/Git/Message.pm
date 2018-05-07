@@ -1,8 +1,9 @@
+use strict;
+use warnings;
+
 package Git::Message;
 # ABSTRACT: A Git commit message
 
-use strict;
-use warnings;
 use Carp;
 
 sub new {

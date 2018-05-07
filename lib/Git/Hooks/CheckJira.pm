@@ -1,12 +1,11 @@
-#!/usr/bin/env perl
+use strict;
+use warnings;
 
 package Git::Hooks::CheckJira;
 # ABSTRACT: Git::Hooks plugin which requires citation of JIRA issues in commit messages
 
 use 5.010;
 use utf8;
-use strict;
-use warnings;
 use Git::Hooks;
 use Git::Repository::Log;
 use Path::Tiny;
@@ -66,7 +65,7 @@ sub _jira {
     # Connect to JIRA if not yet connected
     unless (exists $cache->{jira}) {
         unless (eval { require JIRA::REST; }) {
-            $git->fault(<<EOS, {details => $@});
+            $git->fault(<<"EOS", {details => $@});
 I could not load the JIRA::REST Perl module.
 
 I need it to talk to your JIRA server, as configured by the
@@ -81,7 +80,7 @@ EOS
         my %jira;
         for my $option (qw/jiraurl jirauser jirapass/) {
             $jira{$option} = $git->get_config($CFG => $option)
-                or $git->fault(<<EOS, {option => $option})
+                or $git->fault(<<'EOS', {option => $option})
 The option is missing from the configuration.
 It's required in order to connect to the JIRA server.
 EOS
@@ -91,7 +90,7 @@ EOS
 
         my $jira = eval { JIRA::REST->new($jira{jiraurl}, $jira{jirauser}, $jira{jirapass}) };
         length $@
-            and $git->fault(<<EOS, {details => $@})
+            and $git->fault(<<"EOS", {details => $@})
 Cannot connect to the JIRA server at '$jira{jiraurl}' as '$jira{jirauser}.
 
 Please, check your $CFG.jiraurl, $CFG.jirauser,
@@ -179,7 +178,7 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
 
     unless (@keys) {
         if ($git->get_config_boolean($CFG => 'require')) {
-            $git->fault(<<EOS, {commit => $commit});
+            $git->fault(<<'EOS', {commit => $commit});
 The commit must cite a JIRA in its message.
 
 Please, amend your commit to insert a JIRA key.
@@ -239,7 +238,7 @@ EOS
             # Some issue keys were cited but not found in JIRA
             ++$errors;
             local $, = ' ';
-            $git->fault(<<EOS, {commit => $commit});
+            $git->fault(<<"EOS", {commit => $commit});
 The commit cites the following invalid issues:
 
   @issues_not_found
@@ -283,7 +282,7 @@ EOS
       ISSUE:
         while (my ($key, $issue) = each %issues) {
             if ($unresolved && defined $issue->{fields}{resolution}) {
-                $git->fault(<<EOS, {commit => $commit, option => 'unresolved'});
+                $git->fault(<<"EOS", {commit => $commit, option => 'unresolved'});
 The commit cites issue $key which is already resolved.
 
 The option in your configuration requires that all JIRA issues be unresolved.
@@ -301,7 +300,7 @@ EOS
                         next VERSION if $fixversion->{name} eq $version;
                     }
                 }
-                $git->fault(<<EOS, {commit => $commit, option => 'fixversion'});
+                $git->fault(<<"EOS", {commit => $commit, option => 'fixversion'});
 The commit cites issue $key which is invalid.
 
 Commits on '$ref' must cite issues associated with a fixVersion matching
@@ -313,7 +312,7 @@ EOS
 
             if ($by_assignee) {
                 my $user = $git->authenticated_user()
-                    or $git->fault(<<EOS)
+                    or $git->fault(<<'EOS')
 Internal error: I cannot get your username to authorize you.
 Please check your Git::Hooks configuration with regards to the function
 https://metacpan.org/pod/Git::Repository::Plugin::GitHooks#authenticated_user
@@ -324,7 +323,7 @@ EOS
                 if (my $assignee = $issue->{fields}{assignee}) {
                     my $name = $assignee->{name};
                     $user eq $name
-                        or $git->fault(<<EOS, {commit => $commit, option => 'by-assignee'})
+                        or $git->fault(<<"EOS", {commit => $commit, option => 'by-assignee'})
 The commit cites issue $key which is assigned to '$name'.
 The option requires that cited issues be assigned to you ($user).
 Please, update your issue.
@@ -332,7 +331,7 @@ EOS
                         and ++$errors
                         and next KEY;
                 } else {
-                    $git->fault(<<EOS, {commit => $commit, option => 'by-assignee'});
+                    $git->fault(<<"EOS", {commit => $commit, option => 'by-assignee'});
 The commit cites issue $key which is unassigned.
 The option requires that cited issues be assigned to you ($user).
 Please, update your issue.
@@ -494,7 +493,7 @@ sub notify_commit_msg {
     my $show = $git->run(show => '--stat', $commit->commit);
 
     my %comment = (
-        body => <<EOS,
+        body => <<"EOS",
 [$PKG] commit refers to this issue:
 
 {noformat}
@@ -552,7 +551,7 @@ sub notify_affected_refs {
             value => $2,
         };
     } elsif ($comment ne 'all') {
-        $git->fault(<<EOS, {option => $comment});
+        $git->fault(<<"EOS", {option => $comment});
 Configuration error.
 
 The option is defined as '$comment', but
@@ -574,17 +573,16 @@ EOS
     return $errors == 0;
 }
 
-INIT: {
-    # Install hooks
-    APPLYPATCH_MSG   \&check_message_file;
-    COMMIT_MSG       \&check_message_file;
-    UPDATE           \&check_affected_refs;
-    PRE_RECEIVE      \&check_affected_refs;
-    REF_UPDATE       \&check_affected_refs;
-    POST_RECEIVE     \&notify_affected_refs;
-    PATCHSET_CREATED \&check_patchset;
-    DRAFT_PUBLISHED  \&check_patchset;
-}
+# Install hooks
+APPLYPATCH_MSG   \&check_message_file;
+COMMIT_MSG       \&check_message_file;
+UPDATE           \&check_affected_refs;
+PRE_RECEIVE      \&check_affected_refs;
+REF_UPDATE       \&check_affected_refs;
+POST_RECEIVE     \&notify_affected_refs;
+PATCHSET_CREATED \&check_patchset;
+DRAFT_PUBLISHED  \&check_patchset;
+
 1;
 
 

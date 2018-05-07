@@ -1,13 +1,15 @@
+use strict;
+use warnings;
+
 package Git::Repository::Plugin::GitHooks;
 # ABSTRACT: A Git::Repository plugin with some goodies for hook developers
 
 use parent qw/Git::Repository::Plugin/;
 
 use 5.010;
-use strict;
-use warnings;
 use Carp;
 use Path::Tiny;
+use IO::Interactive 'is_interactive';
 
 sub _keywords {                 ## no critic (ProhibitUnusedPrivateSubroutines)
 
@@ -570,14 +572,14 @@ sub get_config {
             while ($config =~ /([^\cJ]+)(\cJ[^\c@]*|)\c@/sg) {
                 my ($option, $value) = ($1, $2);
                 if ($option =~ /(.+)\.(.+)/) {
-                    my ($section, $key) = (lc $1, lc $2);
+                    my ($osection, $okey) = (lc $1, lc $2);
                     if ($value =~ s/^\cJ//) {
-                        push @{$config{$section}{$key}}, $value;
+                        push @{$config{$osection}{$okey}}, $value;
                     } else {
                         # An option without a value is considered a boolean
                         # true. We mark it explicitly so instead of leaving it
                         # undefined because Perl would consider it false.
-                        push @{$config{$section}{$key}}, 'true';
+                        push @{$config{$osection}{$okey}}, 'true';
                     }
                 } else {
                     croak __PACKAGE__, ": Cannot grok config variable name '$option'.\n";
@@ -676,7 +678,8 @@ sub error {
 
 # DEPRECATED: use get_faults instead!
 sub get_errors {
-    return get_faults(@_);
+    my @args = @_;
+    return get_faults(@args);
 }
 
 sub _githooks_colors {
@@ -693,7 +696,7 @@ sub _githooks_colors {
         # Git::Repository's constructor deletes it by default. (Se discussion in
         # https://rt.cpan.org/Ticket/Display.html?id=124711.)
 
-        my $stdout_is_tty = -t STDOUT ? 'true' : 'false';
+        my $stdout_is_tty = is_interactive() ? 'true' : 'false';
         my $githooks_color = $git->run(qw/config --get-colorbool githooks.color/, $stdout_is_tty,
                                        {env => {TERM => $ENV{TERM}}});
         if ($githooks_color eq 'true') {
@@ -777,7 +780,7 @@ sub get_faults {
 
     if ($git->{_plugin_githooks}{hookname} =~ /^commit-msg|pre-commit$/
             && ! $git->get_config_boolean(githooks => 'abort-commit')) {
-        $faults .= <<EOS;
+        $faults .= <<'EOS';
 
 ATTENTION: To fix the problems in this commit, please consider amending it:
 
@@ -1115,7 +1118,7 @@ sub filter_name_status_in_commit {
                 ++$parents;
                 $expect = 'sha1 or action';
             } else {
-                die;
+                croak;
             }
         } elsif ($expect eq 'sha1 or action') {
             if ($output[0] =~ /^[0-9a-f]{40}$/) {
@@ -1125,13 +1128,13 @@ sub filter_name_status_in_commit {
                 $action = shift @output;
                 $expect = 'file';
             } else {
-                die;
+                croak;
             }
         } elsif ($expect eq 'file') {
             $actions{shift @output}{$sha1} = $action;
             $expect = 'sha1 or action';
         } else {
-            die;
+            croak;
         }
     }
 
@@ -1155,21 +1158,21 @@ sub filter_name_status_in_commit {
 }
 
 sub filter_files_in_index {
-    my $git = shift;
-
-    return sort keys %{$git->filter_name_status_in_index(@_)};
+    my ($git, $filter) = @_;
+    my @files = sort keys %{$git->filter_name_status_in_index($filter)};
+    return @files;
 }
 
 sub filter_files_in_range {
-    my $git = shift;
-
-    return sort keys %{$git->filter_name_status_in_range(@_)};
+    my ($git, @args) = @_;
+    my @files = sort keys %{$git->filter_name_status_in_range(@args)};
+    return @files;
 }
 
 sub filter_files_in_commit {
-    my $git = shift;
-
-    return sort keys %{$git->filter_name_status_in_commit(@_)};
+    my ($git, $commit) = @_;
+    my @files = sort keys %{$git->filter_name_status_in_commit($commit)};
+    return @files;
 }
 
 sub authenticated_user {
@@ -1310,28 +1313,28 @@ sub file_mode {
             if (my ($src_mode, $dst_mode, $rest) = $diff_index[0] =~ /^:(\d+) (\d+) (.*)/) {
                 return oct $dst_mode;
             } else {
-                die "Internal error: cannot parse output of git-diff-idex:\n\n  $diff_index[0]";
+                croak "Internal error: cannot parse output of git-diff-idex:\n\n  $diff_index[0]";
             }
         } else {
-            die "Internal error: git-diff-index should return a single line";
+            croak "Internal error: git-diff-index should return a single line";
         }
     } else {
         my $path = path($file);
         my @ls_tree = $git->run('ls-tree', "$rev:" . $path->dirname, $path->basename);
 
         if (@ls_tree == 1) {
-            if (my ($mode, $type, $object, $file) =
+            if (my ($mode, $type, $object, $filename) =
                     $ls_tree[0] =~ /^(\d+) ([a-z]+) ([a-z0-9]{40})\t(.+)/) {
                 return oct $mode;
             } else {
-                die "Internal error: cannot parse output of git-ls-tree:\n\n  $ls_tree[0]";
+                croak "Internal error: cannot parse output of git-ls-tree:\n\n  $ls_tree[0]";
             }
         } else {
-            die "Internal error: $rev:$file should be a blob";
+            croak "Internal error: $rev:$file should be a blob";
         }
     }
 
-    die "Can't happen!";
+    croak "Can't happen!";
 }
 
 ## DEPRECATED
@@ -1496,7 +1499,7 @@ sub grok_acls {
             # Pre-compile regex
             $acl{spec} = substr($spec, 0, 1) eq '^' ? qr/$spec/ : $spec;
         } else {
-            die "invalid acl syntax for actions '$actions': $_\n";
+            croak "invalid acl syntax for actions '$actions': $_\n";
         }
 
         if (substr($_, $+[0]) =~ /^\s*by\s+(\S+)\s*$/) {
@@ -1504,7 +1507,7 @@ sub grok_acls {
             # Discard this ACL if it doesn't match the user
             next ACL unless $git->match_user($acl{who});
         } elsif (substr($_, $+[0]) !~ /^\s*$/) {
-            die "invalid acl syntax for actions '$actions: $_\n";
+            croak "invalid acl syntax for actions '$actions: $_\n";
         }
 
         unshift @acls, \%acl;

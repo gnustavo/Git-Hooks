@@ -1,12 +1,11 @@
-#!/usr/bin/env perl
+use strict;
+use warnings;
 
 package Git::Hooks::CheckWhitespace;
 # ABSTRACT: Git::Hooks plugin for checking whitespace errors
 
 use 5.010;
 use utf8;
-use strict;
-use warnings;
 use Git::Hooks;
 
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
@@ -59,7 +58,7 @@ sub check_affected_refs {
             $old_commit eq $git->undef_commit ? $git->empty_tree : $old_commit,
             $new_commit);
         if ($? != 0) {
-            $git->fault(<<EOS, {ref => $ref, details => $output});
+            $git->fault(<<'EOS', {ref => $ref, details => $output});
 There are extra whitespaces in the changed files in the reference.
 Please, remove them and amend your commit.
 EOS
@@ -83,7 +82,7 @@ sub check_commit {
     if ($? == 0) {
         return 1;
     } else {
-        $git->fault(<<EOS, {details => $output});
+        $git->fault(<<'EOS', {details => $output});
 There are extra whitespaces in the changed files.
 Please, remove them and amend your commit.
 EOS
@@ -111,7 +110,7 @@ sub check_patchset {
     if ($? == 0) {
         return 1;
     } else {
-        $git->fault(<<EOS, {commit => $opts->{'--commit'}, details => $output});
+        $git->fault(<<'EOS', {commit => $opts->{'--commit'}, details => $output});
 There are extra whitespaces in the changed files.
 Please, remove them and amend your commit.
 EOS
@@ -119,16 +118,14 @@ EOS
     };
 }
 
-INIT: {
-    # Install hooks
-    PRE_APPLYPATCH   \&check_commit;
-    PRE_COMMIT       \&check_commit;
-    UPDATE           \&check_affected_refs;
-    PRE_RECEIVE      \&check_affected_refs;
-    REF_UPDATE       \&check_affected_refs;
-    PATCHSET_CREATED \&check_patchset;
-    DRAFT_PUBLISHED  \&check_patchset;
-}
+# Install hooks
+PRE_APPLYPATCH   \&check_commit;
+PRE_COMMIT       \&check_commit;
+UPDATE           \&check_affected_refs;
+PRE_RECEIVE      \&check_affected_refs;
+REF_UPDATE       \&check_affected_refs;
+PATCHSET_CREATED \&check_patchset;
+DRAFT_PUBLISHED  \&check_patchset;
 
 1;
 

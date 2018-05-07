@@ -1,12 +1,12 @@
-#!/usr/bin/env perl
+use strict;
+use warnings;
 
 package Git::Hooks::GerritChangeId;
 # ABSTRACT: Git::Hooks plugin to insert a Change-Id in a commit message
 
 use 5.010;
 use utf8;
-use strict;
-use warnings;
+use Carp;
 use Git::Hooks;
 use Git::Message;
 use Path::Tiny;
@@ -21,7 +21,7 @@ sub gen_change_id {
     my $filename = Path::Tiny->tempfile(UNLINK => 1);
     open my $fh, '>', $filename ## no critic (RequireBriefOpen)
         or $git->fault("Internal error: can't open '$filename' for writing:", {details => $!})
-        and die;
+        and croak;
 
     foreach my $info (
         [ tree      => [qw/write-tree/] ],
@@ -29,8 +29,11 @@ sub gen_change_id {
         [ author    => [qw/var GIT_AUTHOR_IDENT/] ],
         [ committer => [qw/var GIT_COMMITTER_IDENT/] ],
     ) {
-        # It's OK if we can't find info.
-        eval { $fh->print($info->[0], ' ', scalar($git->run(@{$info->[1]}))) };
+        my $value = eval { $git->run(@{$info->[1]}) };
+        if (defined $value) {
+            # It's OK if we can't find value.
+            $fh->print("$info->[0] $value");
+        }
     }
 
     $fh->print("\n", $msg);
@@ -80,11 +83,9 @@ sub rewrite_message {
     return 1;
 }
 
-INIT: {
-    # Install hooks
-    APPLYPATCH_MSG \&rewrite_message;
-    COMMIT_MSG     \&rewrite_message;
-}
+# Install hooks
+APPLYPATCH_MSG \&rewrite_message;
+COMMIT_MSG     \&rewrite_message;
 
 1;
 

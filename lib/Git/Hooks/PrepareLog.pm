@@ -1,12 +1,11 @@
-#!/usr/bin/env perl
+use strict;
+use warnings;
 
 package Git::Hooks::PrepareLog;
 # ABSTRACT: Git::Hooks plugin to prepare commit messages before being edited
 
 use 5.010;
 use utf8;
-use strict;
-use warnings;
 use Git::Hooks;
 use Path::Tiny;
 
@@ -57,7 +56,7 @@ sub insert_issue_as_trailer {
         $key = ucfirst lc $key;
         $git->run(qw/interpret-trailers --in-place --trailer/, "$key:$issue", $msg_file);
     } else {
-        $git->fault(<<EOS, {option => 'issue-place'});
+        $git->fault(<<'EOS', {option => 'issue-place'});
 The option 'trailer' setting requires Git 2.8.0 or newer.
 Please, either upgrade your Git or disable this option.
 EOS
@@ -75,7 +74,7 @@ sub insert_issue {
 
     my $branch_rx = eval { qr:(?p)\brefs/heads/\K$issue_branch_regex\b: };
     unless (defined $branch_rx) {
-        $git->fault(<<EOS, {option => 'issue-branch-regex', details => $@});
+        $git->fault(<<"EOS", {option => 'issue-branch-regex', details => $@});
 Configuration error: the option must be a valid regular expression, but
 '$issue_branch_regex' isn't.  Please, fix your configuration and try again.
 EOS
@@ -88,8 +87,14 @@ EOS
 
     # Try to grok the issue id from the current branch name. Do not continue if
     # we cannot grok it.
-    my $issue = $branch =~ $branch_rx ? $1 || ${^MATCH} : undef;
-    return 0 unless defined $issue and length $issue;
+    my $issue;
+    if ($branch =~ $branch_rx) {
+        $issue = $1 || $ {^MATCH};
+    } else {
+        return 0;
+    }
+
+    return 0 unless length $issue;
 
     my $place = $git->get_config($CFG => 'issue-place');
     if ($place =~ /^trailer\s+(?<key>[A-Za-z]+)\b/) {
@@ -97,7 +102,7 @@ EOS
     } elsif ($place =~ /^title\s+(?<format>.+?)\s*$/) {
         insert_issue_in_title($git, $msg_file, $issue, $+{format});
     } else {
-        $git->fault(<<EOS, {option => 'issue-place'});
+        $git->fault(<<"EOS", {option => 'issue-place'});
 Configuration error: invalid option value ($place)
 Please, fix it and try again.
 EOS
@@ -122,10 +127,8 @@ sub prepare_message {
     return $errors;
 }
 
-INIT: {
-    # Install hooks
-    PREPARE_COMMIT_MSG \&prepare_message;
-}
+# Install hooks
+PREPARE_COMMIT_MSG \&prepare_message;
 
 1;
 

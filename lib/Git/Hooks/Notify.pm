@@ -1,12 +1,11 @@
-#!/usr/bin/env perl
+use strict;
+use warnings;
 
 package Git::Hooks::Notify;
 # ABSTRACT: Git::Hooks plugin to notify users via email
 
 use 5.010;
 use utf8;
-use strict;
-use warnings;
 use Git::Hooks;
 use Encode qw/decode/;
 use Email::Sender::Simple;
@@ -43,7 +42,7 @@ sub pretty_log {
 
         my $message = decode($encoding, $commit->raw_message . $commit->extra);
 
-        push @log, <<EOS;
+        push @log, <<"EOS";
 
 commit $sha1$merge
 Author: $author
@@ -74,9 +73,14 @@ sub get_transport {
         $args{$arg} = $value;
     }
 
-    eval "require Email::Sender::Transport::$transport";
+    my $transport_module = "Email::Sender::Transport::$transport";
 
-    return "Email::Sender::Transport::$transport"->new(\%args);
+    if (eval "require $transport_module") { ## no critic (ProhibitStringyEval)
+        return "$transport_module"->new(\%args);
+    } else {
+        return;
+    }
+
 }
 
 sub sha1_link {
@@ -132,7 +136,7 @@ sub notify {
 
     $body .= "\n" if length $body;
 
-    $body .= <<EOS;
+    $body .= <<"EOS";
 REPOSITORY: $repository_name
 BRANCH: $branch
 PUSHED BY: $pusher
@@ -170,7 +174,7 @@ EOS
             $2 .
             '&nbsp;' x (8 - length($2))]egm;
 
-        $body = <<EOS;
+        $body = <<"EOS";
 <html>
 <body style="font-family: monospace">
 $html
@@ -241,14 +245,16 @@ sub notify_affected_refs {
 
             my $message = pretty_log($git, \@commits);
 
-            eval { notify($git, $ref, $old_commit, $new_commit, $rule, $message) };
-            if (my $error = $@) {
-                $git->fault(
-                    sprintf('I could not send mail to the following recipients: %s\n',
-                            join(", ", $error->recipients)),
-                    {ref => $ref, details => $error->message}
-                );
-                ++$errors;
+            my $success = eval { notify($git, $ref, $old_commit, $new_commit, $rule, $message) };
+            unless (defined $success) {
+                if (my $error = $@) {
+                    $git->fault(
+                        sprintf('I could not send mail to the following recipients: %s\n',
+                                join(", ", $error->recipients)),
+                        {ref => $ref, details => $error->message}
+                    );
+                    ++$errors;
+                };
             };
         }
     }
@@ -256,10 +262,8 @@ sub notify_affected_refs {
     return $errors == 0;
 }
 
-INIT: {
-    # Install hooks
-    POST_RECEIVE \&notify_affected_refs;
-}
+# Install hooks
+POST_RECEIVE \&notify_affected_refs;
 
 1;
 

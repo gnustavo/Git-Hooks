@@ -1,12 +1,11 @@
-#!/usr/bin/env perl
+use strict;
+use warnings;
 
 package Git::Hooks::CheckLog;
 # ABSTRACT: Git::Hooks plugin to enforce commit log policies
 
 use 5.010;
 use utf8;
-use strict;
-use warnings;
 use Git::Hooks;
 use Git::Message;
 use List::MoreUtils qw/uniq/;
@@ -47,7 +46,7 @@ sub _spell_checker {
 
     unless (state $tried_to_check) {
         unless (eval { require Text::SpellChecker; }) {
-            $git->fault(<<EOS, {option => 'spelling', details => $@});
+            $git->fault(<<'EOS', {option => 'spelling', details => $@});
 I could not load the Text::SpellChecker Perl module.
 
 I need it to spell check your commit's messages as requested by this
@@ -68,7 +67,7 @@ EOS
         my $checker = Text::SpellChecker->new(text => 'a', %extra_options);
 
         unless (defined eval { $checker->next_word(); }) {
-            $git->fault(<<EOS, {option => 'spelling', details => $@});
+            $git->fault(<<'EOS', {option => 'spelling', details => $@});
 There was an error while I tried to spell check your commits using the
 Text::SpellChecker module. If you cannot fix it consider disabling this
 your configuration option.
@@ -148,7 +147,7 @@ sub revert_errors {
         if ($msg =~ /This reverts commit ([0-9a-f]{40})/s) {
             my $reverted_commit = $git->get_commit($1);
             if ($reverted_commit->parent() > 1) {
-                $git->fault(<<EOS, {commit => $id, option => 'deny-merge-revert'});
+                $git->fault(<<'EOS', {commit => $id, option => 'deny-merge-revert'});
 This commit reverts a merge commit, which is not allowed
 by your configuration option.
 EOS
@@ -165,7 +164,7 @@ sub title_errors {
 
     unless (defined $title and length $title) {
         if ($git->get_config_boolean($CFG => 'title-required')) {
-            $git->fault(<<EOS, {commit => $id, option => 'title-required'});
+            $git->fault(<<'EOS', {commit => $id, option => 'title-required'});
 This commit log message needs a title line.
 This is required by your configuration option.
 Please, amend your commit to add one.
@@ -177,7 +176,7 @@ EOS
     }
 
     ($title =~ tr/\n/\n/) == 1
-        or $git->fault(<<EOS, {commit => $id})
+        or $git->fault(<<'EOS', {commit => $id})
 This commit log message title must have just one line.
 Please amend your commit and edit its log message so that its first line
 is separated from the rest by an empty line.
@@ -189,7 +188,7 @@ EOS
     if (my $max_width = $git->get_config_integer($CFG => 'title-max-width')) {
         my $tlen = length($title) - 1; # discount the newline
         $tlen <= $max_width
-            or $git->fault(<<EOS, {commit => $id, option => 'title-max-width'})
+            or $git->fault(<<"EOS", {commit => $id, option => 'title-max-width'})
 This commit log message title is too long.
 It is $tlen characters wide but should be at most $max_width, a limit set by
 your configuration option.
@@ -201,7 +200,7 @@ EOS
     if (my $period = $git->get_config($CFG => 'title-period')) {
         if ($period eq 'deny') {
             $title !~ /\.$/
-                or $git->fault(<<EOS, {commit => $id, option => 'title-period'})
+                or $git->fault(<<'EOS', {commit => $id, option => 'title-period'})
 This commit log message title SHOULD NOT end in a period.
 This is required by your configuration option.
 Please, amend your commit to remove the period.
@@ -209,14 +208,14 @@ EOS
                     and ++$errors;
         } elsif ($period eq 'require') {
             $title =~ /\.$/
-                or $git->fault(<<EOS, {commit => $id, option => 'title-period'})
+                or $git->fault(<<'EOS', {commit => $id, option => 'title-period'})
 This commit log message title SHOULD end in a period.
 This is required by your configuration option.
 Please, amend your commit to add the period.
 EOS
                     and ++$errors;
         } elsif ($period ne 'allow') {
-            $git->fault(<<EOS, {commit => $id, option => 'title-period'})
+            $git->fault(<<"EOS", {commit => $id, option => 'title-period'})
 Configuration error: invalid value '$period' for the configuration option.
 The valid values are 'deny', 'allow', and 'require'.
 EOS
@@ -238,7 +237,7 @@ sub body_errors {
 
     if (my $max_width = $git->get_config_integer($CFG => 'body-max-width')) {
         if (my @biggies = grep {/^\S/} grep {length > $max_width} split(/\n/, $body)) {
-            $git->fault(<<EOS, {commit => $id, option => 'body-max-width', details => join("\n", @biggies)});
+            $git->fault(<<"EOS", {commit => $id, option => 'body-max-width', details => join("\n", @biggies)});
 This commit log body has lines that are too long.
 The configuration option limits body lines to $max_width characters.
 But the following lines exceed it.
@@ -268,14 +267,14 @@ sub footer_errors {
             }
         }
         if (@duplicates) {
-            $git->fault(<<EOS, {commit => $id, details => join("\n", sort @duplicates)});
+            $git->fault(<<'EOS', {commit => $id, details => join("\n", sort @duplicates)});
 This commit have duplicate Signed-off-by footers.
 Please, amend it to remove the duplicates:
 EOS
             ++$errors;
         }
     } elsif ($git->get_config_boolean($CFG => 'signed-off-by')) {
-        $git->fault(<<EOS, {commit => $id, option => 'signed-off-by'});
+        $git->fault(<<'EOS', {commit => $id, option => 'signed-off-by'});
 This commit must have a Signed-off-by footer.
 This is required by your configuration option.
 Please, amend your commit to add it.
@@ -323,7 +322,7 @@ sub check_message_file {
     my $msg = eval {$git->read_commit_msg_file($commit_msg_file)};
 
     unless (defined $msg) {
-        $git->fault(<<EOS, {details => $@});
+        $git->fault(<<"EOS", {details => $@});
 I cannot read the commit message file '$commit_msg_file'.
 EOS
         return 0;
@@ -399,16 +398,14 @@ sub check_patchset {
     return message_errors($git, $commit, $commit->message) == 0;
 }
 
-INIT: {
-    # Install hooks
-    APPLYPATCH_MSG   \&check_message_file;
-    COMMIT_MSG       \&check_message_file;
-    UPDATE           \&check_affected_refs;
-    PRE_RECEIVE      \&check_affected_refs;
-    REF_UPDATE       \&check_affected_refs;
-    PATCHSET_CREATED \&check_patchset;
-    DRAFT_PUBLISHED  \&check_patchset;
-}
+# Install hooks
+APPLYPATCH_MSG   \&check_message_file;
+COMMIT_MSG       \&check_message_file;
+UPDATE           \&check_affected_refs;
+PRE_RECEIVE      \&check_affected_refs;
+REF_UPDATE       \&check_affected_refs;
+PATCHSET_CREATED \&check_patchset;
+DRAFT_PUBLISHED  \&check_patchset;
 
 1;
 

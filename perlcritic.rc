@@ -1,0 +1,13 @@
+severity = 3
+verbose  = %f:%l:%c:%p:%m\n
+exclude  = RegularExpressions::RequireExtendedFormatting ProhibitCascadingIfElse
+
+[Subroutines::ProhibitManyArgs]
+# Increasing from the default which is 5 until we have time to fix the two
+# routines which have 6.
+max_arguments = 6
+
+[Modules::RequireExplicitPackage]
+# We have to use strict and warnings before the package statement because of the
+# interaction with the PkgVersion dzil plugin.
+allow_import_of = strict warnings

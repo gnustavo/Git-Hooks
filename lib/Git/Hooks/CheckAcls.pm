@@ -1,12 +1,11 @@
-#!/usr/bin/env perl
+use strict;
+use warnings;
 
 package Git::Hooks::CheckAcls;
 # ABSTRACT: [DEPRECATED] Git::Hooks plugin for branch/tag access control
 
 use 5.010;
 use utf8;
-use strict;
-use warnings;
 use Git::Hooks;
 
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
@@ -66,7 +65,7 @@ sub check_ref {
         next unless $git->match_user($who);
         next unless match_ref($ref, $refspec);
         if ($what =~ /[^CRUD-]/) {
-            $git->fault(<<EOS, {option => 'acl', ref => $ref});
+            $git->fault(<<"EOS", {option => 'acl', ref => $ref});
 Configuration error: It has an invalid second argument:
 
   acl = $who *$what* $refspec
@@ -88,12 +87,12 @@ EOS
     );
 
     if (my $myself = eval { $git->authenticated_user() }) {
-        $git->fault(<<EOS, {option => 'acl', ref => $ref});
+        $git->fault(<<"EOS", {option => 'acl', ref => $ref});
 Authorization error: you ($myself) cannot $op{$op} this reference.
 Please, check the your configuration options.
 EOS
     } else {
-        $git->fault(<<EOS, {details => $@});
+        $git->fault(<<'EOS', {details => $@});
 Internal error: I cannot get your username to authorize you.
 Please check your Git::Hooks configuration with regards to the function
 https://metacpan.org/pod/Git::Repository::Plugin::GitHooks#authenticated_user
@@ -117,12 +116,10 @@ sub check_affected_refs {
     return 1;
 }
 
-INIT: {
-    # Install hooks
-    UPDATE      \&check_affected_refs;
-    PRE_RECEIVE \&check_affected_refs;
-    REF_UPDATE  \&check_affected_refs;
-}
+# Install hooks
+UPDATE      \&check_affected_refs;
+PRE_RECEIVE \&check_affected_refs;
+REF_UPDATE  \&check_affected_refs;
 
 1;
 

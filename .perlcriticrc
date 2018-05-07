@@ -1,3 +1,0 @@
-severity = 3
-verbose  = 4
-exclude  = RegularExpressions::RequireExtendedFormatting
