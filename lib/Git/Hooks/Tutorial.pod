@@ -395,6 +395,40 @@ mechanism has no such notion, but you can fake it using the same L<include
 mechanism discussed above|/Distributed configuration>. But you have to do it
 manually, though.
 
+=head1 TUTORIAL FOR BITBUCKET ADMINISTRATORS
+
+L<Bitbucket Server|https://www.atlassian.com/software/bitbucket/server> is a
+proprietary Git server made by Atlassian. It doesn't support the standard Git
+hooks natively. Instead, it supports its L<own
+hooks|https://confluence.atlassian.com/bitbucketserver/using-repository-hooks-776639836.html>
+which are L<implemented in Java as
+plugins|https://confluence.atlassian.com/bitbucketserverkb/how-to-create-a-simple-hook-in-bitbucket-server-779171711.html>.
+
+The commercial plugin L<External
+Hooks|https://marketplace.atlassian.com/plugins/com.ngs.stash.externalhooks.external-hooks/server/overview>
+allows you to use standard C<pre-receive> and C<post-receive> Git hooks with
+Bitbucket.
+
+Follow the plugin installation and L<configuration
+instructions|https://github.com/reconquest/atlassian-external-hooks/wiki/Configuration>
+to enable it for particular repositories. The plugin must be configured with an
+I<executable>, which can be our usual C<githooks.pl> script.
+
+Bibucket git repositories are kept in the server but are not easy to locate,
+because they're named after a numeric ID. In order to locate the repository
+directory in the server, go to its I<repository details> page in the
+I<repository settings> section in Bitbucket's web interface. The page shows the
+repository's B<location on disk> where you find the F<config> file which you
+must edit to configure Git::Hooks plugins.
+
+B<Note> that as of April, 2018, the External Hooks plugin's latest version (4.3)
+has an L<issue|https://github.com/reconquest/atlassian-external-hooks/issues/50>
+which prevents it to work with Git 2.11 or newer. Until this problem is fixed
+you have to make Bitbucket use Git 2.10 or older. You can specify which Git to
+use by defining the
+L<plugin.bitbucket-git.path.executable|https://confluence.atlassian.com/bitbucketserver/bitbucket-server-config-properties-776640155.html?_ga=2.152176889.1949745534.1525141700-1507802342.1510178253#BitbucketServerconfigproperties-SCM-git>
+option in the Bitbucket Server config properties file.
+
 =head1 TUTORIAL FOR HOOK DEVELOPERS
 
 I'm sorry but there is no gentle introduction to this. ;-)
