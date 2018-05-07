@@ -1,16 +1,22 @@
-# PODNAME: Git::Hooks Tutorials
-# ABSTRACT: Gentle introduction on Git::Hooks
+# PODNAME: Git::Hooks Tutorial
+# ABSTRACT: Gentle introduction to Git::Hooks
 
 =pod
 
 =encoding utf8
+
+=head1 NAME
+
+Tutorial - Gentle introduction to Git::Hooks users and Git administrators
+
+=head1 INTRODUCTION
 
 This document is intended to make it easy to start using the Git::Hooks
 framework as fast as possible, with a minimum of set up. There are major
 sections for Git users, administrators, and hook developers. After setting it up
 with these instructions you're ready to go.
 
-=head1 Tutorial for Git Users
+=head1 TUTORIAL FOR GIT USERS
 
 As a Git user you may be interested in enabling some hooks for your local Git
 repositories. In particular, you may be interested in guaranteeing that the same
@@ -192,7 +198,7 @@ environment variable homonymous to the plugin (you can use the plugin module
 full name or just its last component, as in the example above) for the duration
 of the commit and the plugin will be disabled.
 
-=head1 Tutorial for Git Administrators
+=head1 TUTORIAL FOR GIT ADMINISTRATORS
 
 As the administrator of a Git server you may be interested in enabling some
 hooks for your Git repositories to enforce project policies through source code
@@ -319,7 +325,7 @@ F<.git/config> files:
 
 Using include files you can manage complex configurations more easily.
 
-=head1 Tutorial for Gerrit Adminitrators
+=head1 TUTORIAL FOR GERRIT ADMINITRATORS
 
 Gerrit is a Git server but since it uses L<JGit|http://eclipse.org/jgit/>
 instead of standard Git, it doesn't support the standard Git hooks. It supports
@@ -389,7 +395,7 @@ mechanism has no such notion, but you can fake it using the same L<include
 mechanism discussed above|/Distributed configuration>. But you have to do it
 manually, though.
 
-=head1 Tutorial for Hook Developers
+=head1 TUTORIAL FOR HOOK DEVELOPERS
 
 I'm sorry but there is no gentle introduction to this. ;-)
 
