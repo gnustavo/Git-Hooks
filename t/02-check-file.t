@@ -153,7 +153,7 @@ $repo->run(qw/config githooks.checkfile.path.allow txt/);
 
 check_can_commit('allow path', 'file.txt');
 
-$repo->run(qw/config --remove-section githooks.checkfile/);
+$repo->run(qw/config --remove-section githooks.checkfile.path/);
 
 sub filesystem_is_case_sentitive {
     # Check using the technique described in
@@ -179,12 +179,12 @@ SKIP: {
                         'File.Txt');
 
     $repo->run(qw/reset --hard/);
+
+    $repo->run(qw/config --remove-section githooks.checkfile/);
 }
 
 SKIP: {
     test_requires_git skip => 1, version_ge => '1.7.4';
-
-    $repo->run(qw/config --remove-section githooks.checkfile/);
 
     $repo->run(qw/config githooks.checkfile.deny-token FIXME/);
 
@@ -196,9 +196,9 @@ SKIP: {
                     );
 
     $repo->run(qw/reset --hard/);
-}
 
-$repo->run(qw/config --remove-section githooks.checkfile/);
+    $repo->run(qw/config --remove-section githooks.checkfile/);
+}
 
 $repo->run(qw/config githooks.checkfile.executable *.sh/);
 
