@@ -2,7 +2,17 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.9.8     2018-10-08 22:33:20-03:00 America/Sao_Paulo
+
+  [Fix]
+
+  - CheckFile: Skip case-sensitive filesystem checks on darwin OS.
+
 2.9.7     2018-10-06 17:58:22-03:00 America/Sao_Paulo
+
+  [Fix]
+
+  - CheckFile: Some tests started to fail after Git 2.18.0.
 
 2.9.6     2018-05-06 22:35:14-03:00 America/Sao_Paulo
 
