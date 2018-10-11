@@ -1399,7 +1399,7 @@ sub _grok_groups_spec {
         my ($groupname, $members) = ($1, $2);
         exists $groups->{"\@$groupname"}
             and croak __PACKAGE__, ": redefinition of group ($groupname) in '$source': $_\n";
-        foreach my $member (split / /, $members) {
+        foreach my $member (split ' ', $members) {
             if ($member =~ /^\@/) {
                 # group member
                 $groups->{"\@$groupname"}{$member} = $groups->{$member}
