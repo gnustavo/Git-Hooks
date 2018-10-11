@@ -100,7 +100,7 @@ sub check_new_files {           ## no critic (ProhibitExcessComplexity)
     # pair containing a regex and a command specification.
     my @name_checks;
     foreach my $check ($git->get_config($CFG => 'name')) {
-        my ($pattern, $command) = split / /, $check, 2;
+        my ($pattern, $command) = split ' ', $check, 2;
         if ($pattern =~ m/^qr(.)(.*)\g{1}/) {
             $pattern = qr/$2/;
         } else {

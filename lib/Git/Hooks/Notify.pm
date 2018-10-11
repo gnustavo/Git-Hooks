@@ -62,7 +62,7 @@ sub get_transport {
 
     return unless $transport;
 
-    my @args = split / /, $transport;
+    my @args = split ' ', $transport;
 
     $transport = shift @args;
 
@@ -208,8 +208,8 @@ sub grok_rules {
         my ($recipients, $paths) = split /\s*--\s*/, $rule;
 
         push @rules, {
-            recipients => [split / /, $recipients],
-            paths      => [defined $paths ? split / /, $paths : ()],
+            recipients => [split ' ', $recipients],
+            paths      => [defined $paths ? split ' ', $paths : ()],
         };
     }
 

@@ -20,7 +20,7 @@ sub grok_acls {
     foreach my $acl ($git->get_config($CFG => 'acl')) {
         # Interpolate environment variables embedded as "{VAR}".
         $acl =~ s/{(\w+)}/$ENV{$1}/ige;
-        push @acls, [split / /, $acl, 3];
+        push @acls, [split ' ', $acl, 3];
     }
 
     return @acls;
