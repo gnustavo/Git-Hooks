@@ -2,6 +2,15 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.9.9     2018-10-11 13:37:12-03:00 America/Sao_Paulo
+
+  [Fix]
+
+  - Fix several usages of the split builtin Perl function to split strings on
+    sequences of whitespace. This was detected in the Git configuration file
+    parsing, but could affect other places as well, depending on how the parsed
+    strings were formatted.
+
 2.9.8     2018-10-08 22:33:20-03:00 America/Sao_Paulo
 
   [Fix]
