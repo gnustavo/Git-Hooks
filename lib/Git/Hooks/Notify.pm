@@ -231,7 +231,7 @@ sub notify_affected_refs {
 
     my $max_count = $git->get_config_integer($CFG, 'max-count') || '10';
 
-    my @options = ('--numstat', '--first-parent', "--max-count=$max_count");
+    my @options = ('--numstat', '--first-parent', '-m', "--max-count=$max_count");
 
     my $errors = 0;
 
@@ -373,9 +373,12 @@ The C<FILTER:> line only appears if the rule specifies one or more I<pathspecs>
 to only show commits affecting matching files.
 
 Each commit shows the files it changes, perhaps filtered by the rule's
-I<pathspecs>. They're shown in the format produced by C<git-log>'s C<--numstat>
-option. Merge commits don't show changed files, though. Thery're marked with an
-additional C<Merge:> header.
+I<pathspecs>. They're shown in the format produced by the command
+
+  git log --numstat --first-parent -m
+
+Merge commits are marked with an additional C<Merge:> header and show files
+changed with regards to the first parent commit only.
 
 You can change the C<git log> format and a few other things in the message using
 the configuration options explained below.
