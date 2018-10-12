@@ -6,6 +6,7 @@ package Git::Hooks::CheckLog;
 
 use 5.010;
 use utf8;
+use Log::Any '$log';
 use Git::Hooks;
 use Git::Message;
 use List::MoreUtils qw/uniq/;
@@ -306,6 +307,8 @@ sub message_errors {
 sub check_message_file {
     my ($git, $commit_msg_file) = @_;
 
+    $log->debug(__PACKAGE__ . "::check_message_file($commit_msg_file)");
+
     _setup_config($git);
 
     my $current_branch = $git->get_current_branch();
@@ -354,6 +357,8 @@ sub check_ref {
 sub check_affected_refs {
     my ($git) = @_;
 
+    $log->debug(__PACKAGE__ . "::check_affected_refs");
+
     _setup_config($git);
 
     return 1 if $git->im_admin();
@@ -371,6 +376,8 @@ sub check_affected_refs {
 
 sub check_patchset {
     my ($git, $opts) = @_;
+
+    $log->debug(__PACKAGE__ . "::check_patchset");
 
     _setup_config($git);
 

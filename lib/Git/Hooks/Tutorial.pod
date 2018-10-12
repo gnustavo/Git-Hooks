@@ -206,10 +206,12 @@ verification or access rights.
 
 =head2 Server Driver Script
 
-The same driver script described L<above|/USER DRIVER SCRIPT> for user
-repositories can be used for server repositories:
+For server hooks, it's advisable to enable logging. So, we increment the driver
+script described L<above|/USER DRIVER SCRIPT> for user repositories with a line
+enabling log to a file:
 
     #!/usr/bin/env perl
+    use Log::Any::Adapter (File => '/var/log/githooks.log', log_level => 'info');
     use Git::Hooks;
     run_hook($0, @ARGV);
 

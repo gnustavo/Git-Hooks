@@ -7,6 +7,7 @@ package Git::Hooks::GerritChangeId;
 use 5.010;
 use utf8;
 use Carp;
+use Log::Any '$log';
 use Git::Hooks;
 use Git::Message;
 use Path::Tiny;
@@ -67,6 +68,8 @@ sub insert_change_id {
 
 sub rewrite_message {
     my ($git, $commit_msg_file) = @_;
+
+    $log->debug(__PACKAGE__ . "::rewrite_message($commit_msg_file)");
 
     my $msg = eval { $git->read_commit_msg_file($commit_msg_file) };
     unless (defined $msg) {

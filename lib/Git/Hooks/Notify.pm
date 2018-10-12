@@ -6,6 +6,7 @@ package Git::Hooks::Notify;
 
 use 5.010;
 use utf8;
+use Log::Any '$log';
 use Git::Hooks;
 use Encode qw/decode/;
 use Email::Sender::Simple;
@@ -248,6 +249,8 @@ sub grok_rules {
 # This routine can act as a post-receive hook.
 sub notify_affected_refs {
     my ($git) = @_;
+
+    $log->debug(__PACKAGE__ . "::notify_affected_refs");
 
     # We're only interested in branches
     my @refs = grep {m:^refs/heads/:} $git->get_affected_refs();

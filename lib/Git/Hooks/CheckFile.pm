@@ -7,6 +7,7 @@ package Git::Hooks::CheckFile;
 use 5.010;
 use utf8;
 use Carp;
+use Log::Any '$log';
 use Git::Hooks;
 use Text::Glob qw/glob_to_regex/;
 use Path::Tiny;
@@ -425,6 +426,8 @@ sub check_everything {
 sub check_affected_refs {
     my ($git) = @_;
 
+    $log->debug(__PACKAGE__ . "::check_affected_refs");
+
     _setup_config($git);
 
     return 1 if $git->im_admin();
@@ -453,6 +456,8 @@ sub check_affected_refs {
 sub check_commit {
     my ($git) = @_;
 
+    $log->debug(__PACKAGE__ . "::check_commit");
+
     _setup_config($git);
 
     my $current_branch = $git->get_current_branch();
@@ -472,6 +477,8 @@ sub check_commit {
 
 sub check_patchset {
     my ($git, $opts) = @_;
+
+    $log->debug(__PACKAGE__ . "::check_patchset");
 
     _setup_config($git);
 

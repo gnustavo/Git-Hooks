@@ -7,6 +7,7 @@ package Git::Hooks::CheckRewrite;
 use 5.010;
 use utf8;
 use Path::Tiny;
+use Log::Any '$log';
 use Git::Hooks;
 
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
@@ -33,6 +34,8 @@ sub _branches_containing {
 sub record_commit_parents {
     my ($git) = @_;
 
+    $log->debug(__PACKAGE__ . "::record_commit_parents");
+
     # Here we record the HEAD commit's own id and it's parent's ids in
     # a file under the git directory. The file has two lines in this
     # format:
@@ -54,6 +57,8 @@ sub record_commit_parents {
 
 sub check_commit_amend {
     my ($git) = @_;
+
+    $log->debug(__PACKAGE__ . "::check_commit_amend");
 
     my $record_file = _record_filename($git);
 
@@ -105,6 +110,8 @@ EOS
 
 sub check_rebase {
     my ($git, $upstream, $branch) = @_;
+
+    $log->debug(__PACKAGE__ . "::check_rebase", {upstream => $upstream, branch => $branch});
 
     unless (defined $branch) {
         # This means we're rebasing the current branch. We try to grok

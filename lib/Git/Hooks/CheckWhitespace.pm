@@ -6,6 +6,7 @@ package Git::Hooks::CheckWhitespace;
 
 use 5.010;
 use utf8;
+use Log::Any '$log';
 use Git::Hooks;
 
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
@@ -13,6 +14,8 @@ use Git::Hooks;
 # This routine can act both as an update or a pre-receive hook.
 sub check_affected_refs {
     my ($git) = @_;
+
+    $log->debug(__PACKAGE__ . "::check_affected_refs");
 
     return 1 if $git->im_admin();
 
@@ -72,6 +75,8 @@ EOS
 sub check_commit {
     my ($git) = @_;
 
+    $log->debug(__PACKAGE__ . "::check_commit");
+
     my $current_branch = $git->get_current_branch();
 
     return 1 unless $git->is_reference_enabled($current_branch);
@@ -92,6 +97,8 @@ EOS
 
 sub check_patchset {
     my ($git, $opts) = @_;
+
+    $log->debug(__PACKAGE__ . "::check_patchset");
 
     return 1 if $git->im_admin();
 

@@ -6,6 +6,7 @@ package Git::Hooks::CheckJira;
 
 use 5.010;
 use utf8;
+use Log::Any '$log';
 use Git::Hooks;
 use Git::Repository::Log;
 use Path::Tiny;
@@ -377,6 +378,8 @@ sub check_commit_msg {
 sub check_patchset {
     my ($git, $opts) = @_;
 
+    $log->debug(__PACKAGE__ . "::check_patchset");
+
     _setup_config($git);
 
     return 1 if $git->im_admin();
@@ -405,6 +408,8 @@ sub check_patchset {
 
 sub check_message_file {
     my ($git, $commit_msg_file) = @_;
+
+    $log->debug(__PACKAGE__ . "::check_message_file($commit_msg_file)");
 
     _setup_config($git);
 
@@ -463,6 +468,8 @@ sub check_ref {
 # This routine can act both as an update or a pre-receive hook.
 sub check_affected_refs {
     my ($git) = @_;
+
+    $log->debug(__PACKAGE__ . "::check_affected_refs");
 
     _setup_config($git);
 
@@ -537,6 +544,8 @@ sub notify_ref {
 # This routine can act as a post-receive hook.
 sub notify_affected_refs {
     my ($git) = @_;
+
+    $log->debug(__PACKAGE__ . "::notify_affected_refs");
 
     _setup_config($git);
 

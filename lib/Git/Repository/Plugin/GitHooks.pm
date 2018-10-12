@@ -11,6 +11,7 @@ use utf8;
 use Carp;
 use Path::Tiny;
 use IO::Interactive 'is_interactive';
+use Log::Any '$log';
 
 sub _keywords {                 ## no critic (ProhibitUnusedPrivateSubroutines)
 
@@ -90,6 +91,7 @@ sub _prepare_receive {
         my ($old_commit, $new_commit, $ref) = @$_;
         _set_affected_ref($git, $ref, $old_commit, $new_commit);
     }
+    $log->debug(_prepare_receive => {affected_refs => _get_affected_refs_hash($git)});
     return;
 }
 
@@ -100,6 +102,7 @@ sub _prepare_receive {
 sub _prepare_update {
     my ($git, $args) = @_;
     _set_affected_ref($git, @$args);
+    $log->debug(_prepare_update => {affected_refs => _get_affected_refs_hash($git)});
     return;
 }
 
@@ -134,6 +137,8 @@ sub _prepare_gerrit_args {
         $ENV{GERRIT_USER_NAME}  = $1; ## no critic (Variables::RequireLocalizedPunctuationVars)
         $ENV{GERRIT_USER_EMAIL} = $2; ## no critic (Variables::RequireLocalizedPunctuationVars)
     }
+
+    $log->debug(_prepare_gerrit_args => {opt => \%opt});
 
     # Now we create a Gerrit::REST object connected to the Gerrit
     # server and tack it to the hook arguments so that Gerrit plugins
@@ -184,6 +189,7 @@ sub _prepare_gerrit_ref_update {
         unless $refname =~ m:^refs/:;
 
     _set_affected_ref($git, $refname, @{$args->[0]}{qw/--oldrev --newrev/});
+    $log->debug(_prepare_gerrit_ref_update => {affected_refs => _get_affected_refs_hash($git)});
     return;
 }
 
@@ -256,6 +262,11 @@ sub _gerrit_patchset_post_hook {
     if (my $notify = $git->get_config('githooks.gerrit' => 'notify')) {
         $review_input{notify} = $notify;
     }
+
+    $log->debug(_gerrit_patchset_post_hook => {
+        review_input => \%review_input,
+        auto_submit  => $auto_submit,
+    });
 
     # Cast review
     eval { $args->{gerrit}->POST("/changes/$id/revisions/$patchset/review", \%review_input) }
@@ -369,6 +380,8 @@ sub load_plugins {
         $git->get_config(githooks => 'plugins'),
         path($INC{'Git/Hooks.pm'})->parent->child('Hooks'),
     );
+
+    $log->debug(load_plugins => {enabled_plugins => \%enabled_plugins, plugin_dirs => \@plugin_dirs});
 
     # Load remaining enabled plugins
     while (my ($key, $plugin) = each %enabled_plugins) {
@@ -607,8 +620,30 @@ sub get_config {
         $config->{$section} = {} unless exists $config->{$section};
         return $config->{$section};
     } elsif (exists $config->{$section}{$var}) {
-        return wantarray ? @{$config->{$section}{$var}} : $config->{$section}{$var}[-1];
+        if (wantarray) {
+            $log->trace(get_config => {
+                wantarray => 1,
+                section   => $section,
+                var       => $var,
+                result    => $config->{$section}{$var},
+            });
+            return @{$config->{$section}{$var}};
+        } else {
+            $log->trace(get_config => {
+                wantarray => 0,
+                section   => $section,
+                var       => $var,
+                result    => $config->{$section}{$var}[-1],
+            });
+            return $config->{$section}{$var}[-1];
+        }
     } else {
+        $log->trace(get_config => {
+            wantarray => wantarray,
+            section   => $section,
+            var       => $var,
+            result    => [],
+        });
         return;
     }
 }

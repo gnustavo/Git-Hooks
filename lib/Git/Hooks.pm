@@ -8,6 +8,8 @@ use 5.010;
 use utf8;
 use Carp;
 use Exporter qw/import/;
+use Path::Tiny;
+use Log::Any '$log';
 use Git::Repository qw/GitHooks Log/;
 
 our @EXPORT; ## no critic (Modules::ProhibitAutomaticExportation)
@@ -48,9 +50,19 @@ BEGIN {                         ## no critic (RequireArgUnpacking)
 sub run_hook {
     my ($hook_name, @args) = @_;
 
+    my $hook_basename = path($hook_name)->basename;
+
+    # Contextualize the logs with the PID on server hooks. However, note that
+    # the Log::Any::context method was implemented on Log::Any version 1.050.
+    $log->context->{pid} = $$
+        if $hook_basename =~ /^(?:(pre|post)?-receive|(post-)?update|push-to-checkout)$/
+        && $log->can('context');
+
+    $log->info("run_hook($hook_basename)", {args => \@args});
+
     my $git = Git::Repository->new();
 
-    my $hook_basename = $git->prepare_hook($hook_name, \@args);
+    $git->prepare_hook($hook_name, \@args);
 
     $git->load_plugins();
 
@@ -89,11 +101,14 @@ sub run_hook {
     }
 
     if (my $faults = $git->get_faults()) {
+        $log->debug(Environment => {ENV => \%ENV});
         $faults .= "\n" unless $faults =~ /\n$/;
         if (($hook_basename eq 'commit-msg' or $hook_basename eq 'pre-commit')
                 and not $git->get_config_boolean(githooks => 'abort-commit')) {
+            $log->warning(Warning => {faults => $faults});
             carp $faults;
         } else {
+            $log->error(Error => {faults => $faults});
             croak $faults;
         }
     }
@@ -661,6 +676,31 @@ to work on them. All plugins that work on the B<patchset-created> also work
 on the B<draft-published> hook to cast a vote when drafts are published.
 
 =back
+
+=head2 Logging
+
+L<Git::Hooks> logs using the L<Log::Any> framework. You may tell where it should
+log using any available L<Log::Any::Adapter> module.
+
+For example, to log everything to a file you just have to add a line to your
+hook script, like this:
+
+        #!/usr/bin/env perl
+        use Log::Any::Adapter (File => '/var/log/githooks.log');
+        use Git::Hooks;
+        run_hook($0, @ARGV);
+
+This will produce copious logs. If you are interested only in the informational
+messages, select the C<log_level> C<info>, like so:
+
+        use Log::Any::Adapter (File => '/var/log/githooks.log', log_level => 'info');
+
+Read the L<Log::Any> documentation to know what other options you have.
+
+Note that several log messages contain context data, which is a feature that was
+implemented on version 1.050 of L<Log::Any>, released on 2017-08-04. If you're
+using an older version the context data will appear as a ref-scalar and won't
+make much sense.
 
 =head1 MAIN FUNCTION
 

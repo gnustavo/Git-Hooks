@@ -7,6 +7,7 @@ package Git::Hooks::CheckCommit;
 use 5.010;
 use utf8;
 use Carp;
+use Log::Any '$log';
 use Git::Hooks;
 use Git::Repository::Log;
 use List::MoreUtils qw/any none/;
@@ -361,6 +362,8 @@ EOS
 sub check_pre_commit {
     my ($git) = @_;
 
+    $log->debug(__PACKAGE__ . "::check_pre_commit");
+
     _setup_config($git);
 
     my $current_branch = $git->get_current_branch();
@@ -393,6 +396,8 @@ sub check_pre_commit {
 sub check_post_commit {
     my ($git) = @_;
 
+    $log->debug(__PACKAGE__ . "::check_post_commit");
+
     _setup_config($git);
 
     my $current_branch = $git->get_current_branch();
@@ -407,6 +412,8 @@ sub check_post_commit {
 # This routine can act both as an update or a pre-receive hook.
 sub check_affected_refs {
     my ($git) = @_;
+
+    $log->debug(__PACKAGE__ . "::check_affected_refs");
 
     _setup_config($git);
 
@@ -424,6 +431,8 @@ sub check_affected_refs {
 
 sub check_patchset {
     my ($git, $opts) = @_;
+
+    $log->debug(__PACKAGE__ . "::check_patchset");
 
     _setup_config($git);
 

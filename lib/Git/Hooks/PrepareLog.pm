@@ -6,6 +6,7 @@ package Git::Hooks::PrepareLog;
 
 use 5.010;
 use utf8;
+use Log::Any '$log';
 use Git::Hooks;
 use Path::Tiny;
 
@@ -114,6 +115,8 @@ EOS
 
 sub prepare_message {
     my ($git, $msg_file, $source) = @_;
+
+    $log->debug(__PACKAGE__ . "::prepare_message($msg_file, $source)");
 
     # Do not mess up with messages if there is already a previous source for it.
     return 0 if defined $source && $source =~ /^(?:commit|merge|squash)$/;
