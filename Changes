@@ -2,6 +2,14 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.9.10    2018-10-16 07:38:48-03:00 America/Sao_Paulo
+
+  [Fix]
+
+  - Notify: Show changed files in merge commits.
+
+  - Fix yet another split usage.
+
 2.9.9     2018-10-11 13:37:12-03:00 America/Sao_Paulo
 
   [Fix]
