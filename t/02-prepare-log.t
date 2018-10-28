@@ -16,20 +16,26 @@ sub check_can_commit_prepared {
     # Use a Perl script as GIT_EDITOR to check if the commit message was
     # prepared.
 
-    # NOTE: We insert a bogus 'x' in the message's first line to guarantee
-    # that it's not empty. We could use the --allow-empty-message option, but it
-    # was implemented on Git 1.7.2 and we still want to support Git 1.7.1.
-    local $ENV{GIT_EDITOR} = "$^X -i -pe '\$match += 1 if /$regex/; \$_ = 'x' if \$. == 1; END {die unless \$match}'";
-    test_ok($testname, $repo, qw/commit --allow-empty/);
+    local $ENV{GIT_EDITOR} = "$^X -ne '\$c .= \$_; \$match += 1 if /^[^#]*$regex/; END {die \"did not match:\$c:\" unless \$match}'";
+
+    # NOTE: We use a 'bogus' non-empty message to guarantee it's not empty. We
+    # could use the --allow-empty-message option, but it was implemented on Git
+    # 1.7.2 and we still need to support Git 1.7.1.
+    test_ok($testname, $repo, qw/commit --allow-empty -mbogus -e/);
 }
 
 sub check_can_commit_not_prepared {
-    my ($testname, $regex) = @_;
+    my ($testname) = @_;
 
     # Use a Perl script as GIT_EDITOR to check if the commit message was
     # not prepared.
-    local $ENV{GIT_EDITOR} = "$^X -i -pe '\$match += 1 if /$regex/; \$_ = 'x' if \$. == 1; END {die if \$match}'";
-    test_ok($testname, $repo, qw/commit --allow-empty/);
+
+    local $ENV{GIT_EDITOR} = "$^X -ne 'die if /^[^#]*JIRA-10/'";
+
+    # NOTE: We use a 'bogus' non-empty message to guarantee it's not empty. We
+    # could use the --allow-empty-message option, but it was implemented on Git
+    # 1.7.2 and we still need to support Git 1.7.1.
+    test_ok($testname, $repo, qw/commit --allow-empty -mbogus -e/);
 }
 
 
@@ -39,11 +45,11 @@ install_hooks($repo, undef, 'prepare-commit-msg');
 
 $repo->run(qw/config githooks.plugin PrepareLog/);
 
-check_can_commit_not_prepared('do not prepare by default', '^\\s*[^#\\s]');
+check_can_commit_not_prepared('do not prepare by default');
 
 $repo->run(qw/config githooks.preparelog.issue-branch-regex [A-Z]+-\\d+/);
 
-check_can_commit_not_prepared('do not prepare if do not match branch', '^\\s*[^#\\s]');
+check_can_commit_not_prepared('do not prepare if do not match branch');
 
 $repo->run(qw/checkout -q -b JIRA-10/);
 
