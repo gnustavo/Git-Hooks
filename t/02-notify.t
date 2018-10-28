@@ -6,7 +6,7 @@ use warnings;
 use Path::Tiny 0.060;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
-use Test::More tests => 9;
+use Test::More tests => 11;
 
 my ($repo, $file, $clone, $T);
 
@@ -101,6 +101,14 @@ SKIP: {
     $clone->run(qw{config --replace-all githooks.notify.rule}, "to\@example.net -- $basename");
 
     check_push_notify('do notify if match pathspec', qr/$basename/);
+
+    $clone->run(qw{config --replace-all githooks.notify.rule}, '^nomatch to@example.net');
+
+    check_push_dont_notify('do not notify if do not match reference');
+
+    $clone->run(qw{config --replace-all githooks.notify.rule}, '^refs/heads/master$ to@example.net');
+
+    check_push_notify('do notify if do match reference', qr/master/);
 
   SKIP: {
         unless (eval { require HTML::Entities; }) {
