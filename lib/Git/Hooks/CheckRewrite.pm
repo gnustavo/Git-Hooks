@@ -125,14 +125,16 @@ sub check_rebase {
         return 1 unless defined $success;
     }
 
-    # Find the base commit of the rebased sequence
-    my $base_commit = $git->run(qw/rev-list --topo-order --reverse/, "$upstream..$branch");
+    my @rebased_sequence = $git->run(qw/rev-list --topo-order --reverse/, "$upstream..$branch");
 
-    # If $upstream is a decendant of $branch, $base_commit is
+    # If $upstream is a decendant of $branch, the @rebased_sequence is
     # empty. In this situation the rebase will turn out to be a simple
     # fast-forward merge from $branch on $upstream and there is
     # nothing to lose.
-    return 1 unless $base_commit;
+    return 1 unless @rebased_sequence;
+
+    # Find the base commit of the rebased sequence
+    my $base_commit = $rebased_sequence[0];
 
     # Find all branches containing that commit
     my @branches = _branches_containing($git, $base_commit);
