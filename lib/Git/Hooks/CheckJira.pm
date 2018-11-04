@@ -588,6 +588,8 @@ COMMIT_MSG       \&check_message_file;
 UPDATE           \&check_affected_refs;
 PRE_RECEIVE      \&check_affected_refs;
 REF_UPDATE       \&check_affected_refs;
+COMMIT_RECEIVED  \&check_affected_refs;
+SUBMIT           \&check_affected_refs;
 POST_RECEIVE     \&notify_affected_refs;
 PATCHSET_CREATED \&check_patchset;
 DRAFT_PUBLISHED  \&check_patchset;
@@ -676,8 +678,19 @@ push>. It's used to notify JIRA of commits citing its issues via comments.
 
 =item * B<ref-update>
 
-This hook is invoked when a push request is received by Gerrit Code
+This hook is invoked when a direct push request is received by Gerrit Code
 Review, to check if the commit message cites valid JIRA issues.
+
+=item * B<commit-received>
+
+This hook is invoked when a push request is received by Gerrit Code Review to
+create a change for review, to check if the commit message cites valid JIRA
+issues.
+
+=item * B<submit>
+
+This hook is invoked when a change is submitted in Gerrit Code Review, to check
+if the commit message cites valid JIRA issues.
 
 =item * B<patchset-created>
 

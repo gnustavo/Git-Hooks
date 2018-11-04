@@ -106,11 +106,10 @@ sub _prepare_update {
     return;
 }
 
-# Gerrit hooks get a list of option/value pairs. Here we convert the
-# list into a hash and change the original argument list into a single
-# hash-ref. We also record information about the user performing the
-# push. Based on:
-# https://gerrit-review.googlesource.com/Documentation/config-hooks.html
+# Gerrit hooks get a list of option/value pairs. Here we convert the list into a
+# hash and change the original argument list into a single hash-ref. We also
+# record information about the user performing the push. Based on:
+# https://gerrit.googlesource.com/plugins/hooks/+/refs/heads/master/src/main/resources/Documentation/hooks.md
 
 sub _prepare_gerrit_args {
     my ($git, $args) = @_;
@@ -167,14 +166,17 @@ sub _prepare_gerrit_args {
     return;
 }
 
-# The ref-update Gerrit hook is invoked synchronously when a user
-# pushes commits to a branch. So, it acts much like Git's standard
-# 'update' hook. This routine prepares the options as usual and sets
-# the affected ref accordingly. The documented arguments for the hook
-# are these:
+# The ref-update and the commit-received Gerrit hooks are invoked synchronously
+# when a user pushes commits to a branch. So, they act much like Git's standard
+# 'update' hook. This routine prepares the options as usual and sets the
+# affected ref accordingly. The documented arguments for the hook are these:
 
-# ref-update --project <project name> --refname <refname> --uploader \
-# <uploader> --oldrev <sha1> --newrev <sha1>
+# ref-update --project <project name> --refname <refname> --uploader <uploader>
+# --uploader-username <username> --oldrev <sha1> --newrev <sha1>
+
+# commit-received --project <project name> --refname <refname> --uploader
+# <uploader> --uploader-username <username> --oldrev <sha1> --newrev <sha1>
+# --cmdref <refname>
 
 sub _prepare_gerrit_ref_update {
     my ($git, $args) = @_;
@@ -190,6 +192,33 @@ sub _prepare_gerrit_ref_update {
 
     _set_affected_ref($git, $refname, @{$args->[0]}{qw/--oldrev --newrev/});
     $log->debug(_prepare_gerrit_ref_update => {affected_refs => _get_affected_refs_hash($git)});
+    return;
+}
+
+# The submit Gerrit hook is invoked synchronously when a user tries to submit a
+# change. So, it acts much like Git's standard 'update' hook. This routine
+# prepares the options as usual and sets the affected ref accordingly. The
+# documented arguments for the hook are these:
+
+# submit --project <project name> --branch <branch> --submitter <submitter>
+# --patchset <patchset id> --commit <sha1>
+
+sub _prepare_gerrit_submit {
+    my ($git, $args) = @_;
+
+    _prepare_gerrit_args($git, $args);
+
+    # The --branch argument contains the branch short-name if it's in the
+    # refs/heads/ namespace. But we need to always use the branch long-name,
+    # so we change it here.
+    my $refname = $args->[0]{'--branch'};
+    $refname = "refs/heads/$refname"
+        unless $refname =~ m:^refs/:;
+
+    my $parent = $git->get_sha1("$refname^");
+
+    _set_affected_ref($git, $refname, $parent, $args->[0]{'--commit'});
+    $log->debug(_prepare_gerrit_submit => {affected_refs => _get_affected_refs_hash($git)});
     return;
 }
 
@@ -328,6 +357,8 @@ my %prepare_hook = (
     'pre-receive'      => \&_prepare_receive,
     'post-receive'     => \&_prepare_receive,
     'ref-update'       => \&_prepare_gerrit_ref_update,
+    'commit-received'  => \&_prepare_gerrit_ref_update,
+    'submit'           => \&_prepare_gerrit_submit,
     'patchset-created' => \&_prepare_gerrit_patchset,
     'draft-published'  => \&_prepare_gerrit_patchset,
 );

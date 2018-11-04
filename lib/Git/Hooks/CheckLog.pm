@@ -411,6 +411,8 @@ COMMIT_MSG       \&check_message_file;
 UPDATE           \&check_affected_refs;
 PRE_RECEIVE      \&check_affected_refs;
 REF_UPDATE       \&check_affected_refs;
+COMMIT_RECEIVED  \&check_affected_refs;
+SUBMIT           \&check_affected_refs;
 PATCHSET_CREATED \&check_patchset;
 DRAFT_PUBLISHED  \&check_patchset;
 
@@ -486,9 +488,19 @@ comply.
 
 =item * B<ref-update>
 
-This hook is invoked when a push request is received by Gerrit Code
-Review, to check if the commit log messages of all commits being
-pushed comply.
+This hook is invoked when a direct push request is received by Gerrit Code
+Review, to check if the commit log messages of all commits being pushed comply.
+
+=item * B<commit-received>
+
+This hook is invoked when a push request is received by Gerrit Code Review to
+create a change for review, to check if the commit log messages of all commits
+being pushed comply.
+
+=item * B<submit>
+
+This hook is invoked when a change is submitted in Gerrit Code Review, to check
+if the commit log messages of all commits being pushed comply.
 
 =item * B<patchset-created>
 

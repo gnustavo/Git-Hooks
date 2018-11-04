@@ -508,6 +508,8 @@ PRE_COMMIT       \&check_commit;
 UPDATE           \&check_affected_refs;
 PRE_RECEIVE      \&check_affected_refs;
 REF_UPDATE       \&check_affected_refs;
+COMMIT_RECEIVED  \&check_affected_refs;
+SUBMIT           \&check_affected_refs;
 PATCHSET_CREATED \&check_patchset;
 DRAFT_PUBLISHED  \&check_patchset;
 

@@ -25,6 +25,7 @@ BEGIN {                         ## no critic (RequireArgUnpacking)
             PUSH_TO_CHECKOUT PRE_AUTO_GC POST_REWRITE
 
             REF_UPDATE PATCHSET_CREATED DRAFT_PUBLISHED
+            COMMIT_RECEIVED SUBMIT
           /;
 
     for my $installer (@installers) {
@@ -626,23 +627,50 @@ error message.
 
 =head2 Gerrit Hooks
 
-L<Gerrit|gerrit.googlecode.com> is a web based code review and project
-management for Git based projects. It's based on
-L<JGit|http://www.eclipse.org/jgit/>, which is a pure Java
-implementation of Git.
+L<Gerrit|https://www.gerritcodereview.com/> is a web based code review and
+project management for Git based projects. It's based on
+L<JGit|http://www.eclipse.org/jgit/>, which is a pure Java implementation of
+Git.
 
 Gerrit doesn't support Git standard hooks. However, it implements its own
 L<special
-hooks|https://gerrit-review.googlesource.com/Documentation/config-hooks.html>.
-B<Git::Hooks> currently supports only three of Gerrit hooks:
+hooks|https://gerrit.googlesource.com/plugins/hooks/+/refs/heads/master/src/main/resources/Documentation/hooks.md>.
+B<Git::Hooks> currently supports only a few of Gerrit hooks:
+
+=head3 Synchronous hooks
+
+These hooks are invoked synchronously so it is recommended that they not block.
+
+Their purpose is the same as Git's B<update> hook, i.e. to block commits from
+being integrated, and Git::Hooks's plugins usually support them all together.
 
 =over
 
 =item * ref-update
 
-The B<ref-update> hook is executed synchronously when a user performs
-a push to a branch. It's purpose is the same as Git's B<update> hook
-and Git::Hooks's plugins usually support them both together.
+This is called when a ref update request (direct push, non-fastforward update,
+or ref deletion) is received by Gerrit. It allows a request to be rejected
+before it is committed to the Gerrit repository.  If the hook fails the update
+will be rejected.
+
+=item * commit-received
+
+This is called when a commit is received for review by Gerrit. It allows a push
+to be rejected before the review is created. If the hook fails the push will be
+rejected.
+
+=item * submit
+
+This is called when a user attempts to submit a change. It allows the submit to
+be rejected. If the hook fails the submit will be rejected.
+
+=back
+
+=head3 Asynchronous hooks
+
+These hooks are invoked asynchronously on a background thread.
+
+=over
 
 =item * patchset-created
 
@@ -820,6 +848,10 @@ The information from these lines is read and can be fetched by the
 hooks using the C<Git::Hooks::get_input_data> method.
 
 =head2 REF_UPDATE(GIT, OPTS)
+
+=head2 COMMIT_RECEIVED(GIT, OPTS)
+
+=head2 SUBMIT(GIT, OPTS)
 
 =head2 PATCHSET_CREATED(GIT, OPTS)
 

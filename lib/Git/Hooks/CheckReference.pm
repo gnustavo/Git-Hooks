@@ -113,9 +113,11 @@ sub check_affected_refs {
 }
 
 # Install hooks
-UPDATE       \&check_affected_refs;
-PRE_RECEIVE  \&check_affected_refs;
-REF_UPDATE   \&check_affected_refs;
+UPDATE           \&check_affected_refs;
+PRE_RECEIVE      \&check_affected_refs;
+REF_UPDATE       \&check_affected_refs;
+COMMIT_RECEIVED  \&check_affected_refs;
+SUBMIT           \&check_affected_refs;
 
 1;
 
@@ -175,6 +177,10 @@ constraints. If they don't, the commit/push is aborted.
 =item * B<pre-receive>
 
 =item * B<ref-update>
+
+=item * B<commit-received>
+
+=item * B<submit>
 
 =back
 
