@@ -77,7 +77,9 @@ sub _prepare_input_data {
         chomp;
         _push_input_data($git, [split]);
     }
-    return;
+    my $input_data = _get_input_data($git);
+    $log->info(_prepare_input_data => {input_data => $input_data});
+    return $input_data;
 }
 
 # The pre-receive and post-receive hooks get the list of affected
@@ -86,12 +88,10 @@ sub _prepare_input_data {
 
 sub _prepare_receive {
     my ($git) = @_;
-    _prepare_input_data($git);
-    foreach (@{_get_input_data($git)}) {
+    foreach (@{_prepare_input_data($git)}) {
         my ($old_commit, $new_commit, $ref) = @$_;
         _set_affected_ref($git, $ref, $old_commit, $new_commit);
     }
-    $log->debug(_prepare_receive => {affected_refs => _get_affected_refs_hash($git)});
     return;
 }
 
@@ -1054,10 +1054,7 @@ sub _set_affected_ref {
 sub _get_affected_refs_hash {
     my ($git) = @_;
 
-    $git->{_plugin_githooks}{affected_refs}
-        or croak __PACKAGE__, ": get_affected_refs(): no affected refs set\n";
-
-    return $git->{_plugin_githooks}{affected_refs};
+    return $git->{_plugin_githooks}{affected_refs} || {};
 }
 
 sub get_affected_refs {
