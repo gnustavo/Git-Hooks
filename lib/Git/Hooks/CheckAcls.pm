@@ -280,7 +280,7 @@ and processed.
 
 This is useful, for instance, if you want developers to be restricted
 in what they can do to official branches but to have complete control
-with their own branch namespace.
+with their own branch name space.
 
     [githooks "checkacls"]
       acl = ^. CRUD ^refs/heads/{USER}/

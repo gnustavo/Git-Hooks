@@ -600,7 +600,7 @@ messages. If the '!' prefix is used, the log must not match the
 REGEXPs. Otherwise, the log must match REGEXPs.
 
 The REGEXPs are matched with the C</m> modifier so that the C<^> and the C<$>
-metacharacters, if used, match the beginning and end of each line in the log,
+meta-characters, if used, match the beginning and end of each line in the log,
 respectively.
 
 This allows you, for example, to disallow hard-tabs in your log messages:
@@ -636,7 +636,7 @@ are duplicate C<Signed-off-by> footers in the commit.
 
 =head2 deny-merge-revert BOOL
 
-This boolean option allows you to deny commits that revert merge commits, since
+This Boolean option allows you to deny commits that revert merge commits, since
 such beasts introduce complications in the repository which you may want to
 avoid. (To know more about this you should read Linus Torvald's L<How to revert
 a faulty

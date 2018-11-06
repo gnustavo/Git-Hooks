@@ -625,7 +625,7 @@ L<Git::Hooks>.  If it's not found or if there's an error in the construction
 of the C<Email::Valid> object the check fails with a suitable message.
 
 The C<Email::Valid> constructor (new) accepts some parameters. You can pass
-the boolean parameters to change their default values by means of the
+the Boolean parameters to change their default values by means of the
 following sub-options. For more information, please consult the
 L<Email::Valid> documentation.
 
@@ -748,7 +748,7 @@ B<pre-receive> hooks. For the B<pre-commit> hook this argument is B<undef>.
 
 =back
 
-The subroutine should return a boolean value indicating success. Any errors
+The subroutine should return a Boolean value indicating success. Any errors
 should be produced by invoking the
 B<Git::Repository::Plugin::GitHooks::error> method.
 

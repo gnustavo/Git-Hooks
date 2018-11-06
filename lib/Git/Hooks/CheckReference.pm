@@ -203,7 +203,7 @@ documentation.
 
 This multi-valued option specifies rules allowing or denying specific users to
 perform specific actions on specific references. (Common references are branches
-and tags, but an ACL may refer to any reference under the F<refs/> namespace.)
+and tags, but an ACL may refer to any reference under the F<refs/> name space.)
 By default any user can perform any action on any reference. So, the rules are
 used to impose restrictions.
 
@@ -235,10 +235,10 @@ If the C<refspec> starts with a caret (^) it's interpreted as a Perl regular
 expression, the caret being kept as part of the regexp. These refspecs match
 potentially many references (e.g. F<^refs/heads/feature/>).
 
-Before being interpreted as a string or as a regexp, any substring of it in the
+Before being interpreted as a string or as a regexp, any sub-string of it in the
 form C<{VAR}> is replaced by C<$ENV{VAR}>. This is useful, for example, to
 interpolate the committer's username in the refspec, in order to create
-reference namespaces for users.
+reference name spaces for users.
 
 =back
 

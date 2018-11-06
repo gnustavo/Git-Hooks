@@ -1685,7 +1685,7 @@ The remaining arguments that were passed to the plugin hooks.
 
 =back
 
-The callbacks may see if there were any errors signalled by the plugin hook
+The callbacks may see if there were any errors signaled by the plugin hook
 by invoking the C<get_errors> method on the GIT object. They may be used to
 signal the hook result in any way they want, but they should not die or they
 will prevent other post hooks to run.
@@ -1772,17 +1772,17 @@ C<undef>, if it's not defined.
 
 As a special case, options without values (i.e., with no equals sign after its
 name in the configuration file) are set to the string 'true' to force Perl
-recognize them as true booleans.
+recognize them as true Booleans.
 
 =head2 get_config_boolean SECTION VARIABLE
 
-Git configuration variables may be grokked as booleans. (See C<git help
+Git configuration variables may be grokked as Booleans. (See C<git help
 config>.)  There are specific values meaning B<true> (viz. C<yes>, C<on>,
-C<true>, C<1>, and the absense of a value) and specific values meaning B<false>
+C<true>, C<1>, and the absence of a value) and specific values meaning B<false>
 (viz. C<no>, C<off>, C<false>, C<0>, and the empty string).
 
-This method checks the variable's value and returns 1 or 0 representing boolean
-values in Perl. If the variable's value isn't recognized as a Git boolean the
+This method checks the variable's value and returns 1 or 0 representing Boolean
+values in Perl. If the variable's value isn't recognized as a Git Boolean the
 method croaks. If the variable isn't defined the method returns undef.
 
 In the L<Git::Hooks> documentation, all configuration variables mentioning a
@@ -2175,13 +2175,13 @@ in revision REV.
 
 This method should be invoked by hooks to see if REF is enabled according to
 the C<githooks.ref> and C<githooks.noref> options. Please, read about these
-options in L<Git::Hooks> documetation.
+options in L<Git::Hooks> documentation.
 
 REF must be a complete reference name or undef. Local hooks should pass the
 current branch, and server hooks should pass the references affected by the push
 command. If REF is undef, the method returns true.
 
-The method decides if a reference is enabled using the following algorithn:
+The method decides if a reference is enabled using the following algorithm:
 
 =over
 
@@ -2198,7 +2198,7 @@ The method decides if a reference is enabled using the following algorithn:
 This method is DEPRECATED. Please, use the C<is_reference_enabled> method
 instead.
 
-Returns a boolean indicating if REF matches one of the ref-specs in
+Returns a Boolean indicating if REF matches one of the ref-specs in
 SPECS. REF is the complete name of a Git ref and SPECS is a list of strings,
 each one specifying a rule for matching ref names.
 
@@ -2271,10 +2271,10 @@ If the C<spec> starts with a caret (^) it's interpreted as a Perl regular
 expression, the caret being kept as part of the regexp. These specs match
 potentially many things.
 
-Before being interpreted as a string or as a regexp, any substring of it in the
+Before being interpreted as a string or as a regexp, any sub-string of it in the
 form C<{VAR}> is replaced by C<$ENV{VAR}>. This is useful, for example, to
 interpolate the committer's username in the spec, in order to create personal
-namespaces for users.
+name spaces for users.
 
 (See the documentation of the C<acl> option in the L<Git::Hooks::CheckFile> and
 the L<Git::Hooks::CheckReference> plugins for examples things as files and
@@ -2311,7 +2311,7 @@ error messages.
 
 =item * B<allow>
 
-A boolean telling if the ACL is an "allow".
+A Boolean telling if the ACL is an "allow".
 
 =item * B<action>
 

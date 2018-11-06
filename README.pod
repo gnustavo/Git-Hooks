@@ -40,10 +40,10 @@ do is to tell Perl where to find it by using this in your scripts:
 =head2 Documentation
 
 The main module documents its L<usage|Git::Hooks> in detail. Each plugin is
-implemented as a separate module under the C<Git::Hooks::> namespace. Git::Hooks
+implemented as a separate module under the C<Git::Hooks::> name space. Git::Hooks
 distribution comes with a set of plugins and you can find more on
 L<CPAN|https://metacpan.org/search?q=module%3AGit%3A%3AHooks>. The native
-plugins provided by the distrubution are these:
+plugins provided by the distribution are these:
 
 =over
 

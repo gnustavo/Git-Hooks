@@ -183,7 +183,7 @@ the following in the F<.git/config> of a particular repository:
 
 =head3 Disabling plugins temporarily
 
-If you prefer the default behaviour of having your C<pre-commit> and
+If you prefer the default behavior of having your C<pre-commit> and
 C<commit-msg> abort on errors, it's sometimes useful to disable a plugin
 temporarily in order to do a commit that otherwise would be rejected. For
 instance, if you enable C<CheckLog>'s spelling checks and it rejects a commit
@@ -291,7 +291,7 @@ The C<CheckReference> plugin is enabled and configured in the
 C<githooks.checkreference> section with three ACLs.
 
 The githooks.checkreference.acl options are used to restrict who can do what to
-which referece in the remote repository during a git-push. The rules are
+which reference in the remote repository during a git-push. The rules are
 processed in reverse order and are (almost) self explanatory. The four acls
 above mean that:
 
@@ -359,7 +359,7 @@ directory. Create it and the two symlinks like so:
 
 The C<patchset-created> hook is invoked when you push a patchset to Gerrit for
 revision, but Git::Hooks only enable it for non-draft patchsets, because draft
-patchsets can only be reviewed by their onwners and invited reviewers. The
+patchsets can only be reviewed by their owners and invited reviewers. The
 C<draft-published> hook is invoked when you publish a draft-patchset. Both hooks
 run asynchronously so that they can't reject the push. Instead, they review the
 patchset as a normal reviewer would, casting a positive or negative vote,
@@ -416,7 +416,7 @@ instructions|https://github.com/reconquest/atlassian-external-hooks/wiki/Configu
 to enable it for particular repositories. The plugin must be configured with an
 I<executable>, which can be our usual C<githooks.pl> script.
 
-Bibucket git repositories are kept in the server but are not easy to locate,
+Bitbucket git repositories are kept in the server but are not easy to locate,
 because they're named after a numeric ID. In order to locate the repository
 directory in the server, go to its I<repository details> page in the
 I<repository settings> section in Bitbucket's web interface. The page shows the

@@ -726,11 +726,11 @@ files which basename matches REGEXP.
 =head2 deny-case-conflict BOOL
 
 This directive checks for newly added files that would conflict in
-case-insensitive filesystems.
+case-insensitive file-systems.
 
 Git itself is case-sensitive with regards to file names. Many operating system's
-filesystems are case-sensitive too, such as Linux, macOS, and other Unix-derived
-systems. But Windows's filesystems are notoriously case-insensitive. So, if you
+file-systems are case-sensitive too, such as Linux, macOS, and other Unix-derived
+systems. But Windows's file-systems are notoriously case-insensitive. So, if you
 want your repository to be absolutely safe for Windows users you don't want to
 add two files which filenames differ only in a case-sensitive manner. Enable
 this option to be safe

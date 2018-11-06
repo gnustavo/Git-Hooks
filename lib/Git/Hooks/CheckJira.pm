@@ -800,7 +800,7 @@ which must match all cited issues. For example, you may want to:
   [githooks "checkjira"]
     jql = resolution IS EMPTY OR resolution IS NOT EMPTY
 
-=item * Require specific projects, issuetypes, and statuses
+=item * Require specific projects, issue-types, and statuses
 
   [githooks "checkjira"]
     jql = project IN (ABC, UTF, GIT) AND issuetype IN (Bug, Story) AND status IN ("In progress", "In testing")
@@ -929,7 +929,7 @@ issues being cited by the commit's message.
 
 =back
 
-The subroutine should return a boolean value indicating success. Any errors
+The subroutine should return a Boolean value indicating success. Any errors
 should be produced by invoking the
 B<Git::Repository::Plugin::GitHooks::error> method.
 

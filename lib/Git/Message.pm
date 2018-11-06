@@ -326,7 +326,7 @@ L<above/Footer syntax>.
 
 =head2 get_footer_keys
 
-This returns the list of footer keys. Multivalued keys appear only
+This returns the list of footer keys. Multi-valued keys appear only
 once in the list, in lower case.
 
 =head2 delete_footer_key KEY

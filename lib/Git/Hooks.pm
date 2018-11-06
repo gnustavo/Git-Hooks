@@ -231,7 +231,7 @@ Instead of having separate scripts implementing different
 functionality you may have a single script implementing all the
 functionality you need either directly or using some of the existing
 plugins, which are implemented by Perl scripts in the Git::Hooks::
-namespace. This single script can be used to implement all standard
+name space. This single script can be used to implement all standard
 hooks, because each hook knows when to perform based on the context in
 which the script was called.
 
@@ -296,7 +296,7 @@ implemented in the generic script you have created. They must be
 defined after the C<use Git::Hooks> line and before the C<run_hook()>
 line.
 
-A hook should return a boolean value indicating if it was
+A hook should return a Boolean value indicating if it was
 successful. B<run_hook> dies after invoking all hooks if at least one
 of them returned false.
 
@@ -449,7 +449,7 @@ The CONFIGURATION section below explains this in more detail.
 
 =head2 Implementing Plugins
 
-Plugins are simply Perl modules inside the Git::Hooks namespace. Choose a
+Plugins are simply Perl modules inside the Git::Hooks name space. Choose a
 descriptive name for it so that it can be installed by means of the
 C<githooks.plugin> configuration option. The only requirement of a plugin is
 that it record one of more functions as hooks using the HOOK DIRECTIVES
@@ -648,7 +648,7 @@ being integrated, and Git::Hooks's plugins usually support them all together.
 
 =item * ref-update
 
-This is called when a ref update request (direct push, non-fastforward update,
+This is called when a ref update request (direct push, non-fast-forward update,
 or ref deletion) is received by Gerrit. It allows a request to be rejected
 before it is committed to the Gerrit repository.  If the hook fails the update
 will be rejected.
@@ -1019,7 +1019,7 @@ configuration options.
 =head2 groups GROUPSPEC
 
 You can define user groups in order to make it easier to configure access
-control plugins. A group is specified by a GROUPSPEC, which is a multiline
+control plugins. A group is specified by a GROUPSPEC, which is a multi-line
 string containing a sequence of group definitions, one per line. Each line
 defines a group like this, where spaces are significant only between users
 and group references:
@@ -1126,7 +1126,7 @@ anchored at the start of the username.
 
 =head2 noref REFSPEC
 
-These multivalued options are meant to selectively enable/disable hook
+These multi-valued options are meant to selectively enable/disable hook
 processing for commits in particular references (usually branches). Hook
 developers should use the C<is_reference_enabled> method
 L<Git::Repository::Plugin> method to check it.
@@ -1332,7 +1332,7 @@ Currently L<Git::Hooks> require Perl 5.10 and Git 1.7.1.
 We try to be compatible with the Git and Perl native packages of the oldest
 L<Ubuntu LTS|https://www.ubuntu.com/info/release-end-of-life> and
 L<CentOS|https://wiki.centos.org/About/Product> Linux distributions still
-getting maintainance updates.
+getting maintenance updates.
 
   +-----------------------+------+--------+-------------+
   | Distro                | Perl |   Git  | End of Life |

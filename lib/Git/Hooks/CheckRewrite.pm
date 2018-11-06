@@ -192,7 +192,7 @@ may configure it in a Git configuration file like this:
     admin = joe molly
 
 This section enables the plugin and defines the users C<joe> and C<molly> as
-administrators, effectivelly exempting them from any restrictions the plugin may
+administrators, effectively exempting them from any restrictions the plugin may
 impose.
 
 =head1 DESCRIPTION
