@@ -245,6 +245,7 @@ using some of the available plugins:
             plugin = CheckJira
             plugin = CheckLog
             admin = gustavo
+            timeout = 30
     [githooks "checkcommit"]
             email-valid = 1
     [githooks "checkjira"]
@@ -270,6 +271,10 @@ As the administrator, I've configured myself (C<githooks.admin = gustavo>) to be
 exempt from any checks so that I can brag about my superpowers to my fellow
 users. Seriously, though, sometimes it's necessary to be able to bypass some
 checks and this is a way to allow some user to do it.
+
+If you have hooks invoking external commands or making network connections
+(e.g. CheckJira) then it's advisable to set a timeout (C<githooks.timeout = 30>)
+in seconds so that the hooks are aborted if they run for too long.
 
 In particular repositories you can make local configurations to complement or
 supersede the global configuration. This is an example F<.git/config> file:

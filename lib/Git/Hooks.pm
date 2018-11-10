@@ -44,32 +44,14 @@ BEGIN {                         ## no critic (RequireArgUnpacking)
 
 }
 
-# This is the main routine of Git::Hooks. It gets the original hook
-# name and arguments, sets up the environment, loads plugins and
-# invokes the appropriate hook functions.
+sub _run_hooks {
+    my ($git, $args) = @_;
 
-sub run_hook {
-    my ($hook_name, @args) = @_;
-
-    my $hook_basename = path($hook_name)->basename;
-
-    # Contextualize the logs with the PID on server hooks. However, note that
-    # the Log::Any::context method was implemented on Log::Any version 1.050.
-    $log->context->{pid} = $$
-        if $hook_basename =~ /^(?:(pre|post)?-receive|(post-)?update|push-to-checkout)$/
-        && $log->can('context');
-
-    $log->info("run_hook($hook_basename)", {args => \@args});
-
-    my $git = Git::Repository->new();
-
-    $git->prepare_hook($hook_name, \@args);
-
-    $git->load_plugins();
+    my $hook_basename = $git->{_plugin_githooks}{hookname};
 
     # Call every hook function installed by the hook scripts before.
     for my $hook (@{$Hooks{$hook_basename}}) {
-        my $ok = eval { $hook->{sub}->($git, @args) };
+        my $ok = eval { $hook->{sub}->($git, @$args) };
         if (defined $ok) {
             # Modern hooks return a boolean value indicating their success.
             # If they fail they invoke
@@ -94,11 +76,57 @@ sub run_hook {
     }
 
     # Invoke enabled external hooks. This doesn't work in Windows yet.
-    $git->invoke_external_hooks(@args);
+    $git->invoke_external_hooks(@$args);
 
     # Some hooks want to do some post-processing
     foreach my $post_hook ($git->post_hooks) {
-        $post_hook->($hook_basename, $git, @args);
+        $post_hook->($hook_basename, $git, @$args);
+    }
+
+    return;
+}
+
+# This is the main routine of Git::Hooks. It gets the original hook
+# name and arguments, sets up the environment, loads plugins and
+# invokes the appropriate hook functions.
+
+sub run_hook {
+    my ($hook_name, @args) = @_;
+
+    my $hook_basename = path($hook_name)->basename;
+
+    # Contextualize the logs with the PID on server hooks. However, note that
+    # the Log::Any::context method was implemented on Log::Any version 1.050.
+    $log->context->{pid} = $$
+        if $hook_basename =~ /^(?:(pre|post)?-receive|(post-)?update|push-to-checkout)$/
+        && $log->can('context');
+
+    $log->info("run_hook($hook_basename)", {args => \@args});
+
+    my $git = Git::Repository->new();
+
+    $git->prepare_hook($hook_name, \@args);
+
+    $git->load_plugins();
+
+    if (my $timeout = $git->get_config_integer(githooks => 'timeout')) {
+        # Set up a timer. See 'perldoc -f alarm' and 'perldoc
+        # Perl::Critic::Policy::ErrorHandling::RequireCheckingReturnValueOfEval'
+        eval {
+            local $SIG{ALRM} = sub {
+                carp $log->fatal("Git::Hooks timed out after $timeout seconds!");
+                exit 1;
+            };
+            alarm $timeout;
+            _run_hooks($git, \@args);
+            alarm 0;
+            1;
+        } or do {
+            # propagate unexpected errors
+            die;                ## no critic (RequireCarping)
+        }
+    } else {
+        _run_hooks($git, \@args);
     }
 
     if (my $faults = $git->get_faults()) {
@@ -1342,6 +1370,15 @@ The error message proper. (Default value is "yellow".)
 The indented lines providing details for error messages. (Default value is empty.)
 
 =back
+
+=head2 timeout SECS
+
+By default Git::Hooks waits until every hook terminates, successfully or
+not. But some hooks may take a long time, waiting for external commands or for
+network connections to work.
+
+In order to avoid keeping the user waiting too long you may specify how long, in
+seconds, you allow Git::Hooks to wait before aborting with a timeout.
 
 =head1 GIT AND PERL COMPATIBILITY POLICY
 
