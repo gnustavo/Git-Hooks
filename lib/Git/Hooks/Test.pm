@@ -141,6 +141,7 @@ EOS
                 or BAIL_OUT("can't path('$hookfile')->spew('$script')\n");
             chmod 0755 => $hookfile;
         } else {
+            $hookfile->remove;  # in case we're replacing the hooks
             symlink 'hook.pl', $hookfile
                 or BAIL_OUT("can't symlink '$hooks_dir', '$hook': $!");
         }
