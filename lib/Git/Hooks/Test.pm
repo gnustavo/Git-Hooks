@@ -121,11 +121,11 @@ EOS
     chmod 0755 => $hook_pl;
 
     @hooks = qw/ applypatch-msg pre-applypatch post-applypatch
-        pre-commit prepare-commit-msg commit-msg
-        post-commit pre-rebase post-checkout post-merge
-        pre-receive update post-receive post-update
-        pre-auto-gc post-rewrite /
-            unless @hooks;
+                 pre-commit prepare-commit-msg commit-msg
+                 post-commit pre-rebasen post-checkout post-merge
+                 pre-push pre-receive update post-receive post-update
+                 push-to-checkout pre-auto-gc post-rewrite
+               / unless @hooks;
 
     foreach my $hook (@hooks) {
         my $hookfile = $hooks_dir->child($hook);
