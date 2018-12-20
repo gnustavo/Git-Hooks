@@ -2,6 +2,12 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.10.1    2018-12-20 21:33:27-02:00 America/Sao_Paulo
+
+[Fix]
+
+  - The hook-specific help-on-error config wasn't being used.
+
 2.10.0    2018-11-06 12:05:34-02:00 America/Sao_Paulo
 
 [New features]
