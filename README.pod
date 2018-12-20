@@ -69,7 +69,7 @@ plugins provided by the distribution are these:
 
 =back
 
-For a gentler introduction you can read our L<Git::Hooks::Tutorial>. They have
+For a gentler introduction you can read our L<Git::Hooks::Tutorial>. It has
 instructions for Git users, Git administrators, and Gerrit administrators.
 
 =head2 Getting Help
