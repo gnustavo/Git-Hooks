@@ -34,7 +34,7 @@ BEGIN {                         ## no critic (RequireArgUnpacking)
         no strict 'refs';       ## no critic (ProhibitNoStrict)
         *{"Git::Hooks::$installer"} = sub (&) {
             push @{$Hooks{$hook}}, {
-                package => scalar(caller(1)),
+                package => scalar(caller),
                 sub     => shift(@_),
             };
         }
