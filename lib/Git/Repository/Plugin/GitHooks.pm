@@ -1457,7 +1457,7 @@ sub _grok_groups_spec {
     foreach (@$specs) {
         s/\#.*//;               # strip comments
         next unless /\S/;       # skip blank lines
-        /^\s*(\w+)\s*=\s*(.+?)\s*$/
+        /^\s*([\w-]+)\s*=\s*(.+?)\s*$/
             or croak __PACKAGE__, ": invalid line in '$source': $_\n";
         my ($groupname, $members) = ($1, $2);
         exists $groups->{"\@$groupname"}
