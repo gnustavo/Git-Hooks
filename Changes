@@ -2,6 +2,18 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.11.0    2020-04-04 23:36:17-03:00 America/Sao_Paulo
+
+[New features]
+
+  - CheckDiff: This is a new plugin which makes it easy to check the output of a
+    git-diff showing the differences introduced by a new local commit or by a
+    sequence of commits being pushed to a branch. It comes with a sample script
+    which can be used to detect secret leakage in your code.
+
+  - Group names now can have dashes in them. Courtesy of Bartosz
+    Oudekerk. Thanks!
+
 2.10.1    2018-12-20 21:33:27-02:00 America/Sao_Paulo
 
 [Fix]
