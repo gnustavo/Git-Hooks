@@ -26,7 +26,7 @@ sub check_affected_refs {
 
         my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
 
-        # If the referece is being deleted we have nothing to check
+        # If the reference is being deleted we have nothing to check
         next if $new_commit eq $git->undef_commit;
 
         # If the reference is being created we have to calculate a proper

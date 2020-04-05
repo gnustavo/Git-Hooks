@@ -384,6 +384,11 @@ own documentation for more details.
 
 =over
 
+=item * L<Git::Hooks::CheckDiff>
+
+Check if the differences introduced by new commits comply with specified
+policies.
+
 =item * L<Git::Hooks::CheckFile>
 
 Check if the names and contents of added, modified, or deleted files comply with
