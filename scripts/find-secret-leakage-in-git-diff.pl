@@ -1,4 +1,6 @@
 #!/usr/bin/env perl
+# PODNAME: find-secret-leakage-in-git-diff.pl
+## no critic (RequireCarping)
 
 use 5.016;
 use strict;
