@@ -2,6 +2,13 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.11.1    2020-04-05 00:05:19-03:00 America/Sao_Paulo
+
+[Fix]
+
+  - The files in the scripts/ directory weren't being installed. Now, they're
+    installed as executables during the module installation.
+
 2.11.0    2020-04-04 23:36:17-03:00 America/Sao_Paulo
 
 [New features]
