@@ -21,12 +21,8 @@ my %tokens = (
     'Twilio API Key'                => qr/SK[0-9a-fA-F]{32}/,
     'Twitter Access Token'          => qr/[1-9]\d+-[0-9a-zA-Z]{40}/,
 
-    # Private keys
-    'RSA Private Key'               => qr/-----BEGIN RSA PRIVATE KEY-----/,
-    'SSH Private Key'               => qr/-----BEGIN OPENSSH PRIVATE KEY-----/,
-    'PKCS8 Private Key'             => qr/-----BEGIN PRIVATE KEY-----/,
-    'PGP Private Key'               => qr/-----BEGIN PGP PRIVATE KEY BLOCK-----/,
-    'EC Private Key'                => qr/-----BEGIN EC PRIVATE KEY-----/,
+    # Private keys (RSA, SSH, PKCS8, PGP, EC, etc.)
+    'Private Key'                   => qr/-----BEGIN [A-Z ]*?PRIVATE KEY(?: BLOCK)?-----/,
 
     # Passwords
     'URL with Password'             => qr'(?i)[a-z][a-z+.-]*://[^:@/]+:([^@/]+)@',
