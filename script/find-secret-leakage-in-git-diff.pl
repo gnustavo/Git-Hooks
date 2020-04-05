@@ -30,19 +30,32 @@ my %tokens = (
 
 my $errors = 0;
 
-my ($filename, $lineno);
+my ($filename, $lineno, $skip) = ('', 0, 0);
 
 while (<>) {
     if (/^\+\+\+ (.+)/) {
         $filename = $1;
     } elsif (/^\@\@ -[0-9,]+ \+(\d+)/) {
         $lineno = $1;
+    } elsif (/^\ /) {
+        $lineno += 1;
     } elsif (/^\+/) {
-        while (my ($token, $regex) = each %tokens) {
-            if (/$regex/) {
-                $errors += 1;
-                warn "$filename:$lineno: Secret Leakage: $token '$&'";
-                last;
+        if (/## not a secret leak ?(begin|end)?/) {
+            if ($skip) {
+                $skip = 0 if defined $1 && $1 eq 'end';
+            } else {
+                $skip = 1 if defined $1 && $1 eq 'begin';
+            }
+            $lineno += 1;
+            next;
+        }
+        unless ($skip) {
+            while (my ($token, $regex) = each %tokens) {
+                if (/$regex/) {
+                    $errors += 1;
+                    warn "$filename:$lineno: Secret Leakage: $token '$&'";
+                    last;
+                }
             }
         }
         $lineno += 1;
@@ -103,6 +116,33 @@ The specific secret found.
 
 =back
 
+Sometimes you need to have a pseudo-secret in a file. Perhaps it's a credential
+used only in your test environment or as an example. You can mark these secrets
+so that this script disregards them. If you can, add the following mark in the
+same line of your pseudo-secret, like this:
+
+  my $aws_access_key = 'AKIA1234567890ABCDEF'; ## not a secret leak
+
+The mark is the string C<## not a secret leak>. The two hashes are part of it!
+
+Sometimes you can't put the mark in the same line. Lines beginning private keys,
+for example, do not have room for anything else. In these cases you can skip a
+whole block marking its beginning and end like this:
+
+  ## not a secret leak begin
+  my $rsa_private_key = <<EOS;
+  -----BEGIN RSA PRIVATE KEY-----
+  izfrNTmQLnfsLzi2Wb9xPz2Qj9fQYGgeug3N2MkDuVHwpPcgkhHkJgCQuuvT+qZI
+  MbS2U6wTS24SZk5RunJIUkitRKeWWMS28SLGfkDs1bBYlSPa5smAd3/q1OePi4ae
+  <...>
+  8S86b6zEmkser+SDYgGketS2DZ4hB+vh2ujSXmS8Gkwrn+BfHMzkbtio8lWbGw0l
+  eM1tfdFZ6wMTLkxRhBkBK4JiMiUMvpERyPib6a2L6iXTfH+3RUDS6A==
+  -----END RSA PRIVATE KEY-----
+  EOS
+  ## not a secret leak end
+
+None of the lines inside the block will be denounced as leaks.
+
 =head1 EXIT CODES
 
 The script exits with the number of secrets found. So, it succeeds if no secret
@@ -114,10 +154,10 @@ is found and fails if it finds at least one.
 
 =item * L<How Bad Can It Git? Characterizing Secret Leakage in Public GitHub Repositories|https://blog.acolyer.org/2019/04/08/how-bad-can-it-git-characterizing-secret-leakage-in-public-github-repositories/>
 
-This blog post sumarizes L<a paper by the
-same|https://www.ndss-symposium.org/ndss-paper/how-bad-can-it-git-characterizing-secret-leakage-in-public-github-repositories/>
-name which studies how secrets such as API keys, auuthorization tokens, and
-private keys are commonly leaked by being inadvertently pushed to GitHub
+This blog post sumarizes L<a paper by the same
+name|https://www.ndss-symposium.org/ndss-paper/how-bad-can-it-git-characterizing-secret-leakage-in-public-github-repositories/>
+which studies how secrets such as API keys, authorization tokens, and private
+keys are commonly leaked by being inadvertently pushed to GitHub
 directories. The study found that this much more common than one would think and
 tells which kind of secrets are most commonly leaked like that. Moreover, it
 shows specific regular expressions which can be used to detect such secrets in
