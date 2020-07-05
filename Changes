@@ -2,6 +2,14 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.12.0    2020-07-05 14:49:44-03:00 America/Sao_Paulo
+
+[New features]
+
+  - New configuration option githooks.error-prefix makes it easier to integrate
+    Git::Hooks with GitLab:
+    https://docs.gitlab.com/ee/administration/server_hooks.html#custom-error-messages
+
 2.11.1    2020-04-05 00:05:19-03:00 America/Sao_Paulo
 
 [Fix]
