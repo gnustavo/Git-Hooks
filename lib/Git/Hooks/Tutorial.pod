@@ -152,7 +152,7 @@ messages's title line.
 I enable other plugins for specific repositories, since they depend on the
 context in which they are developed.
 
-At L<CPqD|http://www.cpqd.com.br/> we use
+At L<CPQD|http://www.cpqd.com.br/> we use
 L<JIRA|http://www.atlassian.com/software/jira> and
 L<Gerrit|https://code.google.com/p/gerrit/>. So, for my work-related
 repositories I have this in their F<.git/config>:
