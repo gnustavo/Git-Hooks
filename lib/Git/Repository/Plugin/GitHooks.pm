@@ -859,6 +859,10 @@ EOS
         $faults .= "\n$colors->{footer}" . qx{$footer} . "$colors->{reset}\n"; ## no critic (ProhibitBacktickOperators)
     }
 
+    if (my $prefix = $git->get_config(githooks => 'error-prefix')) {
+        $faults =~ s/^/$prefix/gm;
+    }
+
     return $faults;
 }
 

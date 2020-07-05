@@ -1233,6 +1233,19 @@ Allowed values are NONE, OWNER, OWNER_REVIEWERS, and ALL.
 
 If not set, the default is ALL.
 
+=head2 error-prefix STRING
+
+This option specifies a fixed string that will be inserted as a prefix to all
+the lines in the error messages produced by the
+L<Git::Repository::Plugin::GitHooks::fault> method.
+
+It's useful, for instance, to produce error messages for
+<Gitlab|https://docs.gitlab.com/ee/administration/server_hooks.html#custom-error-messages>
+as in:
+
+  [githooks]
+    error-prefix = "GL-HOOK-ERR: "
+
 =head2 error-header CMD
 
 This option specifies a command that should produce a multi-line string
