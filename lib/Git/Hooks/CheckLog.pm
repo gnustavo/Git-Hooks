@@ -516,7 +516,7 @@ the format of commit log messages. The REFERENCES section below lists
 some of the most important.
 
 This plugin allows one to enforce most of the established policies. The
-default configuration already enforces the most common one.
+default configuration already enforces the most common ones.
 
 To enable it you should add it to the githooks.plugin configuration
 option:
@@ -527,7 +527,7 @@ option:
 =head1 CONFIGURATION
 
 The plugin is configured by the following git options under the
-C<githooks.checkacls> subsection.
+C<githooks.checklog> subsection.
 
 It can be disabled for specific references via the C<githooks.ref> and
 C<githooks.noref> options about which you can read in the L<Git::Hooks>
