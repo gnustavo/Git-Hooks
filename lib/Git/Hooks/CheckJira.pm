@@ -217,6 +217,11 @@ EOS
             }
         }
 
+        # AND JQLs
+        if (my @and_jql = $git->get_config($CFG => 'and-jql')) {
+            push @jqls, @and_jql;
+        }
+
         # JQL terms for the deprecated configuration options
         foreach my $option (qw/project issuetype status/) {
             if (my @values = $git->get_config($CFG => $option)) {
@@ -828,6 +833,27 @@ issues.
 Note, though, that if there is a global JQL specified by the
 B<githooks.checkjira.jql> option it will be checked separately and both
 expressions must validate the issues matching REF.
+
+=head2 and-jql JQL
+
+Unlike the B<jql> option, this one is multi-valued. All JQL terms specified with
+this option are ANDed together with the last B<jql> expression and with the
+B<ref-jql> expression, if they exist.
+
+It is useful, for instance, when you want to specialize a default JQL with new
+terms.  Suppose you have a global B<jql> option with some general requirements
+that all Jira issues must fulfill, like being of particular types and in
+specific statuses:
+
+  [githooks "checkjira"]
+    jql = issuetype IN (Bug, Story) AND status IN ("In progress", "In testing")
+
+Moreover, you may have several repositories, each one associated with a
+particular Jira project. Then, you can AND more terms to the global JQL like
+this in a repository:
+
+  [githooks "checkjira"]
+    and-jql = project = ABC
 
 =head2 require BOOL
 
