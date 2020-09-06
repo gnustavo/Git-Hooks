@@ -10,7 +10,7 @@ use Log::Any '$log';
 use Git::Hooks;
 use Git::Repository::Log;
 use Path::Tiny;
-use List::MoreUtils qw/uniq/;
+use List::MoreUtils qw/last_index uniq/;
 
 my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
@@ -205,21 +205,22 @@ EOS
 
         # global JQL
         if (my $jql = $git->get_config($CFG => 'jql')) {
-            push @jqls, $jql;
+            push @jqls, $jql unless $jql eq 'undef';
         }
 
         # ref-specific JQL
         foreach my $refjql (reverse $git->get_config($CFG => 'ref-jql')) {
             my ($match_ref, $jql) = split ' ', $refjql, 2;
             if ($ref =~ $match_ref) {
-                push @jqls, $jql;
+                push @jqls, $jql unless $jql eq 'undef';
                 last;
             }
         }
 
         # AND JQLs
         if (my @and_jql = $git->get_config($CFG => 'and-jql')) {
-            push @jqls, @and_jql;
+            my $first = 1 + last_index {$_ eq 'undef'} @and_jql;
+            push @jqls, @and_jql[$first .. $#and_jql];
         }
 
         # JQL terms for the deprecated configuration options
@@ -815,6 +816,9 @@ which must match all cited issues. For example, you may want to:
 This is a scalar option. Only the last JQL expression will be used to check the
 issues.
 
+The special value 'undef' can be used to disable the option, making it possible
+to disable it locally.
+
 =head2 ref-jql REF JQL
 
 You may impose restrictions on specific branches (or, more broadly, any
@@ -829,6 +833,9 @@ expression starting with a caret (C<^>), which is kept as part of the regexp
 
 This is a scalar option. Only the last JQL expression will be used to check the
 issues.
+
+The special value 'undef' can be used to disable the option, making it possible
+to disable it locally.
 
 Note, though, that if there is a global JQL specified by the
 B<githooks.checkjira.jql> option it will be checked separately and both
@@ -854,6 +861,9 @@ this in a repository:
 
   [githooks "checkjira"]
     and-jql = project = ABC
+
+The special value 'undef' can be used to reset the option, effectively making
+any previous values be forgotten so that you can start anew to add terms to it.
 
 =head2 require BOOL
 
