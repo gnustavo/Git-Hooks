@@ -226,7 +226,7 @@ sub signature_errors {
     my $signature = $git->get_config($CFG => 'signature');
 
     if (defined $signature && $signature ne 'nocheck') {
-        my $status = $git->run(qw/log -1 --format='%G?'/, $commit);
+        my $status = $git->run(qw/log -1 --format=%G?/, $commit);
 
         if ($status eq 'B') {
             $git->fault(<<'EOS', {commit => $commit, option => 'signature'});
