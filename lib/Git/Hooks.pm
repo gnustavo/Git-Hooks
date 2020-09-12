@@ -1093,7 +1093,11 @@ sign, you can configure it like this:
       'eval:(exists $ENV{GERRIT_USER_EMAIL} && $ENV{GERRIT_USER_EMAIL} =~ /([^@]+)/) ? $1 : undef'
 
 This variable is useful for any hook that need to authenticate the
-user performing the git action.
+user performing the git action. The value is available
+in L<Git::Hooks::CheckReference> hook
+when specifying allowed reference (branch) names with config item acl,
+see L<Git::Hooks::CheckReference/"grok_acls CFG ACTIONS">.
+It can be access by string '{AUTHENTICATED-USER}'.
 
 =head2 admin USERSPEC
 

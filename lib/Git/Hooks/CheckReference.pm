@@ -152,7 +152,13 @@ may configure it in a Git configuration file like this:
     acl = allow CRUD ^refs/tags/ by @cms
 
     # Users may maintain personal branches under user/<username>/
+    # All environment variables are available.
+    # Just surround them with '{' and '}'.
     acl = allow CRUD ^refs/heads/user/{USER}/
+
+    # The authenticated user, as provided by config item githooks.userenv,
+    # is available via the special string '{AUTHENTICATED-USER}'.
+    acl = allow CRUD ^refs/heads/user/{Git::Hooks-Auth-User}/
 
     # Users may only update the vetted branch names
     acl = allow U    ^refs/heads/(?:feature|release|hotfix)/

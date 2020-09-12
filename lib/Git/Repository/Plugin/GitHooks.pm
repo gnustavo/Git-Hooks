@@ -1562,6 +1562,9 @@ sub grok_acls {
             $acl{action} = $2;
             my $spec     = $3;
 
+            # Interpolate authenticated user. In case user was fetched
+            # by eval, not by env var! See: config item githooks.userenv
+            $spec =~ s/{AUTHENTICATED-USER}/$git->authenticated_user()/ige;
             # Interpolate environment variables embedded as "{VAR}".
             $spec =~ s/{(\w+)}/$ENV{$1}/ige;
             # Pre-compile regex
@@ -2279,6 +2282,10 @@ Before being interpreted as a string or as a regexp, any sub-string of it in the
 form C<{VAR}> is replaced by C<$ENV{VAR}>. This is useful, for example, to
 interpolate the committer's username in the spec, in order to create personal
 name spaces for users.
+
+The authenticated user, as provided by config var C<githooks.userenv>,
+see L<Git::Hooks/"userenv STRING">,
+is available via the special string '{AUTHENTICATED-USER}'.
 
 (See the documentation of the C<acl> option in the L<Git::Hooks::CheckFile> and
 the L<Git::Hooks::CheckReference> plugins for examples things as files and
