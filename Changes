@@ -2,6 +2,21 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.13.0    2020-10-21 21:06:44-03:00 America/Sao_Paulo
+
+[New features]
+
+  - CheckJira: The new option 'and-jql' conjuncts a new JQL with the one
+    previously set, making it easier to implement restrictions on a global JQL
+    per repository.
+
+  - CheckJira: Now one can reset the value of the 'jql' option by assigning it
+    the special value 'undef'.
+
+[Fix]
+
+  - CheckCommit: The 'signature' option wasn't working at all.
+
 2.12.0    2020-07-05 14:49:44-03:00 America/Sao_Paulo
 
 [New features]
