@@ -30,17 +30,11 @@ sub check_pre_commit {
 
     $log->debug(__PACKAGE__ . "::check_pre_commit");
 
-    my @commands = $git->get_config($CFG => 'shell');
-
-    return 1 unless @commands;
-
     my $current_branch = $git->get_current_branch();
 
     return 1 unless $git->is_reference_enabled($current_branch);
 
-    return _check_commands(
-        $git, {ref => $current_branch}, 'diff-index', ['--cached', 'HEAD'], \@commands,
-    ) == 0;
+    return _check_everything($git, {ref => $current_branch}, qw/diff-index --cached HEAD/);
 }
 
 sub check_patchset {
@@ -49,10 +43,6 @@ sub check_patchset {
     $log->debug(__PACKAGE__ . "::check_patchset");
 
     return 1 if $git->im_admin();
-
-    my @commands = $git->get_config($CFG => 'shell');
-
-    return 1 unless @commands;
 
     # The --branch argument contains the branch short-name if it's in the
     # refs/heads/ namespace. But we need to always use the branch long-name,
@@ -65,9 +55,7 @@ sub check_patchset {
 
     my $commit = $opts->{'--commit'};
 
-    return _check_commands(
-        $git, {ref => $branch, commit => $commit}, 'diff-tree', [$commit], \@commands,
-    ) == 0;
+    return _check_everything($git, {ref => $branch, commit => $commit}, 'diff-tree', $commit);
 }
 
 sub check_affected_refs {
@@ -77,22 +65,18 @@ sub check_affected_refs {
 
     return 1 if $git->im_admin();
 
-    my @commands = $git->get_config($CFG => 'shell');
-
-    return 1 unless @commands;
-
     my $errors = 0;
 
     foreach my $ref ($git->get_affected_refs()) {
         next unless $git->is_reference_enabled($ref);
-        $errors += _check_ref($git, $ref, \@commands);
+        $errors += _check_ref($git, $ref);
     }
 
     return $errors == 0;
 }
 
 sub _check_ref {
-    my ($git, $ref, $commands) = @_;
+    my ($git, $ref) = @_;
 
     my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
 
@@ -125,24 +109,40 @@ sub _check_ref {
         }
     }
 
-    return _check_commands(
-        $git, {ref => $ref}, 'diff-tree', [$old_commit, $new_commit], $commands,
-    );
+    return _check_everything($git, {ref => $ref}, 'diff-tree', $old_commit, $new_commit);
 }
 
-sub _check_commands {
-    my ($git, $ctx, $git_cmd, $args, $commands) = @_;
+sub _check_everything {
+    my ($git, $ctx, $git_cmd, @git_args) = @_;
 
-    my $diff_file = _diff_file($git, $git_cmd, qw/-p -U0 --no-color --diff-filter=AM --no-prefix/, @$args);
+    my $diff_text;
+    my $diff = sub {
+        $diff_text //= $git->run(
+            $git_cmd, qw/-p -U0 --no-color --diff-filter=AM --no-prefix/, @git_args
+        );
+        return $diff_text;
+    };
+
+    return 0 == _check_shell($git, $ctx, $diff);
+}
+
+sub _check_shell {
+    my ($git, $ctx, $diff) = @_;
+
+    my @commands = $git->get_config($CFG => 'shell');
+
+    return 0 unless @commands;
+
+    my $diff_file = _diff_file($diff);
 
     unless ($diff_file) {
-        $git->fault("git $git_cmd failed", {%$ctx});
+        $git->fault("git diff failed", {%$ctx});
         return 1;
     }
 
     my $errors = 0;
 
-    foreach my $command (@$commands) {
+    foreach my $command (@commands) {
         $errors += _check_command($git, $ctx, $command, $diff_file);
     }
 
@@ -150,15 +150,11 @@ sub _check_commands {
 }
 
 sub _diff_file {
-    my ($git, @diff) = @_;
+    my ($diff) = @_;
 
     my $file = Path::Tiny->tempfile();
 
-    my $diff = $git->run(@diff);
-
-    return unless $? == 0;
-
-    $file->spew($diff);
+    $file->spew($diff->());
 
     return $file;
 }
