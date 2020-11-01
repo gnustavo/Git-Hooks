@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
 # PODNAME: find-secret-leakage-in-git-diff.pl
+# ABSTRACT: find secrets leaking in a Git repository
 ## no critic (RequireCarping)
 
 use 5.016;
