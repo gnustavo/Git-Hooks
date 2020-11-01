@@ -63,6 +63,8 @@ sub run_hook {
 
     my $git = Git::Repository->new();
 
+    local $ENV{GITHOOKS_AUTHENTICATED_USER} = $git->authenticated_user();
+
     $git->prepare_hook($hook_name, \@args);
 
     $git->load_plugins();
@@ -1061,6 +1063,23 @@ user's name from the C<GERRIT_USER_EMAIL> or the C<USER> environment
 variable, in this order, and let it undefined if it can't figure it
 out.
 
+If the user name is not directly available in an environment variable
+you may set this option to a code snippet by prefixing it with
+C<eval:>. The code will be evaluated and its value will be used as the
+user name.
+
+For example, if the Gerrit user email is not what you want to use as
+the user id, you can set the C<githooks.userenv> configuration option
+to grok the user id from one of these environment variables. If the
+user id is always identical to the part of the email before the at
+sign, you can configure it like this:
+
+    git config githooks.userenv \
+      'eval:(exists $ENV{GERRIT_USER_EMAIL} && $ENV{GERRIT_USER_EMAIL} =~ /([^@]+)/) ? $1 : undef'
+
+Git::Hooks defines the environment variable C<GITHOOKS_AUTHENTICATED_USER> to
+the authenticated user, making it available for hooks and plugins.
+
 The Gerrit hooks unfortunately do not have access to the user's
 id. But they get the user's full name and email instead. Git:Hooks
 takes care so that two environment variables are defined in the hooks,
@@ -1077,20 +1096,6 @@ This contains the user's full name, such as "User Name".
 This contains the user's email, such as "user@example.net".
 
 =back
-
-If the user name is not directly available in an environment variable
-you may set this option to a code snippet by prefixing it with
-C<eval:>. The code will be evaluated and its value will be used as the
-user name.
-
-For example, if the Gerrit user email is not what you want to use as
-the user id, you can set the C<githooks.userenv> configuration option
-to grok the user id from one of these environment variables. If the
-user id is always identical to the part of the email before the at
-sign, you can configure it like this:
-
-    git config githooks.userenv \
-      'eval:(exists $ENV{GERRIT_USER_EMAIL} && $ENV{GERRIT_USER_EMAIL} =~ /([^@]+)/) ? $1 : undef'
 
 This variable is useful for any hook that need to authenticate the
 user performing the git action.

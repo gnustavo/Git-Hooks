@@ -152,7 +152,7 @@ may configure it in a Git configuration file like this:
     acl = allow CRUD ^refs/tags/ by @cms
 
     # Users may maintain personal branches under user/<username>/
-    acl = allow CRUD ^refs/heads/user/{USER}/
+    acl = allow CRUD ^refs/heads/user/{GITHOOKS_AUTHENTICATED_USER}/
 
     # Users may only update the vetted branch names
     acl = allow U    ^refs/heads/(?:feature|release|hotfix)/
