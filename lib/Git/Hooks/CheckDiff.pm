@@ -123,7 +123,10 @@ sub _check_everything {
         return $diff_text;
     };
 
-    return 0 == _check_shell($git, $ctx, $diff);
+    return 0 == (
+        _check_shell($git, $ctx, $diff) +
+        _check_token($git, $ctx, $diff)
+    )
 }
 
 sub _check_shell {
@@ -206,6 +209,78 @@ sub _check_command {
     return $exit != 0;
 }
 
+sub _check_token {
+    my ($git, $ctx, $diff) = @_;
+
+    my @deny_tokens = $git->get_config($CFG => 'deny-token')
+        or return 0;
+
+    if ($git->version_lt('1.7.4')) {
+        $git->fault(<<'EOS', {option => 'deny-token'});
+This option requires Git 1.7.4 or later but your Git is older.
+Please, upgrade your Git or disable this option.
+EOS
+        return 1;
+    }
+
+    my $errors = 0;
+
+    foreach my $deny_token (@deny_tokens) {
+        my ($regex, $filters) = split /\s+--\s+/, $deny_token, 2;
+
+        my $match_token = qr/^\+.*?$regex/; # FIXME: detect error
+
+        my @filters;
+
+        if ($filters) {
+            foreach my $filter (split ' ', $filters) {
+                my $negated;
+                if ($filter =~ s/^\!//) {
+                    $negated = 1;
+                }
+                if ($filter =~ m/^\^/) {
+                    $filter = qr/$filter/;
+                }
+                push @filters, [$negated, $filter];
+            }
+        }
+
+        my $file = '';
+        my @matches;
+
+      LINE:
+        foreach (split /\n/, $diff->()) {
+            if (/^\+\+\+ (.+)/) {
+                $file = $1;
+                if (@filters) {
+                    foreach my $filter (@filters) {
+                        if ($filter->[0] xor ## no critic (ProhibitDeepNests)
+                                ((ref $filter->[1] and
+                                  $file =~ $filter->[1]) or
+                                  (not ref $filter->[1] and
+                                   $filter->[1] eq substr($file, 0, length($filter->[1]))))) {
+                            next LINE;
+                        }
+                    }
+                    $file = '';
+                }
+            } elsif (length $file && $_ =~ $match_token) {
+                push @matches, "$file: $_";
+            }
+        }
+
+        if (@matches) {
+            $git->fault(<<"EOS", {%$ctx, option => 'deny-token', details => join("\n", @matches)});
+Invalid lines matching '$regex' below.
+Please, rewrite them and try again.
+EOS
+            $errors += 1;
+        }
+    }
+
+    return $errors;
+}
+
 1;
 
 
@@ -230,6 +305,13 @@ may configure it in a Git configuration file like this:
     admin = joe molly
 
   [githooks "checkdiff"]
+
+    # Reject commits adding lines containing FIXME
+    deny-token = \\bFIXME\\b
+
+    # Reject commits adding lines containing TODO (ignoring case) but only on
+    # files under the directories lib/ and t/.
+    deny-token = (?i)\\bTODO\\b -- ^lib/ ^t/
 
     # Reject commits which change lines containing the string COPYRIGHT
     shell = /usr/bin/grep COPYRIGHT && false
@@ -294,6 +376,31 @@ C<githooks.checkdiff> subsection.
 It can be disabled for specific references via the C<githooks.ref> and
 C<githooks.noref> options about which you can read in the L<Git::Hooks>
 documentation.
+
+=head2 deny-token REGEXP [-- FILTER...]
+
+This directive rejects commits or pushes which add lines matching REGEXP, which
+is a Perl regular expression. This is a multi-valued directive, i.e., you can
+specify it multiple times to check several REGEXes.
+
+It is useful to detect marks left by developers in the code while developing,
+such as FIXME or TODO. These marks are usually a reminder to fix things before
+commit, but as it so often happens, they end up being forgotten.
+
+By default the token are looked for in all added lines in the whole commit or
+commit sequence diff. Optional filters may be specified to restrict which files
+should be considered. Only differences of affected files which names match at
+least one filter are checked for tokens.
+
+The REGEXP and the FILTERs are separated by two hyphens.
+
+A FILTER is a string used to match file paths. It can be optionally initiated by
+a '!' character, which reverses the matching logic, effectively selecting paths
+not matching it. If the remaining string initiates with a '^' it's treated as a
+Perl regular expression anchored at the beginning, which is used to match file
+paths. Otherwise, the string matches files paths having it as a prefix.
+
+Note that this option requires Git 1.7.4 or newer.
 
 =head2 shell COMMAND
 

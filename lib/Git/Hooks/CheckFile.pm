@@ -557,9 +557,6 @@ may configure it in a Git configuration file like this:
     # repository in case-insensitive filesystems, such as the ones on Windows.
     deny-case-conflict = true
 
-    # Reject files containing the strings FIXME or TODO.
-    deny-token = \\b(FIXME|TODO)\\b
-
     # Reject commits adding scripts without the executable bit set.
     executable = *.sh
     executable = *.csh
@@ -739,18 +736,6 @@ Note that this check have to check the newly added files against all files
 already in the repository. It can be a little slow for large repositories. Take
 heed!
 
-=head2 deny-token REGEXP
-
-This directive rejects commits or pushes which diff (patch) matches REGEXP. This
-is a multi-valued directive, i.e., you can specify it multiple times to check
-several REGEXes.
-
-It is useful to detect marks left by developers in the code while developing,
-such as FIXME or TODO. These marks are usually a reminder to fix things before
-commit, but as it so often happens, they end up being forgotten.
-
-Note that this option requires Git 1.7.4 or newer.
-
 =head2 executable PATTERN
 
 This directive requires that all added or modified files with names matching
@@ -811,6 +796,21 @@ potentially many files (e.g. F<^lib/.*\\.pm$>).
 =back
 
 See the L</SYNOPSIS> section for some examples.
+
+=head2 [DEPRECATED] deny-token REGEXP
+
+This option is deprecated. Please, use the C<CheckDiff::deny-token> option
+instead.
+
+This directive rejects commits or pushes which diff (patch) matches REGEXP. This
+is a multi-valued directive, i.e., you can specify it multiple times to check
+several REGEXes.
+
+It is useful to detect marks left by developers in the code while developing,
+such as FIXME or TODO. These marks are usually a reminder to fix things before
+commit, but as it so often happens, they end up being forgotten.
+
+Note that this option requires Git 1.7.4 or newer.
 
 =head2 [DEPRECATED] basename.deny REGEXP
 
