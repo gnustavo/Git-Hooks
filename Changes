@@ -2,6 +2,29 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+2.14.0    2020-11-01 22:06:09-03:00 America/Sao_Paulo
+
+[New features]
+
+  - CheckDiff: Add new option 'deny-token' which was previously implemented in
+    the CheckFile plugin. Also, the option now can look for tokens on specific
+    files and directories instead of in the whole repository.
+
+  - The GITHOOKS_AUTHENTICATED_USER environment variable is set to the
+    authenticated user's username, being available for all hooks and plugins. It
+    may be used wherever environment variables can be expanded, such as in
+    CheckReference's acl refspecs.
+
+[Deprecations]
+
+  - CheckFile: Deprecate the 'deny-token' option which was moved to the
+    CheckDiff plugin.
+
+[Fixes]
+
+  - CheckLog: Fix the revert_errors function which crashed when the SHA1
+    mentioned in the revert message didn't refer to an existing commit.
+
 2.13.0    2020-10-21 21:06:44-03:00 America/Sao_Paulo
 
 [New features]
