@@ -11,7 +11,7 @@ use Git::Hooks;
 use Git::Message;
 use Path::Tiny;
 
-(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
+my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
 
 ##########
 

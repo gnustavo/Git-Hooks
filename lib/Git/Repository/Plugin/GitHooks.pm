@@ -1301,7 +1301,7 @@ sub blob {
         my $path = path($file);
 
         # Calculate temporary file path
-        (my $revdir  = $rev) =~ s/^://; # remove ':' from ':0' because Windows don't like ':' in filenames
+        my $revdir = $rev =~ s/^://r; # remove ':' from ':0' because Windows don't like ':' in filenames
         my $filepath = $cache->{tmpdir}->child($revdir, $path);
 
         # Create directory path for the temporary file.

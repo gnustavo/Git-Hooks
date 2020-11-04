@@ -11,7 +11,7 @@ use Git::Hooks;
 use Path::Tiny;
 
 my $PKG = __PACKAGE__;
-(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
+my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
 
 # Install hooks
 GITHOOKS_CHECK_AFFECTED_REFS \&_check_ref;

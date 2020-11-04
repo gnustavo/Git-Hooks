@@ -9,7 +9,7 @@ use Log::Any '$log';
 use Git::Hooks;
 use Path::Tiny;
 
-(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
+my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
 
 #############
 # Grok hook configuration, check it and set defaults.

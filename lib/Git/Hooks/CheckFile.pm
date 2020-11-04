@@ -12,7 +12,7 @@ use Text::Glob qw/glob_to_regex/;
 use Path::Tiny;
 use List::MoreUtils qw/any none/;
 
-(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
+my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
 
 #############
 # Grok hook configuration, check it and set defaults.
@@ -38,7 +38,7 @@ sub check_command {
         or return;
 
     # interpolate filename in $command
-    (my $cmd = $command) =~ s/\{\}/\'$tmpfile\'/g;
+    my $cmd = $command =~ s/\{\}/\'$tmpfile\'/gr;
 
     # execute command and update $errors
     my ($exit, $output);

@@ -12,7 +12,7 @@ use Email::Sender::Simple;
 use Email::Simple;
 use List::MoreUtils qw/none part/;
 
-(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
+my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
 
 sub pretty_log {
     my ($git, $commits) = @_;

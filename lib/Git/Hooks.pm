@@ -243,7 +243,7 @@ sub run_hook {
             unless ($ok) {
                 # Let's see if there is a help-on-error message configured
                 # specifically for this plugin.
-                (my $CFG = $hook->{package}) =~ s/.*::/githooks./;
+                my $CFG = $hook->{package} =~ s/.*::/githooks./r;
                 if (my $help = $git->get_config(lc $CFG => 'help-on-error')) {
                     $git->fault($help, {prefix => $hook->{package}});
                 }

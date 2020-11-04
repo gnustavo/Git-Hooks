@@ -12,7 +12,7 @@ use Git::Repository::Log;
 use List::MoreUtils qw/any none/;
 
 my $PKG = __PACKAGE__;
-(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
+my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
 
 #############
 # Grok hook configuration, check it and set defaults.

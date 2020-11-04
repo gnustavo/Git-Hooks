@@ -8,7 +8,7 @@ use utf8;
 use Log::Any '$log';
 use Git::Hooks;
 
-(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
+my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
 
 # This routine can act both as an update or a pre-receive hook.
 sub check_ref {

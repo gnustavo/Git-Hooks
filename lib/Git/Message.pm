@@ -161,14 +161,9 @@ sub add_footer_values {
     ## no critic (BuiltinFunctions::ProhibitComplexMappings)
     push @{$self->{footer}{lc $key}},
         map { [$key => $_] }
-            map { my $copy = $_; $copy =~ s/foo/BAR/; $copy } # strip trailing newlines to keep the footer structure
+            map { s/\n+$//r } # strip trailing newlines to keep the footer structure
                 @values;
     ## use critic
-
-    # ANCIENT PERL ALERT! The strange looking dance above with the
-    # $copy variable is needed in old Perls.
-    # (http://www.perl.com/pub/2011/05/new-features-of-perl-514-non-destructive-substitution.html)
-    # Since Perl 5.14 that could be simply: map { s/\n+$//r }
 
     return;
 }

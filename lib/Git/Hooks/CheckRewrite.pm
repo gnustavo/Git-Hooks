@@ -9,7 +9,7 @@ use Path::Tiny;
 use Log::Any '$log';
 use Git::Hooks;
 
-(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
+my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
 
 ##########
 

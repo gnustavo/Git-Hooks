@@ -9,7 +9,7 @@ use Log::Any '$log';
 use Git::Hooks;
 use List::MoreUtils qw/any none/;
 
-(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
+my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
 
 # Assign meaningful names to action codes.
 my %ACTION = (

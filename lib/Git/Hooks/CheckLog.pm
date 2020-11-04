@@ -10,7 +10,7 @@ use Git::Hooks;
 use Git::Message;
 use List::MoreUtils qw/uniq/;
 
-(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
+my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
 
 #############
 # Grok hook configuration, check it and set defaults.
