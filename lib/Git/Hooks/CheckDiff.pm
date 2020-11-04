@@ -170,14 +170,6 @@ sub _check_token {
     my @deny_tokens = $git->get_config($CFG => 'deny-token')
         or return 0;
 
-    if ($git->version_lt('1.7.4')) {
-        $git->fault(<<'EOS', {option => 'deny-token'});
-This option requires Git 1.7.4 or later but your Git is older.
-Please, upgrade your Git or disable this option.
-EOS
-        return 1;
-    }
-
     my $errors = 0;
 
     foreach my $deny_token (@deny_tokens) {
@@ -354,8 +346,6 @@ a '!' character, which reverses the matching logic, effectively selecting paths
 not matching it. If the remaining string initiates with a '^' it's treated as a
 Perl regular expression anchored at the beginning, which is used to match file
 paths. Otherwise, the string matches files paths having it as a prefix.
-
-Note that this option requires Git 1.7.4 or newer.
 
 =head2 shell COMMAND
 

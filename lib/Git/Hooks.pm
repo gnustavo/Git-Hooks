@@ -1660,7 +1660,7 @@ The indented lines providing details for error messages. (Default value is empty
 
 =head1 GIT AND PERL VERSION COMPATIBILITY POLICY
 
-Currently L<Git::Hooks> require Perl 5.16 and Git 1.7.1.
+Currently L<Git::Hooks> require Perl 5.16 and Git 1.8.3.
 
 We try to be compatible with the Git and Perl native packages of the oldest
 L<Ubuntu LTS|https://www.ubuntu.com/info/release-end-of-life> and

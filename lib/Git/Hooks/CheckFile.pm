@@ -274,14 +274,6 @@ sub deny_token {
     my $regex = $git->get_config($CFG => 'deny-token')
         or return 0;
 
-    if ($git->version_lt('1.7.4')) {
-        $git->fault(<<'EOS', {option => 'deny-token'});
-This option requires Git 1.7.4 or later but your Git is older.
-Please, upgrade your Git or disable this option.
-EOS
-        return 1;
-    }
-
     # Extract only the lines showing addition of the $regex
     my @diff = grep {/^\+.*?(?:$regex)/}
         ($commit ne ':0'
