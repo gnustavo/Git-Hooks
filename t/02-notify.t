@@ -1,7 +1,6 @@
 # -*- cperl -*-
 
-use 5.010;
-use strict;
+use 5.016;
 use warnings;
 use Path::Tiny 0.060;
 use lib qw/t lib/;

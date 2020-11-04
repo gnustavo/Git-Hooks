@@ -1,7 +1,6 @@
 # -*- cperl -*-
 
-use 5.010;
-use strict;
+use 5.01;
 use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';

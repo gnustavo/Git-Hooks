@@ -1,4 +1,3 @@
-use strict;
 use warnings;
 
 package Git::Repository::Plugin::GitHooks;
@@ -6,7 +5,7 @@ package Git::Repository::Plugin::GitHooks;
 
 use parent qw/Git::Repository::Plugin/;
 
-use 5.010;
+use 5.016;
 use utf8;
 use Carp;
 use Path::Tiny;

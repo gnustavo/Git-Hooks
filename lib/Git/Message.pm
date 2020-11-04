@@ -1,10 +1,9 @@
-use strict;
 use warnings;
 
 package Git::Message;
 # ABSTRACT: A Git commit message
 
-use 5.010;
+use 5.016;
 use utf8;
 use Carp;
 

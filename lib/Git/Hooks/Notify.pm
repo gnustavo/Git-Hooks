@@ -1,10 +1,9 @@
-use strict;
 use warnings;
 
 package Git::Hooks::Notify;
 # ABSTRACT: Git::Hooks plugin to notify users via email
 
-use 5.010;
+use 5.016;
 use utf8;
 use Log::Any '$log';
 use Git::Hooks;

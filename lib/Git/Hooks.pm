@@ -1,10 +1,9 @@
-use strict;
 use warnings;
 
 package Git::Hooks;
 # ABSTRACT: Framework for implementing Git (and Gerrit) hooks
 
-use 5.010;
+use 5.016;
 use utf8;
 use Carp;
 use Exporter qw/import/;
@@ -314,13 +313,15 @@ options. (More on this later.)
 
         #!/usr/bin/env perl
 
+        use 5.016;
+        use warnings;
         use Git::Hooks;
 
         run_hook($0, @ARGV);
 
-In fact, this module installs a script called F<githooks.pl> containing the
-three lines above, so that all you have to do is to create symbolic links in
-your Git repository's F<.git/hook> pointing to it.
+In fact, this module installs a script called F<githooks.pl> exactly like that,
+so that all you have to do is to create symbolic links in your Git repository's
+F<.git/hook> pointing to it.
 
 =head1 INTRODUCTION
 
@@ -1657,9 +1658,9 @@ The indented lines providing details for error messages. (Default value is empty
 
 =back
 
-=head1 GIT AND PERL COMPATIBILITY POLICY
+=head1 GIT AND PERL VERSION COMPATIBILITY POLICY
 
-Currently L<Git::Hooks> require Perl 5.10 and Git 1.7.1.
+Currently L<Git::Hooks> require Perl 5.16 and Git 1.7.1.
 
 We try to be compatible with the Git and Perl native packages of the oldest
 L<Ubuntu LTS|https://www.ubuntu.com/info/release-end-of-life> and
@@ -1669,11 +1670,11 @@ getting maintenance updates.
   +-----------------------+------+--------+-------------+
   | Distro                | Perl |   Git  | End of Life |
   +-----------------------+------+--------+-------------+
-  | Ubuntu 14.04 (trusty) | 5.18 |  1.9.1 |   2019-04   |
   | Ubuntu 16.04 (xenial) | 5.22 |  2.7.4 |   2021-04   |
   | Ubuntu 18.04 (bionic) | 5.26 | 2.15.1 |   2023-04   |
-  | CentOS 6              | 5.10 |  1.7.1 |   2020-12   |
+  | Ubuntu 20.04 (focal ) | 5.30 | 2.25.1 |   2025-04   |
   | CentOS 7              | 5.16 |  1.8.3 |   2024-07   |
+  | CentOS 8              | 5.26 | 2.18.4 |   2029-05   |
   +-----------------------+------+--------+-------------+
 
 As you can see, we're kept behind mostly by the slow pace of CentOS (actually,
