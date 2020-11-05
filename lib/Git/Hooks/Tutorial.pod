@@ -423,14 +423,6 @@ I<repository settings> section in Bitbucket's web interface. The page shows the
 repository's B<location on disk> where you find the F<config> file which you
 must edit to configure Git::Hooks plugins.
 
-B<Note> that as of April, 2018, the External Hooks plugin's latest version (4.3)
-has an L<issue|https://github.com/reconquest/atlassian-external-hooks/issues/50>
-which prevents it to work with Git 2.11 or newer. Until this problem is fixed
-you have to make Bitbucket use Git 2.10 or older. You can specify which Git to
-use by defining the
-L<plugin.bitbucket-git.path.executable|https://confluence.atlassian.com/bitbucketserver/bitbucket-server-config-properties-776640155.html?_ga=2.152176889.1949745534.1525141700-1507802342.1510178253#BitbucketServerconfigproperties-SCM-git>
-option in the Bitbucket Server config properties file.
-
 =head1 TUTORIAL FOR HOOK DEVELOPERS
 
 I'm sorry but there is no gentle introduction to this. ;-)
