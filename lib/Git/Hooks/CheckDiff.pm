@@ -15,64 +15,20 @@ my $PKG = __PACKAGE__;
 (my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
 
 # Install hooks
-PRE_APPLYPATCH   \&check_pre_commit;
-PRE_COMMIT       \&check_pre_commit;
-UPDATE           \&check_affected_refs;
-PRE_RECEIVE      \&check_affected_refs;
-REF_UPDATE       \&check_affected_refs;
-COMMIT_RECEIVED  \&check_affected_refs;
-SUBMIT           \&check_affected_refs;
-PATCHSET_CREATED \&check_patchset;
-DRAFT_PUBLISHED  \&check_patchset;
+GITHOOKS_CHECK_AFFECTED_REFS \&_check_ref;
+GITHOOKS_CHECK_PRE_COMMIT    \&check_commit;
+GITHOOKS_CHECK_PATCHSET      \&check_patchset;
 
-sub check_pre_commit {
-    my ($git) = @_;
-
-    $log->debug(__PACKAGE__ . "::check_pre_commit");
-
-    my $current_branch = $git->get_current_branch();
-
-    return 1 unless $git->is_reference_enabled($current_branch);
+sub check_commit {
+    my ($git, $current_branch) = @_;
 
     return _check_everything($git, {ref => $current_branch}, qw/diff-index --cached HEAD/);
 }
 
 sub check_patchset {
-    my ($git, $opts) = @_;
-
-    $log->debug(__PACKAGE__ . "::check_patchset");
-
-    return 1 if $git->im_admin();
-
-    # The --branch argument contains the branch short-name if it's in the
-    # refs/heads/ namespace. But we need to always use the branch long-name,
-    # so we change it here.
-    my $branch = $opts->{'--branch'};
-    $branch = "refs/heads/$branch"
-        unless $branch =~ m:^refs/:;
-
-    return 1 unless $git->is_reference_enabled($branch);
-
-    my $commit = $opts->{'--commit'};
+    my ($git, $branch, $commit) = @_;
 
     return _check_everything($git, {ref => $branch, commit => $commit}, 'diff-tree', $commit);
-}
-
-sub check_affected_refs {
-    my ($git) = @_;
-
-    $log->debug(__PACKAGE__ . "::check_affected_refs");
-
-    return 1 if $git->im_admin();
-
-    my $errors = 0;
-
-    foreach my $ref ($git->get_affected_refs()) {
-        next unless $git->is_reference_enabled($ref);
-        $errors += _check_ref($git, $ref);
-    }
-
-    return $errors == 0;
 }
 
 sub _check_ref {
@@ -285,7 +241,7 @@ EOS
 
 
 __END__
-=for Pod::Coverage check_affected_refs check_patchset check_pre_commit
+=for Pod::Coverage check_patchset check_commit
 
 =head1 NAME
 

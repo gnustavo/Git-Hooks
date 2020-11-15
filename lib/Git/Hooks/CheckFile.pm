@@ -422,52 +422,33 @@ sub check_everything {
         deny_token($git, \%context, $commit);
 }
 
-# This routine can act both as an update or a pre-receive hook.
-sub check_affected_refs {
-    my ($git) = @_;
+sub check_ref {
+    my ($git, $ref) = @_;
 
-    $log->debug(__PACKAGE__ . "::check_affected_refs");
+    my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
 
-    _setup_config($git);
-
-    return 1 if $git->im_admin();
+    my @commits = $git->get_commits(
+        $old_commit,
+        $new_commit,
+        [qw/--name-status --ignore-submodules -r --cc/],
+    );
 
     my $errors = 0;
 
-    foreach my $ref ($git->get_affected_refs()) {
-        next unless $git->is_reference_enabled($ref);
-
-        my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
-
-        my @commits = $git->get_commits(
-            $old_commit,
-            $new_commit,
-            [qw/--name-status --ignore-submodules -r --cc/],
-        );
-
-        foreach my $commit (@commits) {
-            $errors += check_everything($git, $ref, $commit->commit, $commit->extra);
-        }
+    foreach my $commit (@commits) {
+        $errors += check_everything($git, $ref, $commit->commit, $commit->extra);
     }
 
-    return $errors == 0;
+    return $errors;
 }
 
 sub check_commit {
-    my ($git) = @_;
-
-    $log->debug(__PACKAGE__ . "::check_commit");
-
-    _setup_config($git);
-
-    my $current_branch = $git->get_current_branch();
-
-    return 1 unless $git->is_reference_enabled($current_branch);
+    my ($git, $current_branch) = @_;
 
     my $extra = $git->run(qw/diff-index --name-status --ignore-submodules --no-commit-id --cached -r/,
                           $git->get_head_or_empty_tree);
 
-    return 0 == check_everything(
+    return check_everything(
         $git,
         $current_branch,
         ':0',                   # mark to signify the index
@@ -476,47 +457,22 @@ sub check_commit {
 }
 
 sub check_patchset {
-    my ($git, $opts) = @_;
+    my ($git, $branch, $commit) = @_;
 
-    $log->debug(__PACKAGE__ . "::check_patchset");
-
-    _setup_config($git);
-
-    return 1 if $git->im_admin();
-
-    # The --branch argument contains the branch short-name if it's in the
-    # refs/heads/ namespace. But we need to always use the branch long-name,
-    # so we change it here.
-    my $branch = $opts->{'--branch'};
-    $branch = "refs/heads/$branch"
-        unless $branch =~ m:^refs/:;
-
-    return 1 unless $git->is_reference_enabled($branch);
-
-    my ($commit) = $git->get_commits(
-        "$opts->{'--commit'}^",
-        $opts->{'--commit'},
-        [qw/-n 1 --name-status --ignore-submodules -r --cc/],
-    );
-
-    return 0 == check_everything($git, $branch, $commit->commit, $commit->extra);
+    return check_everything($git, $branch, $commit->commit, $commit->extra);
 }
 
 # Install hooks
-PRE_APPLYPATCH   \&check_commit;
-PRE_COMMIT       \&check_commit;
-UPDATE           \&check_affected_refs;
-PRE_RECEIVE      \&check_affected_refs;
-REF_UPDATE       \&check_affected_refs;
-COMMIT_RECEIVED  \&check_affected_refs;
-SUBMIT           \&check_affected_refs;
-PATCHSET_CREATED \&check_patchset;
-DRAFT_PUBLISHED  \&check_patchset;
+my $options = {config => \&_setup_config};
+
+GITHOOKS_CHECK_AFFECTED_REFS \&check_ref,      $options;
+GITHOOKS_CHECK_PRE_COMMIT    \&check_commit,   $options;
+GITHOOKS_CHECK_PATCHSET      \&check_patchset, $options;
 
 1;
 
 __END__
-=for Pod::Coverage check_command check_new_files deny_case_conflicts deny_token check_acls check_everything check_affected_refs check_commit check_patchset
+=for Pod::Coverage check_command check_new_files deny_case_conflicts deny_token check_acls check_everything check_ref check_commit check_patchset
 
 =head1 NAME
 

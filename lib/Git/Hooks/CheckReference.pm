@@ -93,36 +93,13 @@ EOS
     return $errors;
 }
 
-# This routine can act both as an update or a pre-receive hook.
-sub check_affected_refs {
-    my ($git) = @_;
-
-    $log->debug(__PACKAGE__ . "::check_affected_refs");
-
-    return 1 if $git->im_admin();
-
-    my $errors = 0;
-
-    foreach my $ref ($git->get_affected_refs()) {
-        next unless $git->is_reference_enabled($ref);
-        check_ref($git, $ref)
-            or ++$errors;
-    }
-
-    return $errors == 0;
-}
-
 # Install hooks
-UPDATE           \&check_affected_refs;
-PRE_RECEIVE      \&check_affected_refs;
-REF_UPDATE       \&check_affected_refs;
-COMMIT_RECEIVED  \&check_affected_refs;
-SUBMIT           \&check_affected_refs;
+GITHOOKS_CHECK_AFFECTED_REFS \&check_ref;
 
 1;
 
 __END__
-=for Pod::Coverage check_ref check_affected_refs
+=for Pod::Coverage check_ref
 
 =head1 NAME
 

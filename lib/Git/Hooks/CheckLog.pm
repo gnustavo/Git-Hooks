@@ -308,26 +308,9 @@ sub message_errors {
 }
 
 sub check_message_file {
-    my ($git, $commit_msg_file) = @_;
+    my ($git, $msg) = @_;
 
-    $log->debug(__PACKAGE__ . "::check_message_file($commit_msg_file)");
-
-    _setup_config($git);
-
-    my $current_branch = $git->get_current_branch();
-
-    return 1 unless $git->is_reference_enabled($current_branch);
-
-    my $msg = eval {$git->read_commit_msg_file($commit_msg_file)};
-
-    unless (defined $msg) {
-        $git->fault(<<"EOS", {details => $@});
-I cannot read the commit message file '$commit_msg_file'.
-EOS
-        return 0;
-    }
-
-    return message_errors($git, undef, $msg) == 0;
+    return message_errors($git, undef, $msg);
 }
 
 sub check_ref {
@@ -342,67 +325,24 @@ sub check_ref {
     return $errors == 0;
 }
 
-# This routine can act both as an update or a pre-receive hook.
-sub check_affected_refs {
-    my ($git) = @_;
-
-    $log->debug(__PACKAGE__ . "::check_affected_refs");
-
-    _setup_config($git);
-
-    return 1 if $git->im_admin();
-
-    my $errors = 0;
-
-    foreach my $ref ($git->get_affected_refs()) {
-        next unless $git->is_reference_enabled($ref);
-        check_ref($git, $ref)
-            or ++$errors;
-    }
-
-    return $errors == 0;
-}
-
 sub check_patchset {
-    my ($git, $opts) = @_;
+    my ($git, $branch, $commit) = @_;
 
-    $log->debug(__PACKAGE__ . "::check_patchset");
-
-    _setup_config($git);
-
-    return 1 if $git->im_admin();
-
-    my $sha1   = $opts->{'--commit'};
-    my $commit = $git->get_commit($sha1);
-
-    # The --branch argument contains the branch short-name if it's in the
-    # refs/heads/ namespace. But we need to always use the branch long-name,
-    # so we change it here.
-    my $branch = $opts->{'--branch'};
-    $branch = "refs/heads/$branch"
-        unless $branch =~ m:^refs/:;
-
-    return 1 unless $git->is_reference_enabled($branch);
-
-    return message_errors($git, $commit, $commit->message) == 0;
+    return message_errors($git, $commit, $commit->message);
 }
 
 # Install hooks
-APPLYPATCH_MSG   \&check_message_file;
-COMMIT_MSG       \&check_message_file;
-UPDATE           \&check_affected_refs;
-PRE_RECEIVE      \&check_affected_refs;
-REF_UPDATE       \&check_affected_refs;
-COMMIT_RECEIVED  \&check_affected_refs;
-SUBMIT           \&check_affected_refs;
-PATCHSET_CREATED \&check_patchset;
-DRAFT_PUBLISHED  \&check_patchset;
+my $options = {config => \&_setup_config};
+
+GITHOOKS_CHECK_AFFECTED_REFS \&check_ref,          $options;
+GITHOOKS_CHECK_PATCHSET      \&check_patchset,     $options;
+GITHOOKS_CHECK_MESSAGE_FILE  \&check_message_file, $options;
 
 1;
 
 
 __END__
-=for Pod::Coverage spelling_errors pattern_errors revert_errors title_errors body_errors footer_errors message_errors check_ref check_affected_refs check_message_file check_patchset
+=for Pod::Coverage spelling_errors pattern_errors revert_errors title_errors body_errors footer_errors message_errors check_ref check_message_file check_patchset
 
 =head1 NAME
 
