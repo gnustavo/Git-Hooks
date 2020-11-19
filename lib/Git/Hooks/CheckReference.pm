@@ -65,18 +65,6 @@ EOS
         }
     }
 
-    # Check deprecated options
-    if ($action eq 'C') {
-        if (any  {$ref =~ qr/$_/} $git->get_config($CFG => 'deny') and
-            none {$ref =~ qr/$_/} $git->get_config($CFG => 'allow')) {
-            $git->fault(<<'EOS', {ref => $ref, option => 'deny'});
-The reference name is not allowed.
-Please, check your configuration option.
-EOS
-            ++$errors;
-        }
-    }
-
     if ($ref =~ m:^refs/tags/:
             && $git->get_config_boolean($CFG => 'require-annotated-tags')) {
         my $rev_type = $git->run('cat-file', '-t', $new_commit);
@@ -226,38 +214,6 @@ See the L</SYNOPSIS> section for some examples.
 By default one can push lightweight or annotated tags but if you want to require
 that only annotated tags be pushed to the repository you can set this option to
 true.
-
-=head2 [DEPRECATED] deny REGEXP
-
-This option is deprecated. Please, use an C<acl> option like this instead:
-
-  [githooks "checkreference"]
-    acl = deny C ^<REGEXP>
-
-This directive denies references with names matching REGEXP.
-
-=head2 [DEPRECATED] allow REGEXP
-
-This option is deprecated. Please, use an C<acl> option like this instead:
-
-  [githooks "checkreference"]
-    acl = allow C ^<REGEXP>
-
-This directive allows references with names matching REGEXP. Since by
-default all names are allowed this directive is useful only to prevent a
-B<githooks.checkreference.deny> directive to deny the same name.
-
-The checks are evaluated so that a reference is denied only if it's name
-matches any B<deny> directive and none of the B<allow> directives.  So, for
-instance, you would apply it like this to allow only the creation of
-branches with names prefixed by F<feature/>, F<release/>, and F<hotfix/>,
-denying all others.
-
-    [githooks "checkreference"]
-        deny  = ^refs/heads/
-        allow = ^refs/heads/(?:feature|release|hotfix)/
-
-Note that the order of the directives is irrelevant.
 
 =head1 REFERENCES
 
