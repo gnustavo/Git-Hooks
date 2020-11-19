@@ -161,18 +161,18 @@ setup_repos_for(\$repo);
 
 check_cannot_commit('deny commit by default without JIRAs');
 
-$repo->run(qw{config githooks.checkjira.ref refs/heads/fix});
+$repo->run(qw{config githooks.noref refs/heads/master});
 check_can_commit('allow commit on non-enabled ref even without JIRAs');
 
 $repo->run(qw/checkout -q -b fix/);
 check_cannot_commit('deny commit on enabled ref without JIRAs', qr/must cite a JIRA/);
 
-$repo->run(qw/config --unset githooks.checkjira.ref/);
-$repo->run(qw{config githooks.checkjira.noref refs/heads/fix});
+$repo->run(qw/config --unset githooks.noref/);
+$repo->run(qw{config githooks.noref refs/heads/fix});
 check_can_commit('allow commit on disabled ref even without JIRAs');
 
-$repo->run(qw/config --unset-all githooks.checkjira.noref/);
-$repo->run(qw/checkout -q master/);
+$repo->run(qw/config --unset-all githooks.noref/);
+$repo->run(qw/checkout -q master --/);
 
 $repo->run(qw/config githooks.checkjira.project OTHER/);
 check_cannot_commit('deny commit citing non-allowed projects [GIT-0]',

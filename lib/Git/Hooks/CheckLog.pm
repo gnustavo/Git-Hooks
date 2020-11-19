@@ -318,13 +318,6 @@ sub check_message_file {
 
     return 1 unless $git->is_reference_enabled($current_branch);
 
-    if (my @ref = $git->get_config($CFG => 'ref')) {
-        return 1 unless $git->is_ref_enabled($current_branch, @ref);
-    }
-    if (my @noref = $git->get_config($CFG => 'noref')) {
-        return 0 if $git->is_ref_enabled($current_branch, @noref);
-    }
-
     my $msg = eval {$git->read_commit_msg_file($commit_msg_file)};
 
     unless (defined $msg) {
@@ -339,13 +332,6 @@ EOS
 
 sub check_ref {
     my ($git, $ref) = @_;
-
-    if (my @ref = $git->get_config($CFG => 'ref')) {
-        return 1 unless $git->is_ref_enabled($ref, @ref);
-    }
-    if (my @noref = $git->get_config($CFG => 'noref')) {
-        return 0 if $git->is_ref_enabled($ref, @noref);
-    }
 
     my $errors = 0;
 
@@ -397,13 +383,6 @@ sub check_patchset {
         unless $branch =~ m:^refs/:;
 
     return 1 unless $git->is_reference_enabled($branch);
-
-    if (my @ref = $git->get_config($CFG => 'ref')) {
-        return 1 unless $git->is_ref_enabled($branch, @ref);
-    }
-    if (my @noref = $git->get_config($CFG => 'noref')) {
-        return 0 if $git->is_ref_enabled($branch, @noref);
-    }
 
     return message_errors($git, $commit, $commit->message) == 0;
 }
@@ -659,33 +638,6 @@ Note also that the C<git-revert> command, which creates the reverting commits
 doesn't invoke the C<commit-msg> hook, so that this check can't be performed at
 commit time. The checking will be performed at push time by a C<pre-receive> or
 C<update> hook though.
-
-=head2 [DEPRECATED] ref REFSPEC
-
-This option is DEPRECATED. Please, use the C<githooks.ref> option instead.
-
-By default, the message of every commit is checked. If you want to
-have them checked only for some refs (usually some branch under
-refs/heads/), you may specify them with one or more instances of this
-option.
-
-The refs can be specified as a complete ref name
-(e.g. "refs/heads/master") or by a regular expression starting with a
-caret (C<^>), which is kept as part of the regexp
-(e.g. "^refs/heads/(master|fix)").
-
-=head2 [DEPRECATED] noref REFSPEC
-
-This option is DEPRECATED. Please, use the C<githooks.noref> option instead.
-
-By default, the message of every commit is checked. If you want to exclude
-some refs (usually some branch under refs/heads/), you may specify them with
-one or more instances of this option.
-
-The refs can be specified as in the same way as to the C<ref> option above.
-
-Note that the C<ref> option has precedence over the C<noref> option, i.e.,
-if a reference matches both options it will be checked.
 
 =head1 REFERENCES
 
