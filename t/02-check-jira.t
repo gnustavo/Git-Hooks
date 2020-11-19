@@ -79,18 +79,18 @@ sub GET {
 }
 
 my %queries = (
-    '(key IN (GIT-0)) AND (project IN (\'OTHER\'))'     => [],
-    '(key IN (GIT-0)) AND (project IN (\'GIT\'))'       => [$issues{'GIT-0'}],
-    '(key IN (GIT-1)) AND (project IN (\'GIT\'))'       => [$issues{'GIT-1'}],
-    '(key IN (GIT-2)) AND (project IN (\'GIT\'))'       => [$issues{'GIT-2'}],
-    '(key IN (GIT-2))'                                  => [$issues{'GIT-2'}],
-    '(key IN (GIT-3)) AND (project IN (\'GIT\'))'       => [$issues{'GIT-3'}],
-    '(key IN (GIT-2,GIT-3)) AND (project IN (\'GIT\'))' => [@issues{'GIT-2','GIT-3'}],
-    '(key IN (GIT-4)) AND (project IN (\'GIT\'))'       => [$issues{'GIT-4'}],
-    '(key IN (GIT-2)) AND (project IN (\'GIT\')) AND (status IN (\'Taken\'))'  => [],
-    '(key IN (GIT-3)) AND (project IN (\'GIT\')) AND (status IN (\'Taken\'))'  => [$issues{'GIT-3'}],
-    '(key IN (GIT-3)) AND (project IN (\'GIT\')) AND (issuetype IN (\'Bug\'))' => [],
-    '(key IN (GIT-2)) AND (project IN (\'GIT\')) AND (issuetype IN (\'Bug\'))' => [$issues{'GIT-2'}],
+    '(key IN (GIT-0)) AND (project=OTHER)' => [],
+    '(key IN (GIT-0)) AND (project=GIT)'   => [$issues{'GIT-0'}],
+    '(key IN (GIT-1)) AND (project=GIT)'   => [$issues{'GIT-1'}],
+    '(key IN (GIT-2)) AND (project=GIT)'   => [$issues{'GIT-2'}],
+    '(key IN (GIT-2))'                     => [$issues{'GIT-2'}],
+    '(key IN (GIT-3))'                     => [$issues{'GIT-3'}],
+    '(key IN (GIT-2,GIT-3))'               => [@issues{'GIT-2','GIT-3'}],
+    '(key IN (GIT-4))'                     => [$issues{'GIT-4'}],
+    '(key IN (GIT-2)) AND (status=Taken)'  => [],
+    '(key IN (GIT-3)) AND (status=Taken)'  => [$issues{'GIT-3'}],
+    '(key IN (GIT-3)) AND (issuetype=Bug)' => [],
+    '(key IN (GIT-2)) AND (issuetype=Bug)' => [$issues{'GIT-2'}],
 );
 
 sub set_search_iterator {
@@ -174,7 +174,7 @@ check_can_commit('allow commit on disabled ref even without JIRAs');
 $repo->run(qw/config --unset-all githooks.noref/);
 $repo->run(qw/checkout -q master --/);
 
-$repo->run(qw/config githooks.checkjira.project OTHER/);
+$repo->run(qw/config githooks.checkjira.jql project=OTHER/);
 check_cannot_commit('deny commit citing non-allowed projects [GIT-0]',
                     qr/not match the following JQL expression/);
 
@@ -182,7 +182,7 @@ $repo->run(qw/config githooks.checkjira.require 0/);
 check_can_commit('allow commit if JIRA is not required');
 $repo->run(qw/config --unset-all githooks.checkjira.require/);
 
-$repo->run(qw/config --replace-all githooks.checkjira.project GIT/);
+$repo->run(qw/config --replace-all githooks.checkjira.jql project=GIT/);
 
 $repo->run(qw/config --replace-all githooks.checkjira.jirapass invalid/);
 check_cannot_commit('deny commit if cannot connect to JIRA [GIT-0]',
@@ -210,17 +210,17 @@ $repo->run(qw/config --unset-all githooks.checkjira.by-assignee/);
 
 check_can_commit('allow commit if valid issue cited [GIT-2]');
 
-$repo->run(qw/config --replace-all githooks.checkjira.status Taken/);
+$repo->run(qw/config --replace-all githooks.checkjira.jql status=Taken/);
 check_cannot_commit('deny commit if not in valid status [GIT-2]',
                     qr/not match the following JQL expression/);
 check_can_commit('allow commit if in valid status [GIT-3]');
-$repo->run(qw/config --unset-all githooks.checkjira.status/);
+$repo->run(qw/config --unset-all githooks.checkjira.jql/);
 
-$repo->run(qw/config --replace-all githooks.checkjira.issuetype Bug/);
+$repo->run(qw/config --replace-all githooks.checkjira.jql issuetype=Bug/);
 check_cannot_commit('deny commit if not with valid type [GIT-3]',
                     qr/not match the following JQL expression/);
 check_can_commit('allow commit if with valid type [GIT-2]');
-$repo->run(qw/config --unset-all githooks.checkjira.issuetype/);
+$repo->run(qw/config --unset-all githooks.checkjira.jql/);
 
 $repo->run(qw/config --replace-all githooks.checkjira.fixversion/, 'refs/heads/xpto 1.2');
 check_can_commit('allow commit with fixversion if do not match branch [GIT-2]');
