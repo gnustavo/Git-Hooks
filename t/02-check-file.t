@@ -6,7 +6,7 @@ use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
 use Path::Tiny;
-use Test::More tests => 36;
+use Test::More tests => 34;
 use Test::Requires::Git;
 
 my ($repo, $clone, $T);
@@ -133,27 +133,15 @@ $repo->run(qw/config --unset-all githooks.checkfile.sizelimit/);
 
 $repo->run(qw/config --unset-all githooks.checkfile.basename.sizelimit/);
 
-$repo->run(qw/config githooks.checkfile.basename.deny txt/);
+$repo->run(qw/config githooks.checkfile.acl/, 'deny AMD ^.*txt');
 
-check_cannot_commit('deny basename', qr/basename is not allowed/, 'file.txt');
+check_cannot_commit('deny basename', qr/cannot modify this file/, 'file.txt');
 
-$repo->run(qw/config githooks.checkfile.basename.allow txt/);
+$repo->run(qw/config githooks.checkfile.acl/, 'allow AMD ^.*txt');
 
 check_can_commit('allow basename', 'file.txt');
 
-$repo->run(qw/config --unset-all githooks.checkfile.basename.deny/);
-$repo->run(qw/config --unset-all githooks.checkfile.basename.allow/);
-
-
-$repo->run(qw/config githooks.checkfile.path.deny txt/);
-
-check_cannot_commit('deny path', qr/path is not allowed/, 'file.txt');
-
-$repo->run(qw/config githooks.checkfile.path.allow txt/);
-
-check_can_commit('allow path', 'file.txt');
-
-$repo->run(qw/config --remove-section githooks.checkfile.path/);
+$repo->run(qw/config --remove-section githooks.checkfile/);
 
 sub filesystem_is_case_sentitive {
     # Check using the technique described in

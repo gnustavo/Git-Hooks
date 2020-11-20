@@ -116,11 +116,6 @@ sub check_new_files {           ## no critic (ProhibitExcessComplexity)
 
     # Grok all REGEXP checks
     my %re_checks;
-    foreach my $name (qw/basename path/) {
-        foreach my $check (qw/deny allow/) {
-            $re_checks{$name}{$check} = [map {qr/$_/} $git->get_config("$CFG.$name" => $check)];
-        }
-    }
     foreach ($git->get_config("$CFG.basename" => 'sizelimit')) {
         my ($bytes, $regexp) = split ' ', $_, 2;
         unshift @{$re_checks{basename}{sizelimit}}, [qr/$regexp/, $bytes];
@@ -149,26 +144,6 @@ sub check_new_files {           ## no critic (ProhibitExcessComplexity)
         next unless $name2status->{$file} =~ /[AM]/;
 
         my $basename = path($file)->basename;
-
-        if (any  {$basename =~ $_} @{$re_checks{basename}{deny}} and
-            none {$basename =~ $_} @{$re_checks{basename}{allow}}) {
-            $git->fault(<<"EOS", {%$ctx, option => 'basename.{allow,deny}'});
-The file '$file' basename is not allowed.
-Please, check your configuration options.
-EOS
-            ++$errors;
-            next FILE;          # Don't botter checking the contents of invalid files
-        }
-
-        if (any  {$file =~ $_} @{$re_checks{path}{deny}} and
-            none {$file =~ $_} @{$re_checks{path}{allow}}) {
-            $git->fault(<<"EOS", {%$ctx, option => 'path.{allow,deny}'});
-The file '$file' path is not allowed.
-Please, check your configuration options.
-EOS
-            ++$errors;
-            next FILE;          # Don't botter checking the contents of invalid files
-        }
 
         my $size = $git->file_size($commit, $file);
 
@@ -767,54 +742,5 @@ such as FIXME or TODO. These marks are usually a reminder to fix things before
 commit, but as it so often happens, they end up being forgotten.
 
 Note that this option requires Git 1.7.4 or newer.
-
-=head2 [DEPRECATED] basename.deny REGEXP
-
-This option is deprecated. Please, use an C<acl> option like this, instead:
-
-  [githooks "checkfile"]
-    acl = deny A ^.*<REGEXP>$
-
-This directive denies files which basenames match REGEXP.
-
-=head2 [DEPRECATED] basename.allow REGEXP
-
-This option is deprecated. Please, use an C<acl> option like this, instead:
-
-  [githooks "checkfile"]
-    acl = allow A ^.*<REGEXP>$
-
-This directive allows files which basenames match REGEXP. Since by default
-all basenames are allowed this directive is useful only to prevent a
-B<githooks.checkfile.basename.deny> directive to deny the same basename.
-
-The basename checks are evaluated so that a file is denied only if it's
-basename matches any B<basename.deny> directive and none of the
-B<basename.allow> directives.  So, for instance, you would apply it like
-this to allow the versioning of F<.gitignore> file while denying any other
-file with a name beginning with a dot.
-
-    [githooks "checkfile"]
-        basename.allow ^\\.gitignore
-        basename.deny  ^\\.
-
-=head2 [DEPRECATED] path.deny REGEXP
-
-This option is deprecated. Please, use an C<acl> option like this, instead:
-
-  [githooks "checkfile"]
-    acl = deny A ^<REGEXP>
-
-This directive denies files which full paths match REGEXP.
-
-=head2 [DEPRECATED] path.allow REGEXP
-
-This option is deprecated. Please, use an C<acl> option like this, instead:
-
-  [githooks "checkfile"]
-    acl = allow A ^<REGEXP>
-
-This directive allows files which full paths match REGEXP. It's useful in
-the same way that B<githooks.checkfile.basename.deny> is.
 
 =cut
