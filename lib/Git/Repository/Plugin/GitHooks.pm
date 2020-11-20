@@ -43,7 +43,7 @@ sub _keywords {                 ## no critic (ProhibitUnusedPrivateSubroutines)
 
           blob file_size file_mode
 
-          is_reference_enabled is_ref_enabled match_user im_admin grok_acls
+          is_reference_enabled match_user im_admin grok_acls
       /;
 }
 
@@ -1382,23 +1382,6 @@ sub file_mode {
     croak "Can't happen!";
 }
 
-## DEPRECATED
-sub is_ref_enabled {
-    my ($git, $ref, @specs) = @_;
-
-    return 1 if ! defined $ref || @specs == 0;
-
-    foreach (@specs) {
-        if (/^\^/) {
-            return 1 if $ref =~ qr/$_/;
-        } else {
-            return 1 if $ref eq $_;
-        }
-    }
-
-    return 0;
-}
-
 sub is_reference_enabled {
     my ($git, $reference) = @_;
 
@@ -2165,26 +2148,6 @@ The method decides if a reference is enabled using the following algorithm:
 =item * Else, it is B<enabled>.
 
 =back
-
-=head2 is_ref_enabled REF, SPECs...
-
-This method is DEPRECATED. Please, use the C<is_reference_enabled> method
-instead.
-
-Returns a Boolean indicating if REF matches one of the ref-specs in
-SPECS. REF is the complete name of a Git ref and SPECS is a list of strings,
-each one specifying a rule for matching ref names.
-
-As a special case, it returns true if REF is undef or if there is no SPEC
-whatsoever, meaning that by default all refs/commits are enabled.
-
-You may want to use it, for example, in an C<update>, C<pre-receive>, or
-C<post-receive> hook which may be enabled depending on the particular refs
-being affected.
-
-Each SPEC rule may indicate the matching refs as the complete ref name
-(e.g. C<refs/heads/master>) or by a regular expression starting with a caret
-(C<^>), which is kept as part of the regexp.
 
 =head2 match_user SPEC
 
