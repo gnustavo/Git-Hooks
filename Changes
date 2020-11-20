@@ -2,6 +2,54 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+3.0.0     2020-11-19 21:49:04-03:00 America/Sao_Paulo (TRIAL RELEASE)
+
+This new major version removes support for Perl 5.10 and requires Perl 5.16
+instead. It also removes support for Git 1.7.1 and requires at least Git 1.8.3
+instead.
+
+This was motivated by the end of support of CentOS 6, which still used the old
+Perl and Git. We take advantage of this incompatible change to also remove
+several configuration options which were deprecated more than two years ago.
+
+[New features]
+
+  - New HOOK DRIVERS make it easier to implement plugins which associate
+    themselves to several hooks in a consistent way. Several standard plugins
+    now use them, which made their code simpler and more general. Read about
+    them on the main Git::Hooks documentation.
+
+[Incompatible changes]
+
+  - Require Perl 5.16 and Git 1.8.3, which are used by CentOS 7. A few
+    simplifications and improvements were made on the code.
+
+  - Remove the following deprecated options from several plugins. Check their
+  documentation on the previous version to know how to replace them with newer options.
+    * githooks.checkfile.basename.allow
+    * githooks.checkfile.basename.deny
+    * githooks.checkfile.path.allow
+    * githooks.checkfile.path.deny
+    * githooks.checkjira.issuetype
+    * githooks.checkjira.noref
+    * githooks.checkjira.project
+    * githooks.checkjira.ref
+    * githooks.checkjira.status
+    * githooks.checklog.noref
+    * githooks.checklog.ref
+    * githooks.checkreference.allow
+    * githooks.checkreference.deny
+
+  - CheckAcls: remove this deprecated plugin. It can be replaced by the
+    CheckReference plugin.
+
+  - Git::Repository::Plugin::GitHooks: remove the following deprecated
+  methods. check their documentation on the previous version to know how to
+  replace them with newer methods, if you use them on your plugins.
+    * error
+    * get_error
+    * is_ref_enabled
+
 2.14.0    2020-11-01 22:06:09-03:00 America/Sao_Paulo
 
 [New features]
