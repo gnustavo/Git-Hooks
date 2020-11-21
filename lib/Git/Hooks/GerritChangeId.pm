@@ -1,10 +1,9 @@
-use strict;
 use warnings;
 
 package Git::Hooks::GerritChangeId;
 # ABSTRACT: Git::Hooks plugin to insert a Change-Id in a commit message
 
-use 5.010;
+use 5.016;
 use utf8;
 use Carp;
 use Log::Any '$log';
@@ -12,7 +11,7 @@ use Git::Hooks;
 use Git::Message;
 use Path::Tiny;
 
-(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
+my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
 
 ##########
 

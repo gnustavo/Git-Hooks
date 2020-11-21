@@ -1,15 +1,14 @@
-use strict;
 use warnings;
 
 package Git::Hooks::CheckWhitespace;
 # ABSTRACT: Git::Hooks plugin for checking whitespace errors
 
-use 5.010;
+use 5.016;
 use utf8;
 use Log::Any '$log';
 use Git::Hooks;
 
-(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
+my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
 
 # This routine can act both as an update or a pre-receive hook.
 sub check_ref {

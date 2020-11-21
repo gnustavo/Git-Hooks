@@ -1,4 +1,3 @@
-use strict;
 use warnings;
 
 package Git::Repository::Plugin::GitHooks;
@@ -6,7 +5,7 @@ package Git::Repository::Plugin::GitHooks;
 
 use parent qw/Git::Repository::Plugin/;
 
-use 5.010;
+use 5.016;
 use utf8;
 use Carp;
 use Path::Tiny;
@@ -1302,7 +1301,7 @@ sub blob {
         my $path = path($file);
 
         # Calculate temporary file path
-        (my $revdir  = $rev) =~ s/^://; # remove ':' from ':0' because Windows don't like ':' in filenames
+        my $revdir = $rev =~ s/^://r; # remove ':' from ':0' because Windows don't like ':' in filenames
         my $filepath = $cache->{tmpdir}->child($revdir, $path);
 
         # Create directory path for the temporary file.

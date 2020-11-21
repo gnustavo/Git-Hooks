@@ -1,10 +1,9 @@
-use strict;
 use warnings;
 
 package Git::Hooks::CheckCommit;
 # ABSTRACT: Git::Hooks plugin to enforce commit policies
 
-use 5.010;
+use 5.016;
 use utf8;
 use Carp;
 use Log::Any '$log';
@@ -13,7 +12,7 @@ use Git::Repository::Log;
 use List::MoreUtils qw/any none/;
 
 my $PKG = __PACKAGE__;
-(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
+my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
 
 #############
 # Grok hook configuration, check it and set defaults.

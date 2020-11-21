@@ -1,7 +1,6 @@
 # -*- cperl -*-
 
-use 5.010;
-use strict;
+use 5.016;
 use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
@@ -171,22 +170,18 @@ SKIP: {
     $repo->run(qw/config --remove-section githooks.checkfile/);
 }
 
-SKIP: {
-    test_requires_git skip => 1, version_ge => '1.7.4';
+$repo->run(qw/config githooks.checkfile.deny-token FIXME/);
 
-    $repo->run(qw/config githooks.checkfile.deny-token FIXME/);
+check_cannot_commit('Deny commit if match FIXME',
+                    qr/Invalid tokens detected in added lines/,
+                    'file.txt',
+                    undef,
+                    "FIXME: something\n",
+                );
 
-    check_cannot_commit('Deny commit if match FIXME',
-                        qr/Invalid tokens detected in added lines/,
-                        'file.txt',
-                        undef,
-                        "FIXME: something\n",
-                    );
+$repo->run(qw/reset --hard/);
 
-    $repo->run(qw/reset --hard/);
-
-    $repo->run(qw/config --remove-section githooks.checkfile/);
-}
+$repo->run(qw/config --remove-section githooks.checkfile/);
 
 $repo->run(qw/config githooks.checkfile.executable *.sh/);
 
@@ -274,17 +269,13 @@ SKIP: {
     $clone->run(qw/config --remove-section githooks.checkfile/);
 }
 
-SKIP: {
-    test_requires_git skip => 1, version_ge => '1.7.4';
+$clone->run(qw/config githooks.checkfile.deny-token FIXME/);
 
-    $clone->run(qw/config githooks.checkfile.deny-token FIXME/);
+check_cannot_push('Deny push if match FIXME',
+                  qr/Invalid tokens detected in added lines/,
+                  'file.txt',
+                  undef,
+                  "FIXME: something\n",
+              );
 
-    check_cannot_push('Deny push if match FIXME',
-                      qr/Invalid tokens detected in added lines/,
-                      'file.txt',
-                      undef,
-                      "FIXME: something\n",
-                  );
-
-    $clone->run(qw/config --remove-section githooks.checkfile/);
-}
+$clone->run(qw/config --remove-section githooks.checkfile/);

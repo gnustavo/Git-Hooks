@@ -1,10 +1,9 @@
-use strict;
 use warnings;
 
 package Git::Hooks::CheckFile;
 # ABSTRACT: Git::Hooks plugin for checking files
 
-use 5.010;
+use 5.016;
 use utf8;
 use Carp;
 use Log::Any '$log';
@@ -13,7 +12,7 @@ use Text::Glob qw/glob_to_regex/;
 use Path::Tiny;
 use List::MoreUtils qw/any none/;
 
-(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
+my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
 
 #############
 # Grok hook configuration, check it and set defaults.
@@ -39,7 +38,7 @@ sub check_command {
         or return;
 
     # interpolate filename in $command
-    (my $cmd = $command) =~ s/\{\}/\'$tmpfile\'/g;
+    my $cmd = $command =~ s/\{\}/\'$tmpfile\'/gr;
 
     # execute command and update $errors
     my ($exit, $output);
@@ -274,14 +273,6 @@ sub deny_token {
 
     my $regex = $git->get_config($CFG => 'deny-token')
         or return 0;
-
-    if ($git->version_lt('1.7.4')) {
-        $git->fault(<<'EOS', {option => 'deny-token'});
-This option requires Git 1.7.4 or later but your Git is older.
-Please, upgrade your Git or disable this option.
-EOS
-        return 1;
-    }
 
     # Extract only the lines showing addition of the $regex
     my @diff = grep {/^\+.*?(?:$regex)/}

@@ -1,10 +1,9 @@
-use strict;
 use warnings;
 
 package Git::Hooks::CheckDiff;
 # ABSTRACT: Git::Hooks plugin to enforce commit policies
 
-use 5.010;
+use 5.016;
 use utf8;
 use Carp;
 use Log::Any '$log';
@@ -12,7 +11,7 @@ use Git::Hooks;
 use Path::Tiny;
 
 my $PKG = __PACKAGE__;
-(my $CFG = __PACKAGE__) =~ s/.*::/githooks./;
+my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
 
 # Install hooks
 GITHOOKS_CHECK_AFFECTED_REFS \&_check_ref;
@@ -170,14 +169,6 @@ sub _check_token {
 
     my @deny_tokens = $git->get_config($CFG => 'deny-token')
         or return 0;
-
-    if ($git->version_lt('1.7.4')) {
-        $git->fault(<<'EOS', {option => 'deny-token'});
-This option requires Git 1.7.4 or later but your Git is older.
-Please, upgrade your Git or disable this option.
-EOS
-        return 1;
-    }
 
     my $errors = 0;
 
@@ -355,8 +346,6 @@ a '!' character, which reverses the matching logic, effectively selecting paths
 not matching it. If the remaining string initiates with a '^' it's treated as a
 Perl regular expression anchored at the beginning, which is used to match file
 paths. Otherwise, the string matches files paths having it as a prefix.
-
-Note that this option requires Git 1.7.4 or newer.
 
 =head2 shell COMMAND
 
