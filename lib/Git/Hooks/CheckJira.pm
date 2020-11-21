@@ -223,13 +223,6 @@ EOS
             push @jqls, @and_jql[$first .. $#and_jql];
         }
 
-        # JQL terms for the deprecated configuration options
-        foreach my $option (qw/project issuetype status/) {
-            if (my @values = $git->get_config($CFG => $option)) {
-                push @jqls, "$option IN ('" . join("','", @values) . "')";
-            }
-        }
-
         # Conjunct all terms in a single JQL expression
         my $JQL = '(' . join(') AND (', @jqls) . ')';
 
@@ -639,7 +632,7 @@ option:
 =head1 CONFIGURATION
 
 The plugin is configured by the following git options under the
-C<githooks.checkacls> subsection.
+C<githooks.checkjira> subsection.
 
 It can be disabled for specific references via the C<githooks.ref> and
 C<githooks.noref> options about which you can read in the L<Git::Hooks>
@@ -927,42 +920,6 @@ In this case, the visibility isn't restricted at all.
 
 By default, all commits are checked. You can exempt merge commits from being
 checked by setting this option to true.
-
-=head2 [DEPRECATED] project KEY
-
-This option is B<DEPRECATED>. Please, use a JQL expression such the
-following to restrict by project key:
-
-  project IN (ABC, GIT)
-
-By default, the committer can reference any JIRA issue in the commit
-log. You can restrict the allowed keys to a set of JIRA projects by
-specifying a JIRA project key to this option. You can allow more than one
-project by specifying this option multiple times, once per project key.
-
-If you set this option, then any cited JIRA issue that doesn't belong to one
-of the specified projects causes an error.
-
-=head2 [DEPRECATED] status STATUSNAME
-
-This option is B<DEPRECATED>. Please, use a JQL expression such the
-following to restrict by status:
-
-  status IN (Open, "In Progress")
-
-By default, it doesn't matter in which status the JIRA issues are. By
-setting this multi-valued option you can restrict the valid statuses for the
-issues.
-
-=head2 [DEPRECATED] issuetype ISSUETYPENAME
-
-This option is B<DEPRECATED>. Please, use a JQL expression such the
-following to restrict by issue type:
-
-  issuetype IN (Bug, Story)
-
-By default, it doesn't matter what type of JIRA issues are cited. By setting
-this multi-valued option you can restrict the valid issue types.
 
 =head1 SEE ALSO
 

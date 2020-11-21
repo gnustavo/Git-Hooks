@@ -191,7 +191,7 @@ option:
 =head1 CONFIGURATION
 
 The plugin is configured by the following git options under the
-C<githooks.checkacls> subsection.
+C<githooks.preparelog> subsection.
 
 =head2 issue-branch-regex REGEX
 

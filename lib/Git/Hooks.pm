@@ -1094,7 +1094,7 @@ section.
 As shown in the example above in the L</Implementing Plugins> section, the
 methods in L<Git::Repository::Plugin::GitHooks> make it easy to implement checks
 that can be associated with several hooks at once. For example, the standard
-plugins L<Git::Hooks::CheckAcls>, L<Git::Hooks::CheckCommit>,
+plugins L<Git::Hooks::CheckCommit>,
 L<Git::Hooks::CheckDiff>, L<Git::Hooks::CheckFile>, L<Git::Hooks::CheckJira>,
 L<Git::Hooks::CheckLog>, L<Git::Hooks::CheckReference>, and
 L<Git::Hooks::CheckWhitespace> all implement their checks for the following

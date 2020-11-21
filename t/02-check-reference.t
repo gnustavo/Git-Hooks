@@ -6,7 +6,7 @@ use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
 use Path::Tiny;
-use Test::More tests => 13;
+use Test::More tests => 8;
 
 my ($repo, $clone);
 
@@ -45,22 +45,6 @@ setup_repos();
 $clone->run(qw/config githooks.plugin CheckReference/);
 
 check_can_push('allow by default', 'allow-anything');
-
-$clone->run(qw{config githooks.checkreference.deny ^refs/heads/});
-
-check_cannot_push('deny anything', 'deny-anything');
-
-$clone->run(qw{config githooks.checkreference.allow ^refs/heads/(?:feature|release|hotfix)});
-
-check_can_push('allow feature', 'feature/x');
-
-check_can_push('allow release', 'release/1.0');
-
-check_can_push('allow hotfix', 'hotfix/bug');
-
-check_cannot_push('deny anything else', 'xpto');
-
-$clone->run(qw/config --remove-section githooks.checkreference/);
 
 $repo->run(qw/tag mytag HEAD/);
 test_ok('can push lightweight tag by default', $repo, 'push', $clone->git_dir(), 'tag', 'mytag');
