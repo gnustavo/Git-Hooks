@@ -137,36 +137,40 @@ sub check_codes {
 
     unless (exists $cache->{codes}) {
         $cache->{codes} = [];
-      CODE:
-        foreach my $check ($git->get_config($CFG => 'check-code')) {
-            my $code;
-            if ($check =~ s/^file://) {
-                $code = do $check;
-                unless ($code) {
-                    if (length $@) {
-                        $git->fault("I couldn't parse option value ($check).",
-                                    {option => 'check-code', details => $@});
-                    } elsif (! defined $code) {
-                        $git->fault("I couldn't do option value ($check).",
-                                    {option => 'check-code', details => $!});
-                    } else {
-                        $git->fault("I couldn't run  option value ($check).",
-                                    {option => 'check-code'});
+        for my $type (qw/check-code check-code-ref/) {
+          CODE:
+            foreach my $check ($git->get_config($CFG => $type)) {
+                my $code;
+                if ($check =~ s/^file://) {
+                    $code = do $check;
+                    unless ($code) {
+                        ## no critic (ProhibitDeepNests)
+                        if (length $@) {
+                            $git->fault("I couldn't parse option value ($check).",
+                                        {option => 'check-code', details => $@});
+                        } elsif (! defined $code) {
+                            $git->fault("I couldn't do option value ($check).",
+                                        {option => 'check-code', details => $!});
+                        } else {
+                            $git->fault("I couldn't run  option value ($check).",
+                                        {option => 'check-code'});
+                        }
+                        ## use critic (ProhibitDeepNests)
+                        next CODE;
                     }
-                    next CODE;
+                } else {
+                    $code = eval $check; ## no critic (BuiltinFunctions::ProhibitStringyEval)
+                    length $@
+                        and $git->fault("I couldn't parse option value.",
+                                        {option => 'check-code', details => $@})
+                        and next CODE;
                 }
-            } else {
-                $code = eval $check; ## no critic (BuiltinFunctions::ProhibitStringyEval)
-                length $@
-                    and $git->fault("I couldn't parse option value.",
-                                    {option => 'check-code', details => $@})
+                defined $code and ref $code and ref $code eq 'CODE'
+                    or $git->fault("The option value must end with a code-ref.",
+                                   {option => 'check-code'})
                     and next CODE;
+                push @{$cache->{codes}}, [$type => $code];
             }
-            defined $code and ref $code and ref $code eq 'CODE'
-                or $git->fault("The option value must end with a code-ref.",
-                               {option => 'check-code'})
-                and next CODE;
-            push @{$cache->{codes}}, $code;
         }
     }
 
@@ -347,12 +351,16 @@ EOS
 
     foreach my $code (check_codes($git)) {
         if (my $jira = _jira($git)) {
-            my $ok = eval { $code->($git, $commit, $jira, values %issues) };
+            my ($type, $sub) = @$code;
+            my $ok = $type eq 'check-code'
+                ? eval { $sub->($git, $commit, $jira, values %issues) }
+                : eval { $sub->($git, $ref, $commit, $jira, values %issues) }
+                ;
             if (defined $ok) {
                 ++$errors unless $ok;
             } elsif (length $@) {
                 $git->fault('Error while evaluating option value.',
-                            {option => 'check-code', details => $@});
+                            {option => $type, details => $@});
                 ++$errors;
             }
         } else {
@@ -883,6 +891,30 @@ If the subroutine returns undef it's considered to have succeeded.
 
 If it raises an exception (e.g., by invoking B<die>) it's considered
 to have failed and a proper message is produced to the user.
+
+=head2 check-code-ref CODESPEC
+
+This option is an extension of the B<check-code> option. The difference is that
+the routine defined by the CODESPEC will get an extra argument (REF). All the
+others are exactly the same:
+
+=over
+
+=item * B<GIT>
+
+=item * B<REF>
+
+The name of the affected branch. This is the current branch, for the commit-msg
+hook, and the branch to which the commit has been pushed to, for the other
+hooks.
+
+=item * B<COMMITID>
+
+=item * B<JIRA>
+
+=item * B<ISSUES...>
+
+=back
 
 =head2 comment VISIBILITY
 

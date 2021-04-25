@@ -4,7 +4,7 @@ use 5.016;
 use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
-use Test::More tests => 37;
+use Test::More tests => 39;
 use Path::Tiny;
 
 my ($repo, $file, $clone, $T);
@@ -261,6 +261,32 @@ check_cannot_commit('deny commit if check_code does not pass [GIT-2]',
 check_can_commit('allow commit if check_code does pass [GIT-2 GIT-3]');
 
 $repo->run(qw/config --unset-all githooks.checkjira.check-code/);
+
+
+my $codereffile = $T->child('codereffile');
+my $coderef = <<'EOF';
+sub {
+    my ($git, $ref, $commit_id, $jira, @issues) = @_;
+    my $keys = join(', ', sort map {$_->{key}} @issues);
+    die "check-code-ref should be called on 'master', not '$ref'\n"
+        unless $ref eq 'refs/heads/master';
+    return 1 if $keys eq 'GIT-2, GIT-3';
+    die "You must cite issues GIT-2 and GIT-3 only: not '$keys'\n";
+}
+EOF
+path($codereffile)->spew($coderef)
+    or BAIL_OUT("can't path('$codereffile')->spew(<code>)\n");
+
+$repo->run(qw/config githooks.checkjira.check-code-ref/, "file:$codereffile");
+
+check_cannot_commit('deny commit if check_code_ref does not pass [GIT-2]',
+                    qr/You must cite issues GIT-2 and GIT-3 only/);
+
+check_can_commit('allow commit if check_code_ref does pass [GIT-2 GIT-3]');
+
+$repo->run(qw/config --unset-all githooks.checkjira.check-code-ref/);
+
+
 
 $repo->run(qw/config githooks.checkjira.matchlog (?s)^\[([^]]+)\]/);
 
