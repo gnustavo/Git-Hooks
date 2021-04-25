@@ -167,7 +167,7 @@ sub new_repos {
     my $stderr = $T->child('stderr');
 
     my @result = eval {
-        Git::Repository->run(qw/init -q/, "--template=$tmpldir", $repodir);
+        Git::Repository->run(qw/-c init.defaultBranch=master init -q/, "--template=$tmpldir", $repodir);
 
         my $repo = Git::Repository->new(work_tree => $repodir);
 
