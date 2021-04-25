@@ -2,6 +2,20 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+3.1.0     2021-04-24 22:19:07-03:00 America/Sao_Paulo
+
+[New feature]
+
+  - CheckJira: Add a new option called 'check-code-ref' which is an extension of
+    the 'check-code' option. The new option passes the affected reference name
+    as an extra option to the specified checking code routine.
+
+[Fix]
+
+  - The test suite now explicitly sets the default initial branch name of the
+    repositories created for testing to avoid potential conflicts with the
+    init.defaultBranch git configuration option.
+
 3.0.0     2020-11-19 21:49:04-03:00 America/Sao_Paulo (TRIAL RELEASE)
 
 This new major version removes support for Perl 5.10 and requires Perl 5.16
