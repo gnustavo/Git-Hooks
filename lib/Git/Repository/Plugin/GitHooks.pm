@@ -5,7 +5,7 @@ package Git::Repository::Plugin::GitHooks;
 
 use parent qw/Git::Repository::Plugin/;
 
-use 5.016;
+use v5.16.0;
 use utf8;
 use Carp;
 use Path::Tiny;

@@ -3,7 +3,7 @@ use warnings;
 package Git::Hooks::GerritChangeId;
 # ABSTRACT: Git::Hooks plugin to insert a Change-Id in a commit message
 
-use 5.016;
+use v5.16.0;
 use utf8;
 use Carp;
 use Log::Any '$log';

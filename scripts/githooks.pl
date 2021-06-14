@@ -2,7 +2,7 @@
 # PODNAME: githooks.pl
 # ABSTRACT: Git::Hooks driver script
 
-use 5.016;
+use v5.16.0;
 use warnings;
 use Git::Hooks;
 

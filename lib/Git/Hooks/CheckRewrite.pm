@@ -3,7 +3,7 @@ use warnings;
 package Git::Hooks::CheckRewrite;
 # ABSTRACT: Git::Hooks plugin for checking against unsafe rewrites
 
-use 5.016;
+use v5.16.0;
 use utf8;
 use Path::Tiny;
 use Log::Any '$log';

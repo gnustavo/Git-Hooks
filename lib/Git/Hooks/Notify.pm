@@ -3,7 +3,7 @@ use warnings;
 package Git::Hooks::Notify;
 # ABSTRACT: Git::Hooks plugin to notify users via email
 
-use 5.016;
+use v5.16.0;
 use utf8;
 use Log::Any '$log';
 use Git::Hooks;

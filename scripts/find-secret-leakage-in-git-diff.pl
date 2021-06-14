@@ -3,7 +3,7 @@
 # ABSTRACT: find secrets leaking in a Git repository
 ## no critic (RequireCarping)
 
-use 5.016;
+use v5.16.0;
 use warnings;
 
 my %tokens = (

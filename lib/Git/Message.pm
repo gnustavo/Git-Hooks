@@ -3,7 +3,7 @@ use warnings;
 package Git::Message;
 # ABSTRACT: A Git commit message
 
-use 5.016;
+use v5.16.0;
 use utf8;
 use Carp;
 

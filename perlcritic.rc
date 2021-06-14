@@ -1,6 +1,6 @@
 severity = 3
 verbose  = %f:%l:%c:%p:%m\n
-exclude  = RegularExpressions::RequireExtendedFormatting ProhibitCascadingIfElse ProhibitSubroutinePrototypes RequireUseStrict
+exclude  = RegularExpressions::RequireExtendedFormatting ProhibitCascadingIfElse ProhibitSubroutinePrototypes RequireUseStrict ProhibitVersionStrings
 
 [Subroutines::ProhibitManyArgs]
 # Increasing from the default which is 5 until we have time to fix the two

@@ -3,7 +3,7 @@ use warnings;
 package Git::Hooks::CheckCommit;
 # ABSTRACT: Git::Hooks plugin to enforce commit policies
 
-use 5.016;
+use v5.16.0;
 use utf8;
 use Carp;
 use Log::Any '$log';

@@ -3,7 +3,7 @@ use warnings;
 package Git::Hooks;
 # ABSTRACT: Framework for implementing Git (and Gerrit) hooks
 
-use 5.016;
+use v5.16.0;
 use utf8;
 use Carp;
 use Exporter qw/import/;
@@ -313,7 +313,7 @@ options. (More on this later.)
 
         #!/usr/bin/env perl
 
-        use 5.016;
+        use v5.16.0;
         use warnings;
         use Git::Hooks;
 
