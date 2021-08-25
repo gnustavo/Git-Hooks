@@ -2,6 +2,16 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+3.1.1     2021-08-24 23:44:49-03:00 America/Sao_Paulo
+
+[Fix]
+
+  - CheckFile: pathnames with "unusual" characters weren't being correctly
+    decoded from the output of git-log. They are quoted as explained for the
+    configuration variable core.quotePath (see git-config(1)).
+
+  - Fix several Perl::Critic complaints in the test suite scripts.
+
 3.1.0     2021-04-24 22:19:07-03:00 America/Sao_Paulo
 
 [New feature]
