@@ -1,4 +1,4 @@
-# -*- cperl -*-
+#!/usr/bin/env perl
 
 use v5.16.0;
 use warnings;
@@ -19,6 +19,7 @@ sub check_can_commit {
         or BAIL_OUT("check_can_commit: can't '$file'->append('$testname')\n");
     $repo->run(add => $file);
     test_ok($testname, $repo, 'commit', '-F', $msgfile);
+    return;
 }
 
 sub check_cannot_commit {
@@ -33,6 +34,7 @@ sub check_cannot_commit {
     } else {
         test_nok($testname, $repo, 'commit', '-F', $msgfile);
     }
+    return;
 }
 
 sub check_can_push {
@@ -40,6 +42,7 @@ sub check_can_push {
     new_commit($repo, $file, $testname);
     test_ok($testname, $repo,
             'push', $clone->git_dir(), $ref || 'master');
+    return;
 }
 
 sub check_cannot_push {
@@ -47,6 +50,7 @@ sub check_cannot_push {
     new_commit($repo, $file, $testname);
     test_nok_match($testname, $regex, $repo,
                    'push', $clone->git_dir(), $ref || 'master');
+    return;
 }
 
 
@@ -284,7 +288,7 @@ SKIP: {
     use Git::Hooks::CheckLog;
     my $checker = eval {
         local $SIG{__WARN__} = sub {}; # supress warnings in this block
-        Git::Hooks::CheckLog::_spell_checker($repo, 'word');
+        Git::Hooks::CheckLog::_spell_checker($repo, 'word'); ## no critic (ProtectPrivateSubs)
     };
 
     skip "Text::SpellChecker isn't properly installed", 2 unless $checker;
@@ -302,3 +306,4 @@ EOF
     $repo->run(qw/config --unset-all githooks.checklog.spelling/);
 }
 
+1;

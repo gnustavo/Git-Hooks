@@ -1,4 +1,4 @@
-# -*- cperl -*-
+#!/usr/bin/env perl
 
 use v5.16.0;
 use warnings;
@@ -26,4 +26,7 @@ test_nok_match('error-header', qr/My Header/, $repo, qw/commit -q -mheader/);
 $repo->run(qw/config githooks.error-footer/, 'echo My Footer');
 
 test_nok_match('error-footer', qr/My Footer/, $repo, qw/commit -q -mfooter/);
+
+1;
+
 

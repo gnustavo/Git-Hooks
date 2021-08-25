@@ -1,4 +1,4 @@
-# -*- cperl -*-
+#!/usr/bin/env perl
 
 use v5.16.0;
 use warnings;
@@ -121,6 +121,8 @@ EOF
     $$reporef->run(qw/config githooks.checkjira.jiraurl/, 'fake://url/');
     $$reporef->run(qw/config githooks.checkjira.jirauser user/);
     $$reporef->run(qw/config githooks.checkjira.jirapass valid/);
+
+    return;
 }
 
 sub check_can_commit {
@@ -128,6 +130,7 @@ sub check_can_commit {
     $file->append($testname);
     $repo->run(add => $file);
     test_ok($testname, $repo, 'commit', '-m', $testname);
+    return;
 }
 
 sub check_cannot_commit {
@@ -139,6 +142,7 @@ sub check_cannot_commit {
     } else {
         test_nok($testname, $repo, 'commit', '-m', $testname);
     }
+    return;
 }
 
 sub check_can_push {
@@ -146,6 +150,7 @@ sub check_can_push {
     new_commit($repo, $file, $testname);
     test_ok($testname, $repo,
             'push', $clone->git_dir(), $ref || 'master');
+    return;
 }
 
 sub check_cannot_push {
@@ -153,6 +158,7 @@ sub check_cannot_push {
     new_commit($repo, $file, $testname);
     test_nok_match($testname, $regex, $repo,
                    'push', $clone->git_dir(), $ref || 'master');
+    return;
 }
 
 
@@ -199,11 +205,11 @@ check_can_commit('allow commit if issue can be resolved [GIT-1]');
 $repo->run(qw/config --unset-all githooks.checkjira.unresolved/);
 
 $repo->run(qw/config --replace-all githooks.checkjira.by-assignee 1/);
-$ENV{USER} = 'other';
+local $ENV{USER} = 'other';
 check_cannot_commit('deny commit if not by-assignee [GIT-2]',
                     qr/which is assigned to 'user'/);
 
-$ENV{USER} = 'user';
+local $ENV{USER} = 'user';
 check_can_commit('allow commit if by-assignee [GIT-2]');
 $repo->run(qw/config --unset-all githooks.checkjira.by-assignee/);
 
@@ -336,3 +342,4 @@ $repo->run(qw/checkout -q master/);
 $repo->run(qw/branch -D fix/);
 check_can_push('allow push to delete a branch [GIT-2]', ':fix');
 
+1;

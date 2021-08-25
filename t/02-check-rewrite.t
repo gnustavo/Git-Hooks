@@ -1,4 +1,4 @@
-# -*- cperl -*-
+#!/usr/bin/env perl
 
 use v5.16.0;
 use warnings;
@@ -16,6 +16,7 @@ sub commit_on {
     $file->append('xxx');
     $repo->run(add => "$file");
     $repo->run(commit => '-m', "commit on $branch");
+    return;
 }
 
 # Since the hook cannot abort the commit --amend but just generate a
@@ -31,6 +32,7 @@ sub check_can_amend {
     $repo->run(add => "$file");
 
     test_ok_match($testname, qr/^\[master /s, $repo, 'commit', '--amend', '-m', $testname);
+    return;
 }
 
 sub check_cannot_amend {
@@ -42,16 +44,19 @@ sub check_cannot_amend {
     $repo->run(add => "$file");
 
     test_ok_match($testname, $regex, $repo, 'commit', '--amend', '-m', $testname);
+    return;
 }
 
 sub check_can_rebase {
     my ($testname) = @_;
     test_ok($testname, $repo, 'rebase', 'master', 'fork');
+    return;
 }
 
 sub check_cannot_rebase {
     my ($testname, $regex) = @_;
     test_nok_match($testname, $regex, $repo, 'rebase', 'master');
+    return;
 }
 
 
@@ -98,3 +103,5 @@ $repo->run(qw/checkout -q fork/);
 $repo->run(qw/branch -D x/);
 $repo->run(qw/push -q clone fork/);
 check_cannot_rebase('deny rebase of an already pushed branch', $rebase_message);
+
+1;

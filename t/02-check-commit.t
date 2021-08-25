@@ -1,4 +1,4 @@
-# -*- cperl -*-
+#!/usr/bin/env perl
 
 use v5.16.0;
 use warnings;
@@ -12,10 +12,12 @@ my ($repo, $file, $clone, $T) = new_repos();
 
 sub setenvs {
     my ($aname, $amail, $cname, $cmail) = @_;
+    ## no critic (RequireLocalizedPunctuationVars)
     $ENV{GIT_AUTHOR_NAME}     = $aname;
     $ENV{GIT_AUTHOR_EMAIL}    = $amail || "$ENV{GIT_AUTHOR_NAME}\@example.net";
     $ENV{GIT_COMMITTER_NAME}  = $cname || $ENV{GIT_AUTHOR_NAME};
     $ENV{GIT_COMMITTER_EMAIL} = $cmail || $ENV{GIT_AUTHOR_EMAIL};
+    ## use critic
     return;
 }
 
@@ -27,6 +29,7 @@ sub check_can_commit {
     $repo->run(add => $file);
 
     test_ok($testname, $repo, 'commit', '-m', $testname);
+    return;
 }
 
 sub check_cannot_commit {
@@ -51,6 +54,7 @@ sub merge {
     $git->run(qw/checkout -q master/);
     $git->run(qw/merge --no-ff xpto/);
     $git->run(qw/branch -d xpto/);
+    return;
 }
 
 sub check_can_push_merge {
@@ -77,6 +81,7 @@ sub check_can_push {
 
     new_commit($repo, $file, $testname);
     test_ok($testname, $repo, 'push', $clone->git_dir(), "HEAD:$branch");
+    return;
 }
 
 sub check_cannot_push {
@@ -276,15 +281,15 @@ SKIP: {
 
 $clone->run(qw/config githooks.userenv GITMERGER/);
 
-$ENV{GITMERGER} = 'user';
+local $ENV{GITMERGER} = 'user';
 check_can_push_merge('allow merges by default');
 
 $clone->run(qw/config githooks.checkcommit.merger merger/);
 
-$ENV{GITMERGER} = 'user';
+local $ENV{GITMERGER} = 'user';
 check_cannot_push_merge('deny merges by non-mergers', qr/are not authorized to push/);
 
-$ENV{GITMERGER} = 'merger';
+local $ENV{GITMERGER} = 'merger';
 check_can_push_merge('allow merges by merger');
 
 delete $ENV{GITMERGER};
@@ -313,8 +318,8 @@ $clone->run(qw/config --remove-section githooks.checkcommit/);
 
 my $script  = $T->child('check-code.pl');
 {
-    open my $fh, '>', $script or die BAIL_OUT("can't open $script to write: $!");
-    print $fh <<'EOT' or die  BAIL_OUT("can't write to $script: $!");
+    open my $fh, '>', $script or die BAIL_OUT("can't open $script to write: $!"), "\n";
+    print $fh <<'EOT' or die  BAIL_OUT("can't write to $script: $!"), "\n";
 sub {
     my ($git, $commit, $ref) = @_;
     $ref =~ s:.*/::;
@@ -331,3 +336,5 @@ check_can_push('check-code push file ok', 'valid', 'name');
 check_cannot_push('check-code push file nok', qr/Error detected while evaluating/, 'invalid', 'name');
 
 $clone->run(qw/config --remove-section githooks.checkcommit/);
+
+1;

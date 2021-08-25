@@ -1,4 +1,4 @@
-# -*- cperl -*-
+#!/usr/bin/env perl
 
 use v5.16.0;
 use warnings;
@@ -14,6 +14,7 @@ sub setup_repos {
 
     install_hooks($repo, undef, qw/pre-commit/);
     install_hooks($clone, undef, qw/update pre-receive/);
+    return;
 }
 
 sub add_file {
@@ -33,6 +34,7 @@ sub check_can_commit {
     my ($testname, $contents) = @_;
     add_file($testname, $contents);
     test_ok($testname, $repo, 'commit', '-m', $testname);
+    return;
 }
 
 sub check_cannot_commit {
@@ -50,6 +52,7 @@ sub check_can_push {
     add_file($testname, $contents);
     $repo->run(commit => '-m', $testname);
     test_ok($testname, $repo, 'push', $clone->git_dir(), 'master');
+    return;
 }
 
 sub check_cannot_push {
@@ -57,6 +60,7 @@ sub check_cannot_push {
     add_file($testname, $contents);
     $repo->run(commit => '-m', $testname);
     test_nok_match($testname, $regex, $repo, 'push', $clone->git_dir(), 'master');
+    return;
 }
 
 
@@ -87,3 +91,5 @@ check_cannot_push(
     qr/extra whitespaces in the changed files/,
     "end in space \n",
 );
+
+1;

@@ -1,4 +1,4 @@
-# -*- cperl -*-
+#!/usr/bin/env perl
 
 use v5.16.0;
 use warnings;
@@ -21,6 +21,7 @@ sub check_can_commit_prepared {
     # could use the --allow-empty-message option, but it was implemented on Git
     # 1.7.2 and we still need to support Git 1.7.1.
     test_ok($testname, $repo, qw/commit --allow-empty -mbogus -e/);
+    return;
 }
 
 sub check_can_commit_not_prepared {
@@ -35,6 +36,7 @@ sub check_can_commit_not_prepared {
     # could use the --allow-empty-message option, but it was implemented on Git
     # 1.7.2 and we still need to support Git 1.7.1.
     test_ok($testname, $repo, qw/commit --allow-empty -mbogus -e/);
+    return;
 }
 
 
@@ -67,3 +69,5 @@ SKIP: {
 
     check_can_commit_prepared('prepare in trailer', '^Jira: JIRA-10$');
 }
+
+1;

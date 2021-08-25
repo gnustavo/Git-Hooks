@@ -1,4 +1,4 @@
-# -*- cperl -*-
+#!/usr/bin/env perl
 
 use v5.16.0;
 use warnings;
@@ -22,6 +22,7 @@ sub setup_repos {
     $repo->run(push => '-q', '--set-upstream', $clone->git_dir, 'master');
 
     install_hooks($clone, undef, qw/post-receive/);
+    return;
 }
 
 sub do_push {
@@ -120,3 +121,5 @@ SKIP: {
         check_push_notify('html', qr/href=/);
     };
 };
+
+1;

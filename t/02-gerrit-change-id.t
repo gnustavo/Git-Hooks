@@ -1,4 +1,4 @@
-# -*- cperl -*-
+#!/usr/bin/env perl
 
 use v5.16.0;
 use warnings;
@@ -32,6 +32,7 @@ sub last_log {
 sub diag_last_log {
     my $last_log = last_log();
     diag(" LAST LOG[", length($last_log), "]<<<$last_log>>>\n");
+    return;
 }
 
 my $msgfile = $T->child('msg.txt');
@@ -45,6 +46,7 @@ sub cannot_commit {
     unless (test_nok($testname, $repo, 'commit', '-F', $msgfile)) {
         diag_last_log();
     }
+    return;
 }
 
 sub can_commit {
@@ -145,6 +147,7 @@ sub compare {
         fail($testname);
         diag("Expected=<<<$expected>>>\nProduced=<<<$produced>>>");
     }
+    return;
 }
 
 my $CID  = 'Change-Id: I7fc3876fee63c766a2063df97fbe04a2dddd8d7c';
@@ -154,7 +157,7 @@ my $SOB2 = 'Signed-off-by: J Committer <jc@example.com>';
 # Set these environment variables to make sure the change ids come out
 # the same from our plugin and from the official Gerrit commit-msg
 # hook.
-$ENV{GIT_AUTHOR_DATE} = $ENV{GIT_COMMITTER_DATE} = '1356828164 -0200';
+local $ENV{GIT_AUTHOR_DATE} = local $ENV{GIT_COMMITTER_DATE} = '1356828164 -0200';
 
 chdir $repo->git_dir();
 
@@ -183,6 +186,7 @@ foreach my $test (
     compare("compare: $test->[0]", $expected, $produced);
 }
 
+1;
 
 __DATA__
 #!/bin/sh

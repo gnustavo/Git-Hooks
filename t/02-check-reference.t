@@ -1,4 +1,4 @@
-# -*- cperl -*-
+#!/usr/bin/env perl
 
 use v5.16.0;
 use warnings;
@@ -16,12 +16,14 @@ sub setup_repos {
     $repo->run(push => '-q', $clone->git_dir, 'master:master');
 
     install_hooks($clone, undef, qw/pre-receive/);
+    return;
 }
 
 sub check_can_push {
     my ($testname, $reference) = @_;
     $repo->run(branch => $reference, 'master');
     test_ok($testname, $repo, 'push', $clone->git_dir(), "$reference:$reference");
+    return;
 }
 
 sub check_cannot_push {
@@ -34,6 +36,7 @@ sub check_cannot_push {
     }
     test_nok_match($testname, $error, $repo,
                    'push', $clone->git_dir(), "$reference:$reference");
+    return;
 }
 
 
@@ -65,7 +68,7 @@ $clone->run(qw/config --remove-section githooks.checkreference/);
 $clone->run(qw/config githooks.checkreference.acl/, 'deny CRUD ^refs/');
 check_cannot_push('deny CRUD ^refs/', 'any');
 
-$ENV{USER} = 'pusher';
+local $ENV{USER} = 'pusher';
 $clone->run(qw/config githooks.userenv USER/);
 
 $clone->run(qw/config --add githooks.checkreference.acl/, 'allow CRUD ^refs/heads/user/{USER}/');
@@ -77,3 +80,4 @@ check_cannot_push('allow CRUD ^refs/heads/other$ by other', 'other');
 $clone->run(qw/config --add githooks.checkreference.acl/, 'allow CRUD refs/heads/pusher by pusher');
 check_can_push('allow CRUD refs/heads/pusher by pusher', 'pusher');
 
+1;
