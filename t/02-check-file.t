@@ -5,7 +5,7 @@ use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
 use Path::Tiny;
-use Test::More tests => 34;
+use Test::More tests => 36;
 use Test::Requires::Git;
 
 my ($repo, $clone, $T);
@@ -204,6 +204,17 @@ check_cannot_commit('not-executable fail', qr/is executable but should not be/, 
 $wc->child('doc.txt')->touch()->chmod(0644);
 
 check_can_commit('not-executable succeed', 'doc.txt');
+
+# Deal with filenames containing unusual characters
+
+$repo->run(qw/config --remove-section githooks.checkfile/);
+
+$repo->run(qw/config githooks.checkfile.sizelimit 4/);
+
+check_can_commit('filename with unusual characteres OK', '$al\v@ção', 'truncate', '12');
+
+check_cannot_commit('filename with unusual characteres NOK', qr/the current limit is/,
+                    '$al\v@ção', 'truncate', '12345');
 
 # ACLs
 

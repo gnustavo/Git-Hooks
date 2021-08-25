@@ -373,7 +373,38 @@ sub check_everything {
     if (defined $extra) {
         foreach (split /\n/, $extra) {
             if (/^(?<status>[ACDMRTUXB0-9]+)\t(?<file>.+)/) {
-                $name2status{$+{file}} = $+{status};
+                my ($status, $file) = ($+{status}, $+{file});
+                if ($file =~ /^\".*\"$/) {
+                    # Pathnames with "unusual" characters are quoted as
+                    # explained for the configuration variable core.quotePath
+                    # (see git-config(1)): "by enclosing the pathname in
+                    # double-quotes and escaping those characters with
+                    # backslashes in the same way C escapes control characters
+                    # (e.g.  \t for TAB, \n for LF, \\ for backslash) or bytes
+                    # with values larger than 0x80 (e.g. octal \302\265 for
+                    # "micro" in UTF-8)."
+
+                    # The section "Quote and Quote-like Operators" of perlop
+                    # explains how Perl's string literal syntax is an (almost)
+                    # superset of C's. The only C escape that Perl doesn't have
+                    # is "\v", which can be expressed in Perl as "\x0b". So,
+                    # first we use a s/// operator to replace any and all
+                    # occurrences of \v.
+
+                    $file =~ s/(?<!\\)\\v/\x0b/g;
+
+                    # However, since we must evaluate the literal string as
+                    # doubly-quoted we must take care to escape the $ and @
+                    # sigils, or Perl will try to innterpolate them.
+
+                    $file =~ s/([\$\@])/\\$1/g;
+
+                    # Now, we can use eval to read the resulting string as if it
+                    # were a Perl string literal.
+
+                    $file = eval $file; ## no critic (ProhibitStringyEval)
+                }
+                $name2status{$file} = $status;
             }
         }
     }
