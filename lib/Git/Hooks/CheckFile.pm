@@ -90,9 +90,7 @@ sub check_command {
 }
 
 sub check_commands {
-    my ($git, $ctx, $commit, $ACM_files) = @_;
-
-    return 0 unless @$ACM_files; # No new file to check
+    my ($git, $ctx, $commit, $files) = @_;
 
     # Construct a list of command checks from the
     # githooks.checkfile.name configuration. Each check in the list is a
@@ -111,7 +109,7 @@ sub check_commands {
 
     my $errors = 0;
 
-    foreach my $file (@$ACM_files) {
+    foreach my $file (@$files) {
         my $basename = path($file)->basename;
 
         foreach my $command (map {$_->[1]} grep {$basename =~ $_->[0]} @name_checks) {
@@ -123,9 +121,7 @@ sub check_commands {
 }
 
 sub check_sizes {
-    my ($git, $ctx, $commit, $ACM_files) = @_;
-
-    return 0 unless @$ACM_files; # No new file to check
+    my ($git, $ctx, $commit, $files) = @_;
 
     # See if we have to check a file size limit
     my $sizelimit = $git->get_config_integer($CFG => 'sizelimit');
@@ -141,7 +137,8 @@ sub check_sizes {
 
     my $errors = 0;
 
-    foreach my $file (@$ACM_files) {
+  FILE:
+    foreach my $file (@$files) {
         my $basename = path($file)->basename;
 
         my $size = $git->file_size($commit, $file);
@@ -169,9 +166,7 @@ EOS
 }
 
 sub check_executables {
-    my ($git, $ctx, $commit, $ACM_files) = @_;
-
-    return 0 unless @$ACM_files; # No new file to check
+    my ($git, $ctx, $commit, $files) = @_;
 
     # Grok the list of patterns to check for executable permissions
     my %executable_checks;
@@ -191,7 +186,7 @@ sub check_executables {
     my $errors = 0;
 
   FILE:
-    foreach my $file (@$ACM_files) {
+    foreach my $file (@$files) {
         my $basename = path($file)->basename;
 
         my $mode;
@@ -231,9 +226,7 @@ EOS
 }
 
 sub deny_case_conflicts {
-    my ($git, $ctx, $commit, $ACM_files) = @_;
-
-    return 0 unless @$ACM_files; # No new names to check
+    my ($git, $ctx, $commit, $files) = @_;
 
     return 0 unless $git->get_config_boolean($CFG => 'deny-case-conflict');
 
@@ -247,18 +240,18 @@ sub deny_case_conflicts {
     my $errors = 0;
 
     # Check if the new files conflict with each other
-    for (my $i = 0; $i < $#$ACM_files; ++$i) {
-        for (my $j = $i + 1; $j <= $#$ACM_files; ++$j) {
-            if (lc($ACM_files->[$i]) eq lc($ACM_files->[$j]) &&
-                    $ACM_files->[$i] ne $ACM_files->[$j]) {
+    for (my $i = 0; $i < $#$files; ++$i) {
+        for (my $j = $i + 1; $j <= $#$files; ++$j) {
+            if (lc($files->[$i]) eq lc($files->[$j]) &&
+                    $files->[$i] ne $files->[$j]) {
                 ++$errors;
                 $git->fault(<<"EOS", {%$ctx, option => 'deny-case-conflict'});
 This commit adds two files with names that will conflict
 with each other in the repository in case-insensitive
 filesystems:
 
-  $ACM_files->[$i]
-  $ACM_files->[$j]
+  $files->[$i]
+  $files->[$j]
 
 Please, rename the added files to avoid the conflict and amend your commit.
 EOS
@@ -269,7 +262,7 @@ EOS
     # Check if the new files conflict with already existing files
     foreach my $file (@ls_files) {
         my $lc_file = lc $file;
-        foreach my $name (@$ACM_files) {
+        foreach my $name (@$files) {
             my $lc_name = lc $name;
             if ($lc_name eq $lc_file && $name ne $file) {
                 ++$errors;
@@ -431,22 +424,25 @@ sub check_everything {
         }
     }
 
-    # A list of added, copied, or modified files.
-    my @ACM_files = sort grep {$name2status{$_} =~ /[ACM]/} keys %name2status;
-
     my %context = (ref => $ref);
     $context{commit} = $commit unless $commit eq ':0';
 
     my $errors =
-        check_executables($git, \%context, $commit, \@ACM_files) +
-        check_sizes($git, \%context, $commit, \@ACM_files) +
         check_acls($git, \%context, \%name2status) +
-        deny_case_conflicts($git, \%context, $commit, \@ACM_files) +
         deny_token($git, \%context, $commit);
 
-    # Avoid external checks if there are errors already
-    $errors += check_commands($git, \%context, $commit, \@ACM_files)
-        unless $errors;
+    if (my @AC_files = sort grep {$name2status{$_} =~ /[AC]/} keys %name2status) {
+        $errors += deny_case_conflicts($git, \%context, $commit, \@AC_files);
+    }
+
+    if (my @ACM_files = sort grep {$name2status{$_} =~ /[ACM]/} keys %name2status) {
+        $errors +=
+            check_executables($git, \%context, $commit, \@ACM_files) +
+            check_sizes($git, \%context, $commit, \@ACM_files);
+        # Avoid external checks if there are errors already
+        $errors += check_commands($git, \%context, $commit, \@ACM_files)
+            unless $errors;
+    }
 
     return $errors;
 }
