@@ -204,14 +204,11 @@ EOS
 }
 
 sub deny_case_conflicts {
-    my ($git, $ctx, $commit, $name2status) = @_;
+    my ($git, $ctx, $commit, $ACM_files) = @_;
+
+    return 0 unless @$ACM_files; # No new names to check
 
     return 0 unless $git->get_config_boolean($CFG => 'deny-case-conflict');
-
-    # We're only interested in new file names
-    my @names = sort grep {$name2status->{$_} =~ /[AC]/} keys %$name2status;
-
-    return 0 unless @names;     # No new names to check
 
     # Grok the list of all files in the repository at $commit
     my @ls_files = split(
@@ -223,17 +220,18 @@ sub deny_case_conflicts {
     my $errors = 0;
 
     # Check if the new files conflict with each other
-    for (my $i = 0; $i < $#names; ++$i) {
-        for (my $j = $i + 1; $j <= $#names; ++$j) {
-            if (lc($names[$i]) eq lc($names[$j]) && $names[$i] ne $names[$j]) {
+    for (my $i = 0; $i < $#$ACM_files; ++$i) {
+        for (my $j = $i + 1; $j <= $#$ACM_files; ++$j) {
+            if (lc($ACM_files->[$i]) eq lc($ACM_files->[$j]) &&
+                    $ACM_files->[$i] ne $ACM_files->[$j]) {
                 ++$errors;
                 $git->fault(<<"EOS", {%$ctx, option => 'deny-case-conflict'});
 This commit adds two files with names that will conflict
 with each other in the repository in case-insensitive
 filesystems:
 
-  $names[$i]
-  $names[$j]
+  $ACM_files->[$i]
+  $ACM_files->[$j]
 
 Please, rename the added files to avoid the conflict and amend your commit.
 EOS
@@ -244,7 +242,7 @@ EOS
     # Check if the new files conflict with already existing files
     foreach my $file (@ls_files) {
         my $lc_file = lc $file;
-        foreach my $name (@names) {
+        foreach my $name (@$ACM_files) {
             my $lc_name = lc $name;
             if ($lc_name eq $lc_file && $name ne $file) {
                 ++$errors;
@@ -415,7 +413,7 @@ sub check_everything {
     return
         check_new_files($git, \%context, $commit, \@ACM_files) +
         check_acls($git, \%context, \%name2status) +
-        deny_case_conflicts($git, \%context, $commit, \%name2status) +
+        deny_case_conflicts($git, \%context, $commit, \@ACM_files) +
         deny_token($git, \%context, $commit);
 }
 
