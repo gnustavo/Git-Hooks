@@ -91,9 +91,9 @@ sub check_command {
 
 sub check_new_files {           ## no critic (ProhibitExcessComplexity)
     # This routine should be broken in smaller pieces.
-    my ($git, $ctx, $commit, $name2status) = @_;
+    my ($git, $ctx, $commit, $ACM_files) = @_;
 
-    return 0 unless %$name2status; # No new file to check
+    return 0 unless @$ACM_files; # No new file to check
 
     # Construct a list of command checks from the
     # githooks.checkfile.name configuration. Each check in the list is a
@@ -138,10 +138,7 @@ sub check_new_files {           ## no critic (ProhibitExcessComplexity)
     my $errors = 0;
 
   FILE:
-    foreach my $file (sort keys %$name2status) {
-        # We're only interested in new and modified files
-        next unless $name2status->{$file} =~ /[AM]/;
-
+    foreach my $file (@$ACM_files) {
         my $basename = path($file)->basename;
 
         my $size = $git->file_size($commit, $file);
@@ -409,11 +406,14 @@ sub check_everything {
         }
     }
 
+    # A list of added, copied, or modified files.
+    my @ACM_files = sort grep {$name2status{$_} =~ /[ACM]/} keys %name2status;
+
     my %context = (ref => $ref);
     $context{commit} = $commit unless $commit eq ':0';
 
     return
-        check_new_files($git, \%context, $commit, \%name2status) +
+        check_new_files($git, \%context, $commit, \@ACM_files) +
         check_acls($git, \%context, \%name2status) +
         deny_case_conflicts($git, \%context, $commit, \%name2status) +
         deny_token($git, \%context, $commit);
