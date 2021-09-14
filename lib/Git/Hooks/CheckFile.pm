@@ -35,7 +35,7 @@ sub check_command {
     my ($git, $ctx, $commit, $file, $command) = @_;
 
     my $tmpfile = $git->blob($commit, $file)
-        or return;
+        or return 1;
 
     # interpolate filename in $command
     my $cmd = $command =~ s/\{\}/\'$tmpfile\'/gr;
@@ -81,16 +81,15 @@ sub check_command {
         $output =~ s/\Q$tmpfile\E/$file/g;
 
         $git->fault($message, {%$ctx, details => $output});
-        return;
+        return 1;
     } else {
         # FIXME: What should we do with eventual output from a
         # successful command?
     }
-    return 1;
+    return 0;
 }
 
-sub check_new_files {           ## no critic (ProhibitExcessComplexity)
-    # This routine should be broken in smaller pieces.
+sub check_commands {
     my ($git, $ctx, $commit, $ACM_files) = @_;
 
     return 0 unless @$ACM_files; # No new file to check
@@ -109,6 +108,25 @@ sub check_new_files {           ## no critic (ProhibitExcessComplexity)
         $command .= ' {}' unless $command =~ /\{\}/;
         push @name_checks, [$pattern => $command];
     }
+
+    my $errors = 0;
+
+    foreach my $file (@$ACM_files) {
+        my $basename = path($file)->basename;
+
+        foreach my $command (map {$_->[1]} grep {$basename =~ $_->[0]} @name_checks) {
+            $errors += check_command($git, $ctx, $commit, $file, $command);
+        }
+    }
+
+    return $errors;
+}
+
+sub check_new_files {           ## no critic (ProhibitExcessComplexity)
+    # This routine should be broken in smaller pieces.
+    my ($git, $ctx, $commit, $ACM_files) = @_;
+
+    return 0 unless @$ACM_files; # No new file to check
 
     # See if we have to check a file size limit
     my $sizelimit = $git->get_config_integer($CFG => 'sizelimit');
@@ -160,11 +178,6 @@ Please, check your configuration options.
 EOS
             ++$errors;
             next FILE;    # Don't botter checking the contents of huge files
-        }
-
-        foreach my $command (map {$_->[1]} grep {$basename =~ $_->[0]} @name_checks) {
-            check_command($git, $ctx, $commit, $file, $command)
-                or ++$errors;
         }
 
         my $mode;
@@ -412,6 +425,7 @@ sub check_everything {
 
     return
         check_new_files($git, \%context, $commit, \@ACM_files) +
+        check_commands($git, \%context, $commit, \@ACM_files) +
         check_acls($git, \%context, \%name2status) +
         deny_case_conflicts($git, \%context, $commit, \@ACM_files) +
         deny_token($git, \%context, $commit);
@@ -467,7 +481,7 @@ GITHOOKS_CHECK_PATCHSET      \&check_patchset, $options;
 1;
 
 __END__
-=for Pod::Coverage check_command check_new_files deny_case_conflicts deny_token check_acls check_everything check_ref check_commit check_patchset
+=for Pod::Coverage check_command check_commands check_new_files deny_case_conflicts deny_token check_acls check_everything check_ref check_commit check_patchset
 
 =head1 NAME
 
