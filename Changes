@@ -2,6 +2,14 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+3.2.0     2021-09-14 18:39:20-03:00 America/Sao_Paulo
+
+[New feature]
+
+  - CheckFile: Add a new option called 'max-path' which checks if the paths of
+    added files aren't bigger than a limit, which is useful to avoid problems
+    with Window's maximum path length limitation of 260 characters.
+
 3.1.1     2021-08-24 23:44:49-03:00 America/Sao_Paulo
 
 [Fix]
