@@ -168,8 +168,7 @@ EOS
     return $errors;
 }
 
-sub check_new_files {           ## no critic (ProhibitExcessComplexity)
-    # This routine should be broken in smaller pieces.
+sub check_executables {
     my ($git, $ctx, $commit, $ACM_files) = @_;
 
     return 0 unless @$ACM_files; # No new file to check
@@ -187,8 +186,8 @@ sub check_new_files {           ## no critic (ProhibitExcessComplexity)
         }
     }
 
-    # Now we iterate through every new file and apply to them the matching
-    # commands.
+    return 0 unless %executable_checks;
+
     my $errors = 0;
 
   FILE:
@@ -438,13 +437,18 @@ sub check_everything {
     my %context = (ref => $ref);
     $context{commit} = $commit unless $commit eq ':0';
 
-    return
-        check_new_files($git, \%context, $commit, \@ACM_files) +
+    my $errors =
+        check_executables($git, \%context, $commit, \@ACM_files) +
         check_sizes($git, \%context, $commit, \@ACM_files) +
-        check_commands($git, \%context, $commit, \@ACM_files) +
         check_acls($git, \%context, \%name2status) +
         deny_case_conflicts($git, \%context, $commit, \@ACM_files) +
         deny_token($git, \%context, $commit);
+
+    # Avoid external checks if there are errors already
+    $errors += check_commands($git, \%context, $commit, \@ACM_files)
+        unless $errors;
+
+    return $errors;
 }
 
 sub check_ref {
@@ -497,7 +501,7 @@ GITHOOKS_CHECK_PATCHSET      \&check_patchset, $options;
 1;
 
 __END__
-=for Pod::Coverage check_command check_commands check_sizes check_new_files deny_case_conflicts deny_token check_acls check_everything check_ref check_commit check_patchset
+=for Pod::Coverage check_command check_commands check_sizes check_executables deny_case_conflicts deny_token check_acls check_everything check_ref check_commit check_patchset
 
 =head1 NAME
 
