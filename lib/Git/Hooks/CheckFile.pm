@@ -28,6 +28,8 @@ sub _setup_config {
 
     $default->{sizelimit} //= [0];
 
+    $default->{'max-path'} //= [0];
+
     return;
 }
 
@@ -137,7 +139,6 @@ sub check_sizes {
 
     my $errors = 0;
 
-  FILE:
     foreach my $file (@$files) {
         my $basename = path($file)->basename;
 
@@ -281,6 +282,33 @@ EOS
     }
 
     return $errors;
+}
+
+sub check_max_paths {
+    my ($git, $ctx, $commit, $files) = @_;
+
+    # See if we have to check a file size limit
+    my $max_path = $git->get_config_integer($CFG => 'max-path');
+
+    return 0 unless $max_path;
+
+    my @bigs = grep {length > $max_path} @$files;
+
+    if (@bigs) {
+        $git->fault(<<"EOS", {%$ctx, option => 'max-path'});
+The following files have paths more than $max_path characters long.
+
+  @{[join("\n  ", @bigs)]}
+
+Git may not be able to check them out on a Windows host due to its maximum path
+length limit of 260 characteres. See:
+https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
+
+Please, ammend your changes to shorten their paths.
+EOS
+    }
+
+    return @bigs;
 }
 
 sub deny_token {
@@ -432,7 +460,9 @@ sub check_everything {
         deny_token($git, \%context, $commit);
 
     if (my @AC_files = sort grep {$name2status{$_} =~ /[AC]/} keys %name2status) {
-        $errors += deny_case_conflicts($git, \%context, $commit, \@AC_files);
+        $errors +=
+            deny_case_conflicts($git, \%context, $commit, \@AC_files) +
+            check_max_paths($git, \%context, $commit, \@AC_files);
     }
 
     if (my @ACM_files = sort grep {$name2status{$_} =~ /[ACM]/} keys %name2status) {
@@ -497,7 +527,7 @@ GITHOOKS_CHECK_PATCHSET      \&check_patchset, $options;
 1;
 
 __END__
-=for Pod::Coverage check_command check_commands check_sizes check_executables deny_case_conflicts deny_token check_acls check_everything check_ref check_commit check_patchset
+=for Pod::Coverage check_command check_commands check_sizes check_executables check_max_paths deny_case_conflicts deny_token check_acls check_everything check_ref check_commit check_patchset
 
 =head1 NAME
 
@@ -716,6 +746,19 @@ this option to be safe
 Note that this check have to check the newly added files against all files
 already in the repository. It can be a little slow for large repositories. Take
 heed!
+
+=head2 max-path LENGTH
+
+This directive checks for newly added or copied files if their full path is at
+most LENGTH characters long.
+
+This is useful to avoid problems with the L<Windows maximum path length
+limitation|https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation>,
+which is defined as 260 characters.
+
+Note that this check counts just the path length inside the repository. When
+cloning it on Windows you have to make some allowance for the path length of the
+clone's root directory. So, you should allow less than 260 characters!
 
 =head2 executable PATTERN
 

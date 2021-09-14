@@ -5,7 +5,7 @@ use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
 use Path::Tiny;
-use Test::More tests => 36;
+use Test::More tests => 38;
 use Test::Requires::Git;
 
 my ($repo, $clone, $T);
@@ -219,6 +219,18 @@ check_can_commit('filename with unusual characteres OK', '$al\v@ção', 'truncat
 
 check_cannot_commit('filename with unusual characteres NOK', qr/the current limit is/,
                     '$al\v@ção', 'truncate', '12345');
+
+# Check max-path
+
+$repo->run(qw/config --remove-section githooks.checkfile/);
+
+$repo->run(qw/config githooks.checkfile.max-path 10/);
+
+check_can_commit('filename with short path OK', '123456');
+
+check_cannot_commit('filename with big path NOK',
+                    qr/files have paths more than 10 characters long/,
+                    '123456789012');
 
 # ACLs
 
