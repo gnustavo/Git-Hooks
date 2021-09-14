@@ -28,6 +28,8 @@ sub _setup_config {
 
     $default->{sizelimit} //= [0];
 
+    $default->{'max-path'} //= [0];
+
     return;
 }
 
@@ -35,7 +37,7 @@ sub check_command {
     my ($git, $ctx, $commit, $file, $command) = @_;
 
     my $tmpfile = $git->blob($commit, $file)
-        or return;
+        or return 1;
 
     # interpolate filename in $command
     my $cmd = $command =~ s/\{\}/\'$tmpfile\'/gr;
@@ -81,19 +83,16 @@ sub check_command {
         $output =~ s/\Q$tmpfile\E/$file/g;
 
         $git->fault($message, {%$ctx, details => $output});
-        return;
+        return 1;
     } else {
         # FIXME: What should we do with eventual output from a
         # successful command?
     }
-    return 1;
+    return 0;
 }
 
-sub check_new_files {           ## no critic (ProhibitExcessComplexity)
-    # This routine should be broken in smaller pieces.
-    my ($git, $ctx, $commit, $name2status) = @_;
-
-    return 0 unless %$name2status; # No new file to check
+sub check_commands {
+    my ($git, $ctx, $commit, $files) = @_;
 
     # Construct a list of command checks from the
     # githooks.checkfile.name configuration. Each check in the list is a
@@ -110,6 +109,22 @@ sub check_new_files {           ## no critic (ProhibitExcessComplexity)
         push @name_checks, [$pattern => $command];
     }
 
+    my $errors = 0;
+
+    foreach my $file (@$files) {
+        my $basename = path($file)->basename;
+
+        foreach my $command (map {$_->[1]} grep {$basename =~ $_->[0]} @name_checks) {
+            $errors += check_command($git, $ctx, $commit, $file, $command);
+        }
+    }
+
+    return $errors;
+}
+
+sub check_sizes {
+    my ($git, $ctx, $commit, $files) = @_;
+
     # See if we have to check a file size limit
     my $sizelimit = $git->get_config_integer($CFG => 'sizelimit');
 
@@ -120,28 +135,11 @@ sub check_new_files {           ## no critic (ProhibitExcessComplexity)
         unshift @{$re_checks{basename}{sizelimit}}, [qr/$regexp/, $bytes];
     }
 
-    # Grok the list of patterns to check for executable permissions
-    my %executable_checks;
-    foreach my $check (qw/executable not-executable/) {
-        foreach my $pattern ($git->get_config($CFG => $check)) {
-            if ($pattern =~ m/^qr(.)(.*)\g{1}/) {
-                $pattern = qr/$2/;
-            } else {
-                $pattern = glob_to_regex($pattern);
-            }
-            push @{$executable_checks{$check}}, $pattern;
-        }
-    }
+    return 0 unless $sizelimit || %re_checks;
 
-    # Now we iterate through every new file and apply to them the matching
-    # commands.
     my $errors = 0;
 
-  FILE:
-    foreach my $file (sort keys %$name2status) {
-        # We're only interested in new and modified files
-        next unless $name2status->{$file} =~ /[AM]/;
-
+    foreach my $file (@$files) {
         my $basename = path($file)->basename;
 
         my $size = $git->file_size($commit, $file);
@@ -162,13 +160,35 @@ It has $size bytes but the current limit is $file_sizelimit bytes.
 Please, check your configuration options.
 EOS
             ++$errors;
-            next FILE;    # Don't botter checking the contents of huge files
         }
+    }
 
-        foreach my $command (map {$_->[1]} grep {$basename =~ $_->[0]} @name_checks) {
-            check_command($git, $ctx, $commit, $file, $command)
-                or ++$errors;
+    return $errors;
+}
+
+sub check_executables {
+    my ($git, $ctx, $commit, $files) = @_;
+
+    # Grok the list of patterns to check for executable permissions
+    my %executable_checks;
+    foreach my $check (qw/executable not-executable/) {
+        foreach my $pattern ($git->get_config($CFG => $check)) {
+            if ($pattern =~ m/^qr(.)(.*)\g{1}/) {
+                $pattern = qr/$2/;
+            } else {
+                $pattern = glob_to_regex($pattern);
+            }
+            push @{$executable_checks{$check}}, $pattern;
         }
+    }
+
+    return 0 unless %executable_checks;
+
+    my $errors = 0;
+
+  FILE:
+    foreach my $file (@$files) {
+        my $basename = path($file)->basename;
 
         my $mode;
 
@@ -207,14 +227,9 @@ EOS
 }
 
 sub deny_case_conflicts {
-    my ($git, $ctx, $commit, $name2status) = @_;
+    my ($git, $ctx, $commit, $files) = @_;
 
     return 0 unless $git->get_config_boolean($CFG => 'deny-case-conflict');
-
-    # We're only interested in new file names
-    my @names = sort grep {$name2status->{$_} =~ /[AC]/} keys %$name2status;
-
-    return 0 unless @names;     # No new names to check
 
     # Grok the list of all files in the repository at $commit
     my @ls_files = split(
@@ -226,17 +241,18 @@ sub deny_case_conflicts {
     my $errors = 0;
 
     # Check if the new files conflict with each other
-    for (my $i = 0; $i < $#names; ++$i) {
-        for (my $j = $i + 1; $j <= $#names; ++$j) {
-            if (lc($names[$i]) eq lc($names[$j]) && $names[$i] ne $names[$j]) {
+    for (my $i = 0; $i < $#$files; ++$i) {
+        for (my $j = $i + 1; $j <= $#$files; ++$j) {
+            if (lc($files->[$i]) eq lc($files->[$j]) &&
+                    $files->[$i] ne $files->[$j]) {
                 ++$errors;
                 $git->fault(<<"EOS", {%$ctx, option => 'deny-case-conflict'});
 This commit adds two files with names that will conflict
 with each other in the repository in case-insensitive
 filesystems:
 
-  $names[$i]
-  $names[$j]
+  $files->[$i]
+  $files->[$j]
 
 Please, rename the added files to avoid the conflict and amend your commit.
 EOS
@@ -247,7 +263,7 @@ EOS
     # Check if the new files conflict with already existing files
     foreach my $file (@ls_files) {
         my $lc_file = lc $file;
-        foreach my $name (@names) {
+        foreach my $name (@$files) {
             my $lc_name = lc $name;
             if ($lc_name eq $lc_file && $name ne $file) {
                 ++$errors;
@@ -266,6 +282,33 @@ EOS
     }
 
     return $errors;
+}
+
+sub check_max_paths {
+    my ($git, $ctx, $commit, $files) = @_;
+
+    # See if we have to check a file size limit
+    my $max_path = $git->get_config_integer($CFG => 'max-path');
+
+    return 0 unless $max_path;
+
+    my @bigs = grep {length > $max_path} @$files;
+
+    if (@bigs) {
+        $git->fault(<<"EOS", {%$ctx, option => 'max-path'});
+The following files have paths more than $max_path characters long.
+
+  @{[join("\n  ", @bigs)]}
+
+Git may not be able to check them out on a Windows host due to its maximum path
+length limit of 260 characteres. See:
+https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
+
+Please, ammend your changes to shorten their paths.
+EOS
+    }
+
+    return @bigs;
 }
 
 sub deny_token {
@@ -412,11 +455,26 @@ sub check_everything {
     my %context = (ref => $ref);
     $context{commit} = $commit unless $commit eq ':0';
 
-    return
-        check_new_files($git, \%context, $commit, \%name2status) +
+    my $errors =
         check_acls($git, \%context, \%name2status) +
-        deny_case_conflicts($git, \%context, $commit, \%name2status) +
         deny_token($git, \%context, $commit);
+
+    if (my @AC_files = sort grep {$name2status{$_} =~ /[AC]/} keys %name2status) {
+        $errors +=
+            deny_case_conflicts($git, \%context, $commit, \@AC_files) +
+            check_max_paths($git, \%context, $commit, \@AC_files);
+    }
+
+    if (my @ACM_files = sort grep {$name2status{$_} =~ /[ACM]/} keys %name2status) {
+        $errors +=
+            check_executables($git, \%context, $commit, \@ACM_files) +
+            check_sizes($git, \%context, $commit, \@ACM_files);
+        # Avoid external checks if there are errors already
+        $errors += check_commands($git, \%context, $commit, \@ACM_files)
+            unless $errors;
+    }
+
+    return $errors;
 }
 
 sub check_ref {
@@ -469,7 +527,7 @@ GITHOOKS_CHECK_PATCHSET      \&check_patchset, $options;
 1;
 
 __END__
-=for Pod::Coverage check_command check_new_files deny_case_conflicts deny_token check_acls check_everything check_ref check_commit check_patchset
+=for Pod::Coverage check_command check_commands check_sizes check_executables check_max_paths deny_case_conflicts deny_token check_acls check_everything check_ref check_commit check_patchset
 
 =head1 NAME
 
@@ -688,6 +746,19 @@ this option to be safe
 Note that this check have to check the newly added files against all files
 already in the repository. It can be a little slow for large repositories. Take
 heed!
+
+=head2 max-path LENGTH
+
+This directive checks for newly added or copied files if their full path is at
+most LENGTH characters long.
+
+This is useful to avoid problems with the L<Windows maximum path length
+limitation|https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation>,
+which is defined as 260 characters.
+
+Note that this check counts just the path length inside the repository. When
+cloning it on Windows you have to make some allowance for the path length of the
+clone's root directory. So, you should allow less than 260 characters!
 
 =head2 executable PATTERN
 
