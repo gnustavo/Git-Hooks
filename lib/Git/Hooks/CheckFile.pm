@@ -122,8 +122,7 @@ sub check_commands {
     return $errors;
 }
 
-sub check_new_files {           ## no critic (ProhibitExcessComplexity)
-    # This routine should be broken in smaller pieces.
+sub check_sizes {
     my ($git, $ctx, $commit, $ACM_files) = @_;
 
     return 0 unless @$ACM_files; # No new file to check
@@ -138,24 +137,10 @@ sub check_new_files {           ## no critic (ProhibitExcessComplexity)
         unshift @{$re_checks{basename}{sizelimit}}, [qr/$regexp/, $bytes];
     }
 
-    # Grok the list of patterns to check for executable permissions
-    my %executable_checks;
-    foreach my $check (qw/executable not-executable/) {
-        foreach my $pattern ($git->get_config($CFG => $check)) {
-            if ($pattern =~ m/^qr(.)(.*)\g{1}/) {
-                $pattern = qr/$2/;
-            } else {
-                $pattern = glob_to_regex($pattern);
-            }
-            push @{$executable_checks{$check}}, $pattern;
-        }
-    }
+    return 0 unless $sizelimit || %re_checks;
 
-    # Now we iterate through every new file and apply to them the matching
-    # commands.
     my $errors = 0;
 
-  FILE:
     foreach my $file (@$ACM_files) {
         my $basename = path($file)->basename;
 
@@ -177,8 +162,38 @@ It has $size bytes but the current limit is $file_sizelimit bytes.
 Please, check your configuration options.
 EOS
             ++$errors;
-            next FILE;    # Don't botter checking the contents of huge files
         }
+    }
+
+    return $errors;
+}
+
+sub check_new_files {           ## no critic (ProhibitExcessComplexity)
+    # This routine should be broken in smaller pieces.
+    my ($git, $ctx, $commit, $ACM_files) = @_;
+
+    return 0 unless @$ACM_files; # No new file to check
+
+    # Grok the list of patterns to check for executable permissions
+    my %executable_checks;
+    foreach my $check (qw/executable not-executable/) {
+        foreach my $pattern ($git->get_config($CFG => $check)) {
+            if ($pattern =~ m/^qr(.)(.*)\g{1}/) {
+                $pattern = qr/$2/;
+            } else {
+                $pattern = glob_to_regex($pattern);
+            }
+            push @{$executable_checks{$check}}, $pattern;
+        }
+    }
+
+    # Now we iterate through every new file and apply to them the matching
+    # commands.
+    my $errors = 0;
+
+  FILE:
+    foreach my $file (@$ACM_files) {
+        my $basename = path($file)->basename;
 
         my $mode;
 
@@ -425,6 +440,7 @@ sub check_everything {
 
     return
         check_new_files($git, \%context, $commit, \@ACM_files) +
+        check_sizes($git, \%context, $commit, \@ACM_files) +
         check_commands($git, \%context, $commit, \@ACM_files) +
         check_acls($git, \%context, \%name2status) +
         deny_case_conflicts($git, \%context, $commit, \@ACM_files) +
@@ -481,7 +497,7 @@ GITHOOKS_CHECK_PATCHSET      \&check_patchset, $options;
 1;
 
 __END__
-=for Pod::Coverage check_command check_commands check_new_files deny_case_conflicts deny_token check_acls check_everything check_ref check_commit check_patchset
+=for Pod::Coverage check_command check_commands check_sizes check_new_files deny_case_conflicts deny_token check_acls check_everything check_ref check_commit check_patchset
 
 =head1 NAME
 
