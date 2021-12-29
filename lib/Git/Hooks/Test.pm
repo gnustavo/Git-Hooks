@@ -30,8 +30,16 @@ our %EXPORT_TAGS = (
     all => \@EXPORT_OK
 );
 
-# Make sure the git messages come in English.
-local $ENV{LC_ALL} = 'C';
+# Make sure the git messages come in English. (LC_ALL)
+# Eliminate the effects of system wide (GIT_CONFIG_NOSYSTEM)
+# and global configuration (XDG_CONFIG_HOME and HOME).
+# https://metacpan.org/dist/Git-Repository/view/lib/Git/Repository/Tutorial.pod#Ignore-the-system-and-global-configuration-files
+my %git_test_env = (
+    LC_ALL => 'C',
+    GIT_CONFIG_NOSYSTEM => 1,
+    XDG_CONFIG_HOME     => undef,
+    HOME                => undef,
+);
 
 my $cwd = Path::Tiny->cwd;
 
@@ -100,11 +108,6 @@ $ENV{GIT_DIR}    = '.git' unless exists $ENV{GIT_DIR};
 $ENV{GIT_CONFIG} = "$ENV{GIT_DIR}/config";
 EOS
 
-        # Reset HOME to avoid reading ~/.gitconfig
-        print $fh <<'EOS';
-$ENV{HOME}       = '';
-EOS
-
         # Hooks on Windows are invoked indirectly.
         if ($^O eq 'MSWin32') {
             print $fh <<'EOS';
@@ -167,9 +170,11 @@ sub new_repos {
     my $stderr = $T->child('stderr');
 
     my @result = eval {
-        Git::Repository->run(qw/-c init.defaultBranch=master init -q/, "--template=$tmpldir", $repodir);
+        Git::Repository->run(qw/-c init.defaultBranch=master init -q/,
+            "--template=$tmpldir", $repodir, { env => \%git_test_env });
 
-        my $repo = Git::Repository->new(work_tree => $repodir);
+        my $repo = Git::Repository->new(work_tree => $repodir,
+            { env => \%git_test_env });
 
         $repo->run(qw/config user.email myself@example.com/);
         $repo->run(qw/config user.name/, 'My Self');
