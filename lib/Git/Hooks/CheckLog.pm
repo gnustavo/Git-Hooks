@@ -321,7 +321,7 @@ sub check_ref {
         $errors += message_errors($git, $commit, $commit->message);
     }
 
-    return $errors == 0;
+    return $errors;
 }
 
 sub check_patchset {
