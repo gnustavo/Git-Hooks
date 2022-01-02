@@ -298,7 +298,7 @@ sub notify_affected_refs {
 }
 
 # Install hooks
-POST_RECEIVE \&notify_affected_refs;
+POST_RECEIVE(\&notify_affected_refs);
 
 1;
 

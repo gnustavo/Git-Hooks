@@ -130,7 +130,7 @@ sub prepare_message {
 }
 
 # Install hooks
-PREPARE_COMMIT_MSG \&prepare_message;
+PREPARE_COMMIT_MSG(\&prepare_message);
 
 1;
 

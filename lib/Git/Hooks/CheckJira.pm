@@ -512,11 +512,11 @@ my $options = {
     destroy => \&_disconnect_jira,
 };
 
-GITHOOKS_CHECK_AFFECTED_REFS \&check_ref,          $options;
-GITHOOKS_CHECK_PATCHSET      \&check_patchset,     $options;
-GITHOOKS_CHECK_MESSAGE_FILE  \&check_message_file, $options;
+GITHOOKS_CHECK_AFFECTED_REFS(\&check_ref, $options);
+GITHOOKS_CHECK_PATCHSET(\&check_patchset, $options);
+GITHOOKS_CHECK_MESSAGE_FILE(\&check_message_file, $options);
 
-POST_RECEIVE \&notify_affected_refs;
+POST_RECEIVE(\&notify_affected_refs);
 
 1;
 

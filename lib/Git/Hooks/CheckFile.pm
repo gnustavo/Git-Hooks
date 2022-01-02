@@ -520,9 +520,9 @@ sub check_patchset {
 # Install hooks
 my $options = {config => \&_setup_config};
 
-GITHOOKS_CHECK_AFFECTED_REFS \&check_ref,      $options;
-GITHOOKS_CHECK_PRE_COMMIT    \&check_commit,   $options;
-GITHOOKS_CHECK_PATCHSET      \&check_patchset, $options;
+GITHOOKS_CHECK_AFFECTED_REFS(\&check_ref, $options);
+GITHOOKS_CHECK_PRE_COMMIT(\&check_commit, $options);
+GITHOOKS_CHECK_PATCHSET(\&check_patchset, $options);
 
 1;
 

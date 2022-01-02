@@ -333,9 +333,9 @@ sub check_patchset {
 # Install hooks
 my $options = {config => \&_setup_config};
 
-GITHOOKS_CHECK_AFFECTED_REFS \&check_ref,          $options;
-GITHOOKS_CHECK_PATCHSET      \&check_patchset,     $options;
-GITHOOKS_CHECK_MESSAGE_FILE  \&check_message_file, $options;
+GITHOOKS_CHECK_AFFECTED_REFS(\&check_ref, $options);
+GITHOOKS_CHECK_PATCHSET(\&check_patchset, $options);
+GITHOOKS_CHECK_MESSAGE_FILE(\&check_message_file, $options);
 
 1;
 

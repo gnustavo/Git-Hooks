@@ -81,7 +81,7 @@ EOS
 }
 
 # Install hooks
-GITHOOKS_CHECK_AFFECTED_REFS \&check_ref;
+GITHOOKS_CHECK_AFFECTED_REFS(\&check_ref);
 
 1;
 

@@ -96,9 +96,9 @@ EOS
 }
 
 # Install hooks
-GITHOOKS_CHECK_AFFECTED_REFS \&check_ref;
-GITHOOKS_CHECK_PRE_COMMIT    \&check_commit;
-GITHOOKS_CHECK_PATCHSET      \&check_patchset;
+GITHOOKS_CHECK_AFFECTED_REFS(\&check_ref);
+GITHOOKS_CHECK_PRE_COMMIT(\&check_commit);
+GITHOOKS_CHECK_PATCHSET(\&check_patchset);
 
 1;
 

@@ -163,9 +163,9 @@ EOS
 }
 
 # Install hooks
-PRE_COMMIT  \&record_commit_parents;
-POST_COMMIT \&check_commit_amend;
-PRE_REBASE  \&check_rebase;
+PRE_COMMIT(\&record_commit_parents);
+POST_COMMIT(\&check_commit_amend);
+PRE_REBASE(\&check_rebase);
 
 1;
 

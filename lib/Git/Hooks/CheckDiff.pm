@@ -14,9 +14,9 @@ my $PKG = __PACKAGE__;
 my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
 
 # Install hooks
-GITHOOKS_CHECK_AFFECTED_REFS \&_check_ref;
-GITHOOKS_CHECK_PRE_COMMIT    \&check_commit;
-GITHOOKS_CHECK_PATCHSET      \&check_patchset;
+GITHOOKS_CHECK_AFFECTED_REFS(\&_check_ref);
+GITHOOKS_CHECK_PRE_COMMIT(\&check_commit);
+GITHOOKS_CHECK_PATCHSET(\&check_patchset);
 
 sub check_commit {
     my ($git, $current_branch) = @_;
