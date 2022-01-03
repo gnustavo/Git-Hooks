@@ -2,6 +2,24 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+3.2.1     2022-01-02 21:08:19-03:00 America/Sao_Paulo
+
+[Fixes]
+
+  - CheckLog: The check_ref routine was returning a boolean instead of the
+    number of errors found. This was inverting its result.
+
+  - CheckCommit: The 'signature' configuration option wasn't working.
+
+  - The Git::Hooks::Test module wasn't isolating Git from the user's
+    environment, which led it to fail strangely in situations where the test
+    code interacted destructively with the user's global configuration or the
+    system's configuration.
+
+  [Thanks]
+
+  Mikko Koivunalho provided all three fixes.
+
 3.2.0     2021-09-14 18:39:20-03:00 America/Sao_Paulo
 
 [New feature]
