@@ -291,7 +291,7 @@ SKIP: {
         Git::Hooks::CheckLog::_spell_checker($repo, 'word'); ## no critic (ProtectPrivateSubs)
     };
 
-    skip "Text::SpellChecker isn't properly installed", 2 unless $checker;
+    skip "Text::SpellChecker isn't properly installed", 2 unless defined $checker;
 
     check_can_commit('allow misspelling without checking', <<'EOF');
 xytxuythiswordshouldnotspell
