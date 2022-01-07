@@ -478,7 +478,7 @@ committer identities.
 =item * B<post-commit>, B<post-applypatch>
 
 This hook is invoked after a commit is made to check its signature. Note
-that the commit is checked after is has been made and any errors must be
+that the commit is checked after it has been made and any errors must be
 fixed with a C<git-commit --amend> command afterwards.
 
 =item * B<update>
