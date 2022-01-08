@@ -463,6 +463,10 @@ may configure it in a Git configuration file like this:
     # avoid careless pushes.
     push-limit = 2
 
+    # Reject commits unless they are signed with a GPG key
+    # and the signature is good (does not need to be trusted).
+    signature = good
+
 =head1 DESCRIPTION
 
 This L<Git::Hooks> plugin hooks itself to the hooks below to enforce commit
