@@ -9,6 +9,7 @@ use Carp;
 use Log::Any '$log';
 use Git::Hooks;
 use Git::Repository::Log;
+use Git::Repository::Log::Iterator;
 use List::MoreUtils qw/any none/;
 
 my $PKG = __PACKAGE__;
@@ -225,7 +226,7 @@ sub signature_errors {
     my $signature = $git->get_config($CFG => 'signature');
 
     if (defined $signature && $signature ne 'nocheck') {
-        my $status = $git->run(qw/log -1 --format=%G?/, $commit);
+        my $status = $git->run(qw/log -1 --format=%G?/, $commit->commit());
 
         if ($status eq 'B') {
             $git->fault(<<'EOS', {commit => $commit, option => 'signature'});
@@ -395,7 +396,8 @@ sub check_post_commit {
 
     return 1 unless $git->is_reference_enabled($current_branch);
 
-    my $commit = $git->get_sha1('HEAD');
+    my $iter = Git::Repository::Log::Iterator->new($git->get_sha1('HEAD'));
+    my $commit = $iter->next();
 
     return signature_errors($git, $commit);
 }
