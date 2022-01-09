@@ -2,10 +2,12 @@
 
 use v5.16.0;
 use warnings;
+use version;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
-use Test::More tests => 34;
+use Test::More tests => 36;
 use Test::Requires::Git;
+use System::Command;
 use Path::Tiny;
 
 my ($repo, $file, $clone, $T) = new_repos();
@@ -262,20 +264,6 @@ check_cannot_push('deny positive author name (push)', qr/is invalid/, 'master', 
 
 $clone->run(qw/config --remove-section githooks.checkcommit/);
 
-# signature
-SKIP: {
-    skip "signature tests not implemented yet", 4;
-
-    $clone->run(qw/config githooks.checkcommit.signature trusted/);
-
-    check_cannot_push('deny no signature', qr/has NO signature/, 'master', 'name');
-
-    $file->append('new commit');
-    $repo->run(qw/commit -SFIXME -q -a -mcommit/);
-    test_ok('allow with signature', $repo, 'push', $clone->git_dir(), 'master');
-
-    $clone->run(qw/config --remove-section githooks.checkcommit/);
-}
 
 # merges
 
@@ -336,5 +324,241 @@ check_can_push('check-code push file ok', 'valid', 'name');
 check_cannot_push('check-code push file nok', qr/Error detected while evaluating/, 'invalid', 'name');
 
 $clone->run(qw/config --remove-section githooks.checkcommit/);
+
+#
+# Signature
+#
+# How to test for signature:
+# 1. Check that we have `gpg` installed.
+# 1.1. local $ENV{GNUPGHOME} = /tmp/**
+# 1.2. local $ENV{PINENTRY_USER_DATA} = 'loopback';
+# 2. Create a public/private keypair, save in /tmp: create "local" gpg dir.
+# 3. Set up local and remote hooks.
+
+sub is_gpg_available {
+    my ($min_version) = @_;
+    my $cmd = q{sh -c "command -v gpg"};
+    my $rval = system $cmd;
+    if( ! defined $min_version ) {
+        return ! $rval;
+    }
+    $min_version = version->parse($min_version) unless ( ref $min_version eq 'version');
+    my $out = `gpg --version`;
+    my ($ver_line, @dummy) = split qr/\n/, $out;
+    my ($ver_s) = $ver_line =~ m/^gpg \(GnuPG\) (.*)$/ms;
+    my $ver = version->parse($ver_s);
+    return $ver >= $min_version;
+}
+
+SKIP: {
+    skip 'GPG (or high enough version) not available', 6 if( ! is_gpg_available( '2.2.27' ) );
+
+    # Create a public/private keypair.
+    my ($user_name, $user_email, $user_signingkey)
+        = ('Example User', 'example.user@foo.bar', undef);
+    my $T_gpg = $T->child('.gnupg');
+    umask 0077; # Give access only to user, otherwise gpg will complain.
+    $T_gpg->mkpath;
+    diag 'Created temp dir ' . $T;
+    local $ENV{GNUPGHOME} = $T_gpg;
+    local $ENV{PINENTRY_USER_DATA} = 'loopback';
+
+    my $sys_com_trace = q{3=} .  $T->child('system_command.log');
+    # --quick-generate-key user-id [algo [usage [expire]]]
+    # No expiration date, after all, the temp dir is deleted after use.
+    my @gpg_general_opts = (
+        # q{--quiet},
+        q{--batch},
+        q{--no-tty},
+        q{--pinentry-mode}, q{loopback},
+    );
+    my @cmd_opts = (
+        @gpg_general_opts,
+        # q{--passphrase}, q{},
+        # This is very misleading:
+        # To create a key without passphrase, you give the flag --passphrase
+        # but it has no parameter, not even empty string ''.
+        # This is probably a bug, which is why we require the minimum version 2.2.27
+        q{--passphrase},
+        q{--quick-generate-key}, $user_email,
+        q{future-default},
+        q{default},
+        q{never},
+    );
+    # diag 'Create a GPG key ...';
+    my $cmd = System::Command->new( q{gpg}, @cmd_opts, { trace => $sys_com_trace });
+    my $key_id;
+    my $sub_get_key_id = sub {
+        # gpg: key 978CD3B986D23275 marked as ultimately trusted
+        if( $_[0] =~ m/^gpg: key ([A-F0-9]{1,}) marked as .*$/ms ) {
+            ($key_id) = $_[0] =~ m/^gpg: key ([A-F0-9]{1,}) marked as .*$/ms;
+            return 0;
+        }
+        return 1;
+    };
+    $cmd->loop_on( stdout => $sub_get_key_id, stderr => $sub_get_key_id );
+    diag 'Created key ' . $key_id;
+    # Created key always gets automatically ultimate ownertrust
+    if( ! $key_id ) {
+        BAIL_OUT 'Testing failure: Could not create a GPG public/private key pair';
+    }
+
+    # Set user signing key.
+    $user_signingkey = $key_id;
+
+    # Repo has worktree, clone is bare.
+    ($repo, $file, $clone, $T) = new_repos();
+    my $git = $repo;
+    my $git_cmd;
+    diag 'Git work_tree: ' . $git->work_tree;
+    install_hooks($repo, undef, 'post-commit');
+    $repo->run(qw/config githooks.plugin CheckCommit/);
+    $repo->run(qw/config githooks.checkcommit.signature nocheck/);
+    $repo->run(qw/config --local user.name/, $user_name);
+    $repo->run(qw/config --local user.email/, $user_email);
+
+    # Since this is a new repo, let's create a starting commit and push it.
+    $git_cmd = System::Command->new( q{git}, q{commit},
+        q{--no-gpg-sign}, q{--allow-empty}, q{-m}, q{Initial (empty) commit},
+        { cwd => $git->work_tree, trace => $sys_com_trace });
+    $git_cmd = System::Command->new( q{git}, q{push},
+        q{--set-upstream}, q{clone}, q{master},
+        { cwd => $git->work_tree, trace => $sys_com_trace });
+
+    # Test
+    my $testname = 'no_check_succeeds_without_gpg_signature';
+    $git_cmd = System::Command->new( q{git}, q{commit},
+        q{--no-gpg-sign}, q{--allow-empty}, q{-m}, $testname,
+        { cwd => $git->work_tree, trace => $sys_com_trace });
+    my ($stderr_out, $stdout_out)= (q{}, q{});
+    $git_cmd->loop_on( stderr => sub { $stderr_out .= $_[0]; } );
+    if( length $stderr_out ) {
+        fail 'Test 2 failed: STDERR output produced: ' . $stderr_out;
+    } else {
+        pass $testname;
+    }
+
+    # Test
+    $testname = 'check_fails_without_gpg_signature';
+    $repo->run(qw/config githooks.checkcommit.signature good/);
+    $git_cmd = System::Command->new( q{git}, q{commit},
+        q{--no-gpg-sign}, q{--allow-empty}, q{-m}, $testname,
+        { cwd => $git->work_tree, trace => $sys_com_trace });
+    $stderr_out = q{};
+    $git_cmd->loop_on( stderr => sub { $stderr_out .= $_[0]; } );
+    diag $stderr_out;
+    if( $stderr_out =~ m/^The commit has NO GPG signature\.$/ms ) {
+        pass $testname;
+    } else {
+        fail $testname;
+    }
+
+    # Test
+    $testname = 'check_succeeds_with_a_gpg_signature';
+    $git_cmd = System::Command->new( q{git}, q{commit},
+        qq{--gpg-sign=$user_signingkey}, q{--allow-empty}, q{-m}, $testname,
+        { cwd => $git->work_tree, trace => $sys_com_trace });
+    ($stderr_out, $stdout_out)= (q{}, q{});
+    $git_cmd->loop_on(
+        stderr => sub { $stdout_out .= $_[0]; },
+        stderr => sub { $stderr_out .= $_[0]; } );
+    if( length $stderr_out ) {
+        fail 'Test 2 failed: STDERR output produced: ' . $stderr_out;
+    } else {
+        pass $testname;
+    }
+
+    # Test
+    $testname = 'check_fails_with_an_untrusted_gpg_signature';
+    @cmd_opts = (
+        # Using --command-fd we force gpg to read from stdin instead of tty.
+        q{--command-fd}, q{0},
+        q{--edit-key}, $user_signingkey,
+        q{trust},
+        q{quit},
+    );
+    diag 'Downgrade ownertrust to not defined ...';
+    $cmd = System::Command->new( q{gpg}, @cmd_opts, { trace => $sys_com_trace });
+    print { $cmd->stdin() } "1\n";
+    print { $cmd->stdin() } "y\n";
+    ($stderr_out, $stdout_out)= (q{}, q{});
+    $cmd->loop_on(
+        stderr => sub { $stdout_out .= $_[0]; },
+        stderr => sub { $stderr_out .= $_[0]; } );
+    $repo->run(qw/config githooks.checkcommit.signature trusted/);
+    $git_cmd = System::Command->new( q{git}, q{commit},
+        qq{--gpg-sign=$user_signingkey}, q{--allow-empty}, q{-m}, $testname,
+        { cwd => $repo->work_tree, trace => $sys_com_trace });
+    $stderr_out = q{};
+    $stdout_out = q{};
+    $git_cmd->loop_on(
+        stderr => sub { $stdout_out .= $_[0]; },
+        stderr => sub { $stderr_out .= $_[0]; } );
+    if( $stderr_out =~ m/^The commit has an UNTRUSTED GPG signature\.$/ms ) {
+        pass $testname;
+    } else {
+        fail $testname;
+    }
+
+    # Let's remove the previous commits
+    $repo->run(qw/reset --hard HEAD~4/);
+
+
+    # SERVER SIDE
+    install_hooks($clone, undef, 'update');
+
+    # Test
+    $testname = 'push_fails_with_an_untrusted_gpg_signature';
+    $clone->run(qw/config githooks.plugin CheckCommit/);
+    $clone->run(qw/config githooks.checkcommit.signature trusted/);
+
+    # Make a commit. (while the GPG key is untrusted).
+    $git_cmd = System::Command->new( q{git}, q{commit},
+        qq{--gpg-sign=$user_signingkey}, q{--allow-empty}, q{-m}, $testname,
+        { cwd => $repo->work_tree, trace => $sys_com_trace });
+    $git_cmd->loop_on( stdout => sub { } );
+
+    # Push to clone (bare)
+    $git_cmd = System::Command->new( q{git}, q{push},
+        { cwd => $repo->work_tree, trace => $sys_com_trace });
+    ($stderr_out, $stdout_out) = (q{}, q{});
+    $git_cmd->loop_on(
+        stdout => sub { $stdout_out .= $_[0]; },
+        stderr => sub { $stderr_out .= $_[0]; } );
+    if( $stderr_out =~ m/The commit has an UNTRUSTED GPG signature\./ms ) {
+        pass $testname;
+    } else {
+        fail $testname;
+    }
+
+    # Test
+    $testname = 'check_succeeds_after_push_with_a_trusted_gpg_signature';
+
+    # Fix the signing key's ownertrust to ultimate.
+    @cmd_opts = (
+        # Using --command-fd we force gpg to read from stdin instead of tty.
+        q{--command-fd}, q{0},
+        q{--edit-key}, $user_signingkey,
+        q{trust},
+        q{quit},
+    );
+    $cmd = System::Command->new( q{gpg}, @cmd_opts, { trace => $sys_com_trace });
+    print { $cmd->stdin() } "5\n";
+    print { $cmd->stdin() } "y\n";
+    $cmd->loop_on( stdout => sub { }, stderr => sub { } );
+
+    # Push to clone (bare)
+    $git_cmd = System::Command->new( q{git}, q{push},
+        { cwd => $repo->work_tree, trace => $sys_com_trace });
+    ($stderr_out, $stdout_out) = (q{}, q{});
+    $git_cmd->loop_on(
+        stdout => sub { $stdout_out .= $_[0]; },
+        stderr => sub { $stderr_out .= $_[0]; } );
+    if( $stderr_out =~ m/remote: error:/ms ) {
+        fail 'Test failed: STDERR output produced: ' . $stderr_out;
+    } else {
+        pass $testname;
+    }
+} # SKIP.
 
 1;
