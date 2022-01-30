@@ -1248,9 +1248,10 @@ sub repository_name {
         if (my $gerrit_args = $git->{_plugin_githooks}{gerrit_args}) {
             # Gerrit
              $git->{_plugin_githooks}{repository_name} = $gerrit_args->{'--project'};
-        } elsif (exists $ENV{STASH_REPO_NAME}) {
-            # Bitbucket
-            $git->{_plugin_githooks}{repository_name} = "$ENV{STASH_PROJECT_KEY}/$ENV{STASH_REPO_NAME}";
+        } elsif (exists $ENV{BB_REPO_SLUG}) {
+            # Bitbucket Server environment variables available for hooks:
+            # https://developer.atlassian.com/server/bitbucket/how-tos/write-hook-scripts/
+            $git->{_plugin_githooks}{repository_name} = "$ENV{BB_PROJECT_KEY}/$ENV{BB_REPO_SLUG}";
         } else {
             # As a last resort, return GIT_DIR's basename
             my $gitdir = path($git->git_dir());
