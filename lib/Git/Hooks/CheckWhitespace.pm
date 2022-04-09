@@ -17,7 +17,7 @@ sub check_ref {
     my ($old_commit, $new_commit) = $git->get_affected_ref_range($ref);
 
     # If the reference is being deleted we have nothing to check
-    next if $new_commit eq $git->undef_commit;
+    return 0 if $new_commit eq $git->undef_commit;
 
     # If the reference is being created we have to calculate a proper
     # $old_commit to diff against.
@@ -27,7 +27,7 @@ sub check_ref {
         while (my $log = $log_iterator->next()) {
             $last_log = $log;
         }
-        next unless $last_log;
+        return 0 unless $last_log;
         my @parents = $last_log->parent;
         if (@parents == 0) {
             # We reached the repository root. Hence, let's consider
