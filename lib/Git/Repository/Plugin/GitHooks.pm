@@ -1364,8 +1364,7 @@ sub file_mode {
             croak "Internal error: git-diff-index should return a single line";
         }
     } else {
-        my $path = path($file);
-        my @ls_tree = $git->run('ls-tree', "$rev:" . $path->dirname, $path->basename);
+        my @ls_tree = $git->run('ls-tree', "$rev:", $file );
 
         if (@ls_tree == 1) {
             if (my ($mode, $type, $object, $filename) =
