@@ -38,7 +38,7 @@ sub _keywords {                 ## no critic (ProhibitUnusedPrivateSubroutines)
 
           authenticated_user repository_name
 
-          get_current_branch get_sha1 get_head_or_empty_tree
+          get_current_branch get_sha1 get_head_or_empty_tree has_any_commits
 
           blob file_size file_mode
 
@@ -1283,10 +1283,19 @@ sub get_sha1 {
 sub get_head_or_empty_tree {
     my ($git) = @_;
 
+    # Return the empty tree object if in the initial commit
+    return $git->empty_tree if( ! has_any_commits($git) );
+
     my $head = $git->run({fatal => [-129, -128]}, qw/rev-parse --verify HEAD/);
 
-    # Return the empty tree object if in the initial commit
     return $? == 0 ? $head : $git->empty_tree;
+}
+
+sub has_any_commits {
+    my ($git) = @_;
+
+    my $refs = $git->run(qw/rev-parse -n 1 --all/);
+    return $refs ne "-n\n1";
 }
 
 sub blob {
@@ -2096,6 +2105,13 @@ if it is a brand new repository, it returns the SHA1 representing the empty
 tree. It's useful to come up with the correct argument for, e.g., C<git
 diff> during a pre-commit hook. (See the default pre-commit.sample script
 which comes with Git to understand how this is used.)
+
+=head2 has_any_commits
+
+Returns true if currently there is any commits in the repository.
+Most Git operations fail or produce unnecessary errors when a repository
+is brand new and has no commits yet. Use this method to check first
+if that is the case to avoid the common failures.
 
 =head2 blob REV, FILE, ARGS...
 
