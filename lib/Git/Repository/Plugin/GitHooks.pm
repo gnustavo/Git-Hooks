@@ -1268,7 +1268,7 @@ sub repository_name {
 
 sub get_current_branch {
     my ($git) = @_;
-    my $branch = $git->run({fatal => [-129, -128]}, qw/symbolic-ref HEAD/);
+    my $branch = $git->run({fatal => [-129, -128], quiet => 1}, qw/symbolic-ref HEAD/);
 
     # Return undef if we're in detached head state
     return $? == 0 ? $branch : undef;
@@ -1283,7 +1283,7 @@ sub get_sha1 {
 sub get_head_or_empty_tree {
     my ($git) = @_;
 
-    my $head = $git->run({fatal => [-129, -128]}, qw/rev-parse --verify HEAD/);
+    my $head = $git->run({fatal => [-129, -128], quiet => 1}, qw/rev-parse --verify HEAD/);
 
     # Return the empty tree object if in the initial commit
     return $? == 0 ? $head : $git->empty_tree;

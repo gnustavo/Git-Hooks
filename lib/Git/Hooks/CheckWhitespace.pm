@@ -46,7 +46,7 @@ sub check_ref {
     }
 
     my $output = $git->run(
-        {fatal => [-129, -128]},
+        {fatal => [-129, -128], quiet => 1},
         qw/diff-tree -r --check/,
         $old_commit eq $git->undef_commit ? $git->empty_tree : $old_commit,
         $new_commit);
@@ -65,7 +65,7 @@ sub check_commit {
     my ($git) = @_;
 
     my $output = $git->run(
-        {fatal => [-129, -128]},
+        {fatal => [-129, -128], quiet => 1},
         qw/diff-index --check --cached/, $git->get_head_or_empty_tree());
     if ($? == 0) {
         return 1;
@@ -82,7 +82,7 @@ sub check_patchset {
     my ($git, $branch, $commit) = @_;
 
     my $output = $git->run(
-        {fatal => [-129, -128]},
+        {fatal => [-129, -128], quiet => 1},
         qw/diff-tree -r -m --check/, $commit->commit);
     if ($? == 0) {
         return 1;
