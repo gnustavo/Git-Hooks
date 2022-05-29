@@ -395,15 +395,13 @@ sub check_post_commit {
 
     return 1 unless $git->is_reference_enabled($current_branch);
 
-    my $commit = $git->get_sha1('HEAD');
-
-    return signature_errors($git, $commit);
+    return signature_errors($git, $git->get_commit('HEAD'));
 }
 
 sub check_patchset {
     my ($git, $branch, $commit) = @_;
 
-    return commit_errors($git, $commit, $branch);
+    return commit_errors($git, $commit, $git->get_commit($branch));
 }
 
 # Install hooks
