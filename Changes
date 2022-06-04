@@ -2,6 +2,23 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+3.2.2     2022-06-04 17:20:26-03:00 America/Sao_Paulo
+
+[Fixes]
+
+  - CheckCommit: Fix calls to the check_post_commit and check_patchset which
+    were being passed SHA1 hashes intead of commit objects.
+
+  - Avoid showing some expected Git error messages.
+
+  - CheckWhiteSpace: Fix "Exiting subroutine via next" errors.
+
+  - CheckLog: Fix spellcheck test.
+
+  - Now we grok Bitbucket's repository name from the newer BB_REPO_SLUG
+    environment variable instead of the old STASH_REPO_NAME environment
+    variable.
+
 3.2.1     2022-01-02 21:08:19-03:00 America/Sao_Paulo
 
 [Fixes]
