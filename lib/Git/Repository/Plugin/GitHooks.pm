@@ -839,6 +839,13 @@ EOS
         $faults =~ s/^/$prefix/gm;
     }
 
+    if (my $limit = $git->get_config_integer(githooks => 'error-length-limit')) {
+        if ($limit > 0 && $limit < length($faults)) {
+            my $mark = "\n\n[MESSAGE TRUNCATED at githooks.error-length-limit]\n";
+            substr($faults, $limit - length($mark) - 1, length($faults), $mark);
+        }
+    }
+
     return $faults;
 }
 
