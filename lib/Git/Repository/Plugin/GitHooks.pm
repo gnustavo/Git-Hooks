@@ -24,7 +24,9 @@ sub _keywords {                 ## no critic (ProhibitUnusedPrivateSubroutines)
 
           get_config get_config_boolean get_config_integer
 
-          fault get_faults
+          check_timeout
+
+          fault get_faults fail_on_faults
 
           undef_commit empty_tree get_commit get_commits
 
@@ -558,7 +560,10 @@ sub invoke_external_hooks {
             _invoke_external_hook($git, $file, $hookname, @args)
                 or $git->fault(": error in external hook '$file'");
         }
+    } continue {
+        $git->check_timeout();
     }
+
     return;
 }
 
@@ -762,6 +767,25 @@ sub _githooks_colors {
     return $cache;
 }
 
+sub check_timeout {
+    my ($git) = @_;
+
+    state $timeout = $git->get_config_integer(githooks => 'timeout');
+
+    return unless $timeout;
+
+    state $start_time = time;
+
+    my $now = time;
+
+    if (($now - $start_time) >= $timeout) {
+        $git->fault("Hook timeout");
+        $git->fail_on_faults();
+    }
+
+    return;
+}
+
 sub fault {
     my ($git, $message, $info) = @_;
     $info //= {};
@@ -847,6 +871,24 @@ EOS
     }
 
     return $faults;
+}
+
+sub fail_on_faults {
+    my ($git, $warn_only) = @_;
+
+    if (my $faults = $git->get_faults()) {
+        $log->debug(Environment => {ENV => \%ENV});
+        $faults .= "\n" unless $faults =~ /\n$/;
+        if ($warn_only) {
+            $log->warning(Warning => {faults => $faults});
+            carp $faults;
+        } else {
+            $log->error(Error => {faults => $faults});
+            croak $faults;
+        }
+    }
+
+    return;
 }
 
 sub undef_commit {
@@ -1774,6 +1816,13 @@ method croaks. If the variable isn't defined the method returns undef.
 In the L<Git::Hooks> documentation, all configuration variables mentioning an
 C<INT> value are grokked with this method.
 
+=head2 check_timeout
+
+If the configuration option C<githooks.timeout> is set to a positive number,
+this method aborts the hook if more than that amount of time (in seconds) has
+passed since the start of the run. It's called in many places by Git::Hooks
+itself and by some of its plugins to try to stop runaway checks.
+
 =head2 fault MESSAGE INFO
 
 This method should be used by plugins to record consistent error or warning
@@ -1855,6 +1904,14 @@ which are explained in the section L<Git::Hooks/CONFIGURATION> documentation.
 This method returns a string specially formatted with all error messages
 recorded with the C<fault> method, a header, and a footer, if requested by
 configuration.
+
+=head2 fail_on_faults [WARN_ONLY]
+
+By default (or if WARN_ONLY is false) if there are any faults registered so far
+by the C<fault> method, this method logs the fault messages in the ERROR level
+and aborts by croaking.
+
+If WARN_ONLY is true, it logs the fault messages in the WARN level.
 
 =head2 undef_commit
 

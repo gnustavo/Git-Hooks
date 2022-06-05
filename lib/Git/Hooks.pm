@@ -257,6 +257,8 @@ sub run_hook {
         } else {
             # ...and return undef when they succeed.
         }
+    } continue {
+        $git->check_timeout();
     }
 
     # Invoke enabled external hooks. This doesn't work in Windows yet.
@@ -265,20 +267,14 @@ sub run_hook {
     # Some hooks want to do some post-processing
     foreach my $post_hook ($git->post_hooks) {
         $post_hook->($hook_basename, $git, @args);
+    } continue {
+        $git->check_timeout();
     }
 
-    if (my $faults = $git->get_faults()) {
-        $log->debug(Environment => {ENV => \%ENV});
-        $faults .= "\n" unless $faults =~ /\n$/;
-        if (($hook_basename eq 'commit-msg' or $hook_basename eq 'pre-commit')
-                and not $git->get_config_boolean(githooks => 'abort-commit')) {
-            $log->warning(Warning => {faults => $faults});
-            carp $faults;
-        } else {
-            $log->error(Error => {faults => $faults});
-            croak $faults;
-        }
-    }
+    $git->fail_on_faults(
+        ($hook_basename eq 'commit-msg' or $hook_basename eq 'pre-commit')
+        and not $git->get_config_boolean(githooks => 'abort-commit')
+    );
 
     return;
 }
@@ -1621,6 +1617,11 @@ subsection.
 This option tells if Git::Hooks's output should be colorized. It accepts the
 same values as Git's own C<color.ui> option. If it's not set, the C<color.ui>
 value is used by default. The meaning of each value is the following:
+
+=head2 timeout SECONDS
+
+This option sets a limit in seconds to how long the hook script can run. It's
+used by the L<Git::Repository::Plugin::GitHooks::check_timeout> method.
 
 =over 4
 

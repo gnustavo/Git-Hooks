@@ -311,6 +311,8 @@ sub code_errors {
                         {commit => $commit, option => 'check-code', details => $@});
             ++$errors;
         }
+    } continue {
+        $git->check_timeout();
     }
 
     return $errors;
@@ -681,6 +683,9 @@ as the script filename, which is executed by a B<do> command. Otherwise, the
 option's value is executed directly by an eval. Either way, the code must
 end with the definition of a routine, which will be called once for each
 commit with the following arguments:
+
+Since the codes may take much time to run, the plugin checks if the
+C<githooks.timeout> option has been violated after each code runs.
 
 =over
 

@@ -116,6 +116,8 @@ sub check_commands {
 
         foreach my $command (map {$_->[1]} grep {$basename =~ $_->[0]} @name_checks) {
             $errors += check_command($git, $ctx, $commit, $file, $command);
+        } continue {
+            $git->check_timeout();
         }
     }
 
@@ -677,6 +679,9 @@ Some real examples:
 
 COMMAND may rely on the B<GIT_COMMIT> environment variable to identify the
 commit being checked according to the hook being used, as follows.
+
+Since the external commands may take much time to run, the plugin checks if the
+C<githooks.timeout> option has been violated after each command runs.
 
 =over
 
