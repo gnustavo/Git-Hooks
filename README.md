@@ -73,7 +73,7 @@ GitHub](https://github.com/gnustavo/Git-Hooks/issues).
 
 ## Copyright & License
 
-Git::Hooks is copyright (c) 2008-2020 of [CPQD](http://www.cpqd.com.br).
+Git::Hooks is copyright (c) 2008-2022 of [CPQD](http://www.cpqd.com.br).
 
 This is free software; you can redistribute it and/or modify it under the same
 terms as the Perl 5 programming language system itself. About the only thing you
