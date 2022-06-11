@@ -2,6 +2,24 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+3.3.0     2022-06-11 16:43:20-03:00 America/Sao_Paulo
+
+[New features]
+
+  - The new githooks.timeout configuration option adds timeout support. It sets
+    a time limit to how log the hooks can run. If it runs longer than the
+    specified time, in seconds, it aborts.
+
+  - The new githooks.error-length-limit configuration option specifies a limit
+    to the length of the error messages in characters. If the errors are bigger
+    than the limit the message is truncated and a special mark is appended to
+    the end.
+
+[Fixes]
+
+  - CheckLog: The checklog.spelling tests weren't being skipped correctly which
+    made them fail on FreeBSD systems.
+
 3.2.2     2022-06-04 17:20:26-03:00 America/Sao_Paulo
 
 [Fixes]
