@@ -326,7 +326,7 @@ It can be disabled for specific references via the C<githooks.ref> and
 C<githooks.noref> options about which you can read in the L<Git::Hooks>
 documentation.
 
-=head2 deny-token REGEXP [-- FILTER...]
+=head2 deny-token REGEXP [-- FILTER ...]
 
 This directive rejects commits or pushes which add lines matching REGEXP, which
 is a Perl regular expression. This is a multi-valued directive, i.e., you can

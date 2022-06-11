@@ -355,7 +355,7 @@ email about pushed commits affecting specific files in the repository.
 =item * B<post-receive>
 
 This hook is invoked once in the remote repository after a successful C<git
-push>. It's used to notify JIRA of commits citing its issues via comments.
+push>. It's used to notify Jira of commits citing its issues via comments.
 
 =back
 
@@ -434,7 +434,7 @@ It can be disabled for specific references via the C<githooks.ref> and
 C<githooks.noref> options about which you can read in the L<Git::Hooks>
 documentation.
 
-=head2 rule [REFS] [OPTIONS] RECIPIENTS [-- PATHSPECS]
+=head2 rule [REFS] [OPTIONS] RECIPIENTS [-- PATHSPEC ...]
 
 The B<rule> directive adds a notification rule specifying which RECIPIENTS
 should be notified of commits pushed to a reference matching REFS, affecting the
@@ -581,9 +581,9 @@ angle-bracketed names with values appropriate to your context:
 
   <BITBUCKET_BASE_URL>/projects/%R/commits/%H
 
-=item * Gerrit with Gitblit
+=item * Gerrit with Gitiles
 
-  <GERRIT_BASE_URL>/plugins/gitblit/commit/?r=%R&h=%H
+  <GERRIT_BASE_URL>/plugins/gitiles/%R/+/%H
 
 =back
 

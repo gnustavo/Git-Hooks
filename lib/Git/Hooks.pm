@@ -560,9 +560,9 @@ specified policies.
 
 =item * L<Git::Hooks::CheckJira>
 
-Integrate Git with the L<JIRA|http://www.atlassian.com/software/jira/>
+Integrate Git with the L<Jira|http://www.atlassian.com/software/jira/>
 ticketing system by requiring that every commit message cites valid
-JIRA issues.
+Jira issues.
 
 =item * L<Git::Hooks::CheckCommit>
 

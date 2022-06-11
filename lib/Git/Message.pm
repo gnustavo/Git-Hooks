@@ -252,7 +252,7 @@ standard Git commit-msg hook|http://goo.gl/tyjri>. After the parsing,
 which occurs during construction, we aggregate, for each key, all the
 values and comments associated with it in the footer. Since a key may
 appear multiple times with different letter case, we use their
-lowercased form as the aggregation keys to avoid spurious
+lowercase form as the aggregation keys to avoid spurious
 differences. As an example, suppose we have a message with the
 following footer in it:
 
@@ -335,7 +335,7 @@ empty if the key doesn't appear in the footer at all.
 
 =head2 add_footer_values KEY, VALUE...
 
-This adds a list of VALUEs to KEY.
+This adds a list of values to KEY.
 
 =head2 as_string
 

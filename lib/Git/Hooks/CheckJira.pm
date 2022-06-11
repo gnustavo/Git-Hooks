@@ -1,7 +1,7 @@
 use warnings;
 
 package Git::Hooks::CheckJira;
-# ABSTRACT: Git::Hooks plugin which requires citation of JIRA issues in commit messages
+# ABSTRACT: Git::Hooks plugin which requires citation of Jira issues in commit messages
 
 use v5.16.0;
 use utf8;
@@ -26,7 +26,7 @@ sub _setup_config {
 
     my $default = $config->{lc $CFG};
 
-    # Default matchkey for matching default JIRA keys.
+    # Default matchkey for matching default Jira keys.
     $default->{matchkey}   //= ['\b[A-Z][A-Z]+-\d+\b'];
 
     $default->{require}    //= ['true'];
@@ -43,7 +43,7 @@ sub grok_msg_jiras {
     my $matchkey = $git->get_config($CFG => 'matchkey');
     my @matchlog = $git->get_config($CFG => 'matchlog');
 
-    # Grok the JIRA issue keys from the commit log
+    # Grok the Jira issue keys from the commit log
     if (@matchlog) {
         my @keys;
         foreach my $matchlog (@matchlog) {
@@ -62,13 +62,13 @@ sub _jira {
 
     my $cache = $git->cache($PKG);
 
-    # Connect to JIRA if not yet connected
+    # Connect to Jira if not yet connected
     unless (exists $cache->{jira}) {
         unless (eval { require JIRA::REST; }) {
             $git->fault(<<"EOS", {details => $@});
 I could not load the JIRA::REST Perl module.
 
-I need it to talk to your JIRA server, as configured by the
+I need it to talk to your Jira server, as configured by the
 $CFG.jiraurl, $CFG.jirauser, and $CFG.jirapass
 options in your Git configuration.
 
@@ -82,7 +82,7 @@ EOS
             $jira{$option} = $git->get_config($CFG => $option)
                 or $git->fault(<<'EOS', {option => $option})
 The option is missing from the configuration.
-It's required in order to connect to the JIRA server.
+It's required in order to connect to the Jira server.
 EOS
                 and return;
         }
@@ -91,7 +91,7 @@ EOS
         my $jira = eval { JIRA::REST->new($jira{jiraurl}, $jira{jirauser}, $jira{jirapass}) };
         length $@
             and $git->fault(<<"EOS", {details => $@})
-Cannot connect to the JIRA server at '$jira{jiraurl}' as '$jira{jirauser}.
+Cannot connect to the Jira server at '$jira{jiraurl}' as '$jira{jirauser}.
 
 Please, check your $CFG.jiraurl, $CFG.jirauser,
 and $CFG.jirapass configuration options.
@@ -183,9 +183,9 @@ sub _check_jira_keys {          ## no critic (ProhibitExcessComplexity)
     unless (@keys) {
         if ($git->get_config_boolean($CFG => 'require')) {
             $git->fault(<<'EOS', {commit => $commit});
-The commit must cite a JIRA in its message.
+The commit must cite a Jira in its message.
 
-Please, amend your commit to insert a JIRA key.
+Please, amend your commit to insert a Jira key.
 EOS
             return 0;
         } else {
@@ -203,7 +203,7 @@ EOS
     {
         # Build a list of JQL terms
 
-        # Starting with a check to see if all JIRA keys exist
+        # Starting with a check to see if all Jira keys exist
         my @jqls = ("key IN (@{[join(',', @keys)]})");
 
         # global JQL
@@ -238,7 +238,7 @@ EOS
         @issues{keys %$issues} = values %$issues; # cache all matched issues
 
         if (my @issues_not_found  = sort grep { ! exists $issues->{$_} } @keys) {
-            # Some issue keys were cited but not found in JIRA
+            # Some issue keys were cited but not found in Jira
             ++$errors;
             local $, = ' ';
             $git->fault(<<"EOS", {commit => $commit});
@@ -288,7 +288,7 @@ EOS
                 $git->fault(<<"EOS", {commit => $commit, option => 'unresolved'});
 The commit cites issue $key which is already resolved.
 
-The option in your configuration requires that all JIRA issues be unresolved.
+The option in your configuration requires that all Jira issues be unresolved.
 EOS
                 ++$errors;
                 next ISSUE;
@@ -447,7 +447,7 @@ EOS
 
     foreach my $key (@keys) {
         eval { $jira->POST("/issue/$key/comment", undef, \%comment); 1; }
-            or $git->fault("I could not add a comment to JIRA issue $key.",
+            or $git->fault("I could not add a comment to Jira issue $key.",
                            {commit => $commit, details => $@})
             and ++$errors;
     }
@@ -528,7 +528,7 @@ __END__
 
 =head1 NAME
 
-CheckJira - Git::Hooks plugin to implement JIRA checks
+CheckJira - Git::Hooks plugin to implement Jira checks
 
 =head1 SYNOPSIS
 
@@ -545,37 +545,37 @@ may configure it in a Git configuration file like this:
 
   [githooks "checkjira"]
 
-    # Configure the URL and the admin credentials to interact with the JIRA
+    # Configure the URL and the admin credentials to interact with the Jira
     # server.
     jiraurl = https://jira.example.net
     jirauser = jiradmin
     jirapass = my-secret
 
-    # Look for JIRA keys at the beginning of the commit messages title, enclosed
+    # Look for Jira keys at the beginning of the commit messages title, enclosed
     # in brackets.
     matchlog = (?s)^\\[([^]]+)\\]
 
-    # Impose restrictions on valid JIRA issues
+    # Impose restrictions on valid Jira issues
     jql = project IN (ABC, UTF, GIT) AND \
           issuetype IN (Bug, Story) AND \
           status IN ("In progress", "In testing")
 
-    # Require that all cited JIRA issues be assigned to the user pushing the
+    # Require that all cited Jira issues be assigned to the user pushing the
     # commits.
     by-assignee = true
 
-    # Commits pushed to master must cite JIRAs associated with the fixVersion
+    # Commits pushed to master must cite Jiras associated with the fixVersion
     # 'future'
     fixversion = refs/heads/master             future
 
-    # Commits pushed to release branches must cite JIRAs associated with the
+    # Commits pushed to release branches must cite Jiras associated with the
     # fixVersion named after the same major.minor version number.
     fixversion = ^refs/heads/(\\d+\\.\\d+)\\.  ^$+
 
 =head1 DESCRIPTION
 
 This L<Git::Hooks> plugin hooks itself to the hooks below to guarantee that
-every commit message cites at least one valid JIRA issue key in its log
+every commit message cites at least one valid Jira issue key in its log
 message, so that you can be certain that every change has a proper change
 request (a.k.a. ticket) open.
 
@@ -584,50 +584,50 @@ request (a.k.a. ticket) open.
 =item * B<commit-msg>, B<applypatch-msg>
 
 This hook is invoked during the commit, to check if the commit message
-cites valid JIRA issues.
+cites valid Jira issues.
 
 =item * B<update>
 
 This hook is invoked multiple times in the remote repository during
 C<git push>, once per branch being updated, to check if the commit
-message cites valid JIRA issues.
+message cites valid Jira issues.
 
 =item * B<pre-receive>
 
 This hook is invoked once in the remote repository during C<git push>,
-to check if the commit message cites valid JIRA issues.
+to check if the commit message cites valid Jira issues.
 
 =item * B<post-receive>
 
 This hook is invoked once in the remote repository after a successful C<git
-push>. It's used to notify JIRA of commits citing its issues via comments.
+push>. It's used to notify Jira of commits citing its issues via comments.
 
 =item * B<ref-update>
 
 This hook is invoked when a direct push request is received by Gerrit Code
-Review, to check if the commit message cites valid JIRA issues.
+Review, to check if the commit message cites valid Jira issues.
 
 =item * B<commit-received>
 
 This hook is invoked when a push request is received by Gerrit Code Review to
-create a change for review, to check if the commit message cites valid JIRA
+create a change for review, to check if the commit message cites valid Jira
 issues.
 
 =item * B<submit>
 
 This hook is invoked when a change is submitted in Gerrit Code Review, to check
-if the commit message cites valid JIRA issues.
+if the commit message cites valid Jira issues.
 
 =item * B<patchset-created>
 
 This hook is invoked when a push request is received by Gerrit Code
 Review for a virtual branch (refs/for/*), to check if the commit
-message cites valid JIRA issues.
+message cites valid Jira issues.
 
 =back
 
 It requires that any Git commits affecting all or some branches must
-make reference to valid JIRA issues in the commit log message. JIRA
+make reference to valid Jira issues in the commit log message. Jira
 issues are cited by their keys which, by default, consist of a
 sequence of uppercase letters separated by an hyphen from a sequence of
 digits. E.g., C<CDS-123>, C<RT-1>, and C<GIT-97>.
@@ -649,39 +649,39 @@ documentation.
 
 =head2 jiraurl URL
 
-This option specifies the JIRA server HTTP URL, used to construct the
-C<JIRA::REST> object which is used to interact with your JIRA
+This option specifies the Jira server HTTP URL, used to construct the
+C<JIRA::REST> object which is used to interact with your Jira
 server. Please, see the JIRA::REST documentation to know about them.
 
 =head2 jirauser USERNAME
 
-This option specifies the JIRA server username, used to construct the
+This option specifies the Jira server username, used to construct the
 C<JIRA::REST> object.
 
 =head2 jirapass PASSWORD
 
-This option specifies the JIRA server password, used to construct the
+This option specifies the Jira server password, used to construct the
 C<JIRA::REST> object.
 
 =head2 matchkey REGEXP
 
-By default, JIRA keys are matched with the regex
+By default, Jira keys are matched with the regex
 C</\b[A-Z][A-Z]+-\d+\b/>, meaning, a sequence of two or more capital
 letters, followed by an hyphen, followed by a sequence of digits. If
-you customized your L<JIRA project
-keys|https://confluence.atlassian.com/display/JIRA/Configuring+Project+Keys>,
+you customized your L<Jira project
+keys|https://confluence.atlassian.com/adminjiraserver0820/changing-the-project-key-format-1095776846.html>,
 you may need to customize how this hook is going to match them. Set
-this option to a suitable regex to match a complete JIRA issue key.
+this option to a suitable regex to match a complete Jira issue key.
 
 =head2 matchlog REGEXP
 
-By default, JIRA keys are looked for in all of the commit message. However,
+By default, Jira keys are looked for in all of the commit message. However,
 this can lead to some false positives, since the default issue pattern can
-match other things besides JIRA issue keys. You may use this option to
+match other things besides Jira issue keys. You may use this option to
 restrict the places inside the commit message where the keys are going to be
 looked for. You do this by specifying a regular expression with a capture
 group (a pair of parenthesis) in it. The commit message is matched against
-the regular expression and the JIRA tickets are looked for only within the
+the regular expression and the Jira tickets are looked for only within the
 part that matched the capture group.
 
 Here are some examples:
@@ -690,25 +690,25 @@ Here are some examples:
 
 =item * C<\[([^]]+)\]>
 
-Looks for JIRA keys inside the first pair of brackets found in the
+Looks for Jira keys inside the first pair of brackets found in the
 message.
 
 =item * C<(?s)^\[([^]]+)\]>
 
-Looks for JIRA keys inside a pair of brackets that must be at the
+Looks for Jira keys inside a pair of brackets that must be at the
 beginning of the message's title.
 
 =item * C<(?im)^Bug:(.*)>
 
-Looks for JIRA keys in a line beginning with C<Bug:>. This is a common
+Looks for Jira keys in a line beginning with C<Bug:>. This is a common
 convention around some high caliber projects, such as OpenStack and
 Wikimedia.
 
 =back
 
 This is a multi-valued option. You may specify it more than once. All
-regexes are tried and JIRA keys are looked for in all of them. This allows
-you to more easily accommodate more than one way of specifying JIRA keys if
+regexes are tried and Jira keys are looked for in all of them. This allows
+you to more easily accommodate more than one way of specifying Jira keys if
 you wish.
 
 =head2 jql JQL
@@ -764,7 +764,7 @@ expressions must validate the issues matching REF.
 =head2 and-jql JQL
 
 Unlike the B<jql> option, this one is multi-valued. All JQL terms specified with
-this option are ANDed together with the last B<jql> expression and with the
+this option are AND-ed together with the last B<jql> expression and with the
 B<ref-jql> expression, if they exist.
 
 It is useful, for instance, when you want to specialize a default JQL with new
@@ -787,7 +787,7 @@ any previous values be forgotten so that you can start anew to add terms to it.
 
 =head2 require BOOL
 
-By default, the log must reference at least one JIRA issue. You can
+By default, the log must reference at least one Jira issue. You can
 make the reference optional by setting this option to false.
 
 =head2 unresolved BOOL
@@ -801,13 +801,13 @@ option to false.
 This multi-valued option allows you to specify that commits affecting BRANCH
 must cite only issues that have their C<Fix For Version> field matching
 FIXVERSION. This may be useful if you have release branches associated with
-particular JIRA versions.
+particular Jira versions.
 
 BRANCH can be specified as a complete ref name (e.g. "refs/heads/master") or
 by a regular expression starting with a caret (C<^>), which is kept as part
 of the regexp (e.g. "^refs/heads/(master|fix)").
 
-FIXVERSION can be specified as a complete JIRA version name (e.g. "1.2.3")
+FIXVERSION can be specified as a complete Jira version name (e.g. "1.2.3")
 or by a regular expression starting with a caret (C<^>), which is kept as
 part of the regexp (e.g. "^1\.2").
 
@@ -829,12 +829,12 @@ So, suppose you have this configuration:
 
 Then, commits affecting the C<master> branch must cite issues assigned to
 the C<future> version. Also, commits affecting any branch which name begins
-with a version number (e.g. C<1.0.3>) be assigned to the corresponding JIRA
+with a version number (e.g. C<1.0.3>) be assigned to the corresponding Jira
 version (e.g. C<1.0>).
 
 =head2 by-assignee BOOL
 
-By default, the committer can reference any valid JIRA issue. Setting
+By default, the committer can reference any valid Jira issue. Setting
 this value to true requires that the user doing the push/commit (as
 specified by the C<userenv> configuration variable) be the current
 issue's assignee.
@@ -864,11 +864,11 @@ because there is no commit yet.
 
 =item * B<JIRA>
 
-The JIRA::REST object used to talk to the JIRA server.
+The JIRA::REST object used to talk to the Jira server.
 
 Note that up to version 0.047 of Git::Hooks::CheckJira this used to be a
-JIRA::Client object, which uses JIRA's SOAP API which was deprecated on JIRA
-6.0 and won't be available anymore on JIRA 7.0.
+JIRA::Client object, which uses Jira's SOAP API which was deprecated on Jira
+6.0 and won't be available anymore on Jira 7.0.
 
 If you have code relying on the JIRA::Client module you're advised to
 rewrite it using the JIRA::REST module. As a stopgap measure you can
@@ -924,11 +924,11 @@ hooks.
 =head2 comment VISIBILITY
 
 If this option is set and the C<post-receive> hook is enabled, for every
-pushed commit, every cited JIRA issue receives a comment showing the result
+pushed commit, every cited Jira issue receives a comment showing the result
 of the C<git show --stat COMMIT> command. This is meant to notify the issue
 assignee of commits referring to the issue.
 
-Note that the user with which C<Git::Hooks> authenticates to JIRA must have
+Note that the user with which C<Git::Hooks> authenticates to Jira must have
 permission to add comments to the issues or an error will be
 logged. However, since this happens after the push, the result of the
 operation isn't affected.
@@ -939,12 +939,12 @@ You must specify the VISIBILITY of the comments in one of these ways.
 
 =item * B<role:NAME>
 
-In this case, NAME must be the name of a JIRA role, such as
+In this case, NAME must be the name of a Jira role, such as
 C<Administrators>, C<Developers>, or C<Users>.
 
 =item * B<group:NAME>
 
-In this case, NAME must be the name of a JIRA group.
+In this case, NAME must be the name of a Jira group.
 
 =item * B<all>
 
@@ -983,7 +983,7 @@ notice|https://developer.atlassian.com/display/JIRADEV/SOAP+and+XML-RPC+API+Depr
 =item * L<Yet Another Commit
 Checker|https://github.com/sford/yet-another-commit-checker>
 
-This Bitbucket plugin implements some nice checks with JIRA, from which we
+This Bitbucket plugin implements some nice checks with Jira, from which we
 stole some ideas.
 
 =back

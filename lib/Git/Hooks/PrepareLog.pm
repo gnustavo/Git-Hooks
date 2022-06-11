@@ -156,11 +156,11 @@ may configure it in a Git configuration file like this:
   [githooks "preparelog"]
 
     # Grok issue names from the part of the branch name matching this regular
-    # expression, which matches JIRA issue IDs.
+    # expression, which matches Jira issue IDs.
     issue-branch-regex = [A-Z]+-\\d+
 
     # The grokked issue ID should be inserted as a message trailer, keyed by
-    # "JIRA".
+    # "Jira".
     issue-place = key Jira
 
 =head1 DESCRIPTION
@@ -199,7 +199,7 @@ bug-id) in the message, making the commit refer to the project issue which
 required the change made by the commit. It's very common, in large or enterprise
 projects, to require that every commit cites at least one issue in the project's
 issue management system. In fact, the L<Git::Hooks::CheckJira> plugin is used to
-require the citation of JIRA issues in commit messages.
+require the citation of Jira issues in commit messages.
 
 It's cumbersome for the developer to have to insert issue IDs for every commit
 message. In order to make it automatic, as a developer, you enable this plugin
@@ -207,7 +207,7 @@ and configures this option to match the syntax of your issue IDs. Then, when you
 start to work on a new issue, you should create a local branch named after the
 issue ID and let this plugin insert it into your commit messages for you.
 
-If you're using JIRA, for example, the issue IDs are strings like C<PRJ-123> and
+If you're using Jira, for example, the issue IDs are strings like C<PRJ-123> and
 C<HD-1000>. In this case, you can configure it like this:
 
   [githooks "preparelog"]
@@ -271,14 +271,14 @@ you overflow that limit often.
 
 You can insert the issue ID as a trailer to the log message instead, in order to
 solve these problems. You must simply choose a KEY for the trailer. If you're
-using JIRA you can use C<Jira> as the key. Other generic common choices are
+using Jira you can use C<Jira> as the key. Other generic common choices are
 C<Issue> and C<Bug>. In this case, your issue ID will appear at the end of the
 log message, something like this:
 
   Jira: PRJ-123
 
 The key is always capitalized, so that in this case it will be C<Jira> even if
-you specified C<JIRA> or C<jira> in the format.
+you specified C<Jira> or C<jira> in the format.
 
 Note that this format only works with Git 2.7.0 and later, because we rely on
 the L<git interpret-trailers|https://git-scm.com/docs/git-interpret-trailers>

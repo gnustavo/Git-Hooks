@@ -541,11 +541,11 @@ check. Please, refer to the module's own documentation to see how to
 install it and its own dependencies (which are C<Text::Hunspell> or
 C<Text::Aspell>).
 
-=head2 spelling-lang ISOCODE
+=head2 spelling-lang CODE
 
 The Text::SpellChecker module uses defaults to infer which language it
 must use to spell check the message. You can make it use a particular
-language passing its ISO code to this option.
+language passing its ISO CODE to this option.
 
 =head2 signed-off-by BOOL
 
@@ -559,7 +559,7 @@ are duplicate C<Signed-off-by> footers in the commit.
 
 This Boolean option allows you to deny commits that revert merge commits, since
 such beasts introduce complications in the repository which you may want to
-avoid. (To know more about this you should read Linus Torvald's L<How to revert
+avoid. (To know more about this you should read Linus Torvalds's L<How to revert
 a faulty
 merge|https://github.com/git/git/blob/master/Documentation/howto/revert-a-faulty-merge.txt>.)
 
@@ -635,7 +635,7 @@ information he usually includes in his commit messages and why.
 
 This
 L<message|https://github.com/git/git/blob/master/Documentation/howto/revert-a-faulty-merge.txt>,
-from Linus Torvald's himself, explains why reverting a merge commit is
+from Linus Torvalds's himself, explains why reverting a merge commit is
 problematic and how to deal with it.
 
 =back

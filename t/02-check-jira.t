@@ -16,7 +16,7 @@ sub setup_repos_for {
 
     foreach my $git ($repo, $clone) {
         # Inject a fake JIRA::REST class definition in order to be able
-        # to test this without a real JIRA server.
+        # to test this without a real Jira server.
 
         install_hooks($git, <<'EOF', qw/commit-msg update pre-receive/);
 package JIRA::REST;
@@ -164,17 +164,17 @@ sub check_cannot_push {
 
 setup_repos_for(\$repo);
 
-check_cannot_commit('deny commit by default without JIRAs');
+check_cannot_commit('deny commit by default without Jiras');
 
 $repo->run(qw{config githooks.noref refs/heads/master});
-check_can_commit('allow commit on non-enabled ref even without JIRAs');
+check_can_commit('allow commit on non-enabled ref even without Jiras');
 
 $repo->run(qw/checkout -q -b fix/);
-check_cannot_commit('deny commit on enabled ref without JIRAs', qr/must cite a JIRA/);
+check_cannot_commit('deny commit on enabled ref without Jiras', qr/must cite a Jira/);
 
 $repo->run(qw/config --unset githooks.noref/);
 $repo->run(qw{config githooks.noref refs/heads/fix});
-check_can_commit('allow commit on disabled ref even without JIRAs');
+check_can_commit('allow commit on disabled ref even without Jiras');
 
 $repo->run(qw/config --unset-all githooks.noref/);
 $repo->run(qw/checkout -q master --/);
@@ -184,14 +184,14 @@ check_cannot_commit('deny commit citing non-allowed projects [GIT-0]',
                     qr/not match the following JQL expression/);
 
 $repo->run(qw/config githooks.checkjira.require 0/);
-check_can_commit('allow commit if JIRA is not required');
+check_can_commit('allow commit if Jira is not required');
 $repo->run(qw/config --unset-all githooks.checkjira.require/);
 
 $repo->run(qw/config --replace-all githooks.checkjira.jql project=GIT/);
 
 $repo->run(qw/config --replace-all githooks.checkjira.jirapass invalid/);
-check_cannot_commit('deny commit if cannot connect to JIRA [GIT-0]',
-                    qr/Cannot connect to the JIRA server/);
+check_cannot_commit('deny commit if cannot connect to Jira [GIT-0]',
+                    qr/Cannot connect to the Jira server/);
 $repo->run(qw/config --replace-all githooks.checkjira.jirapass valid/);
 
 check_cannot_commit('deny commit if cannot get issue [GIT-0]',
@@ -297,7 +297,7 @@ $repo->run(qw/config --unset-all githooks.checkjira.check-code-ref/);
 $repo->run(qw/config githooks.checkjira.matchlog (?s)^\[([^]]+)\]/);
 
 check_cannot_commit('deny commit if cannot matchlog [GIT-2]',
-                    qr/must cite a JIRA/);
+                    qr/must cite a Jira/);
 
 check_can_commit('[GIT-2] allow commit if can matchlog');
 
@@ -316,8 +316,8 @@ $repo->run(qw/config --unset-all githooks.checkjira.matchlog/);
 
 setup_repos_for(\$clone);
 
-check_cannot_push('deny push by update by default without JIRAs',
-                  qr/must cite a JIRA/);
+check_cannot_push('deny push by update by default without Jiras',
+                  qr/must cite a Jira/);
 
 setup_repos_for(\$clone);
 
@@ -326,8 +326,8 @@ check_can_push('allow push by update if valid issue cited [GIT-2]');
 
 setup_repos_for(\$clone);
 
-check_cannot_push('deny push by pre-receive by default without JIRAs',
-                  qr/must cite a JIRA/);
+check_cannot_push('deny push by pre-receive by default without Jiras',
+                  qr/must cite a Jira/);
 
 setup_repos_for(\$clone);
 

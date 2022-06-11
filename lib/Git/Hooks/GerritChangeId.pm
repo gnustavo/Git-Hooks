@@ -120,7 +120,7 @@ may impose.
 =head1 DESCRIPTION
 
 This L<Git::Hooks> plugin hooks itself to the C<commit-msg> and the
-C<applypatch-msg> hooks. It is a reimplementation of Gerrit's official
+C<applypatch-msg> hooks. It is a re-implementation of Gerrit's official
 commit-msg hook for inserting change-ids in git commit messages.  It's does not
 produce the same C<Change-Id> for the same message, but this is not really
 necessary, since it keeps existing Change-Id footers unmodified.

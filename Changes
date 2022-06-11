@@ -2,6 +2,10 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+[Improvements]
+
+  - Add POD spelling tests and fix some typos.
+
 3.3.0     2022-06-11 16:43:20-03:00 America/Sao_Paulo
 
 [New features]
