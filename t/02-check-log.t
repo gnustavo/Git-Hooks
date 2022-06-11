@@ -287,7 +287,7 @@ $repo->run(qw/config --remove-section githooks.checklog/);
 SKIP: {
     use Git::Hooks::CheckLog;
     my $checker = eval {
-        local $SIG{__WARN__} = sub {}; # supress warnings in this block
+        local $SIG{__WARN__} = sub {}; # suppress warnings in this block
         Git::Hooks::CheckLog::_spell_checker($repo, 'word'); ## no critic (ProtectPrivateSubs)
     };
 
