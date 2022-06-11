@@ -66,7 +66,7 @@ EOS
 
         my $checker = Text::SpellChecker->new(text => 'a', %extra_options);
 
-        unless (defined eval { $checker->next_word(); }) {
+        if (! defined eval { $checker->next_word(); } && $@) {
             $git->fault(<<'EOS', {option => 'spelling', details => $@});
 There was an error while I tried to spell check your commits using the
 Text::SpellChecker module. If you cannot fix it consider disabling this
