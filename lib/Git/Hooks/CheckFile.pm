@@ -826,7 +826,7 @@ potentially many files (e.g. F<^lib/.*\\.pm$>).
 
 See the L</SYNOPSIS> section for some examples.
 
-=head2 [DEPRECATED] deny-token REGEXP
+=head2 [DEPRECATED after v2.13.0] deny-token REGEXP
 
 This option is deprecated. Please, use the C<CheckDiff::deny-token> option
 instead.
