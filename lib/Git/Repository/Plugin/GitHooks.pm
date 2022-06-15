@@ -382,25 +382,25 @@ sub prepare_hook {
 sub load_plugins {
     my ($git) = @_;
 
-    my %enabled_plugins  = map {($_ => undef)} map {split} $git->get_config(githooks => 'plugin');
+    my %plugins;
 
-    return unless %enabled_plugins; # no one configured
+    foreach my $plugin (map {split} $git->get_config(githooks => 'plugin')) {
+        my ($negation, $prefix, $basename) = ($plugin =~ /^(\!?)((?:.+::)?)(.+)/);
 
-    my %disabled_plugins = map {($_ => undef)} map {split} $git->get_config(githooks => 'disable');
-
-    # Remove disabled plugins from the list of enabled ones
-    foreach my $plugin (keys %enabled_plugins) {
-        my ($prefix, $basename) = ($plugin =~ /^(.+::)?(.+)/);
-
-        if (   exists $disabled_plugins{$plugin}
-            || exists $disabled_plugins{$basename}
-            || exists $ENV{$basename} && ! $ENV{$basename}
-        ) {
-            delete $enabled_plugins{$plugin};
+        if (exists $ENV{$basename} && ! $ENV{$basename}) {
+            delete @plugins{$basename, "$prefix$basename"};
+        } elsif ($negation) {
+            delete $plugins{"$prefix$basename"};
         } else {
-            $enabled_plugins{$plugin} = [$prefix, $basename];
+            $plugins{"$prefix$basename"} = [$prefix, $basename];
         }
     }
+
+    return unless %plugins; # no one configured
+
+    # Remove disabled plugins from the list of plugins
+    my %disabled_plugins = map {($_ => undef)} map {split} $git->get_config(githooks => 'disable');
+    delete @plugins{grep {exists $disabled_plugins{$_}} keys %plugins};
 
     # Define the list of directories where we'll look for the hook
     # plugins. First the local directory 'githooks' under the
@@ -413,10 +413,10 @@ sub load_plugins {
         path($INC{'Git/Hooks.pm'})->parent->child('Hooks'),
     );
 
-    $log->debug(load_plugins => {enabled_plugins => \%enabled_plugins, plugin_dirs => \@plugin_dirs});
+    $log->debug(load_plugins => {plugins => \%plugins, plugin_dirs => \@plugin_dirs});
 
     # Load remaining enabled plugins
-    while (my ($key, $plugin) = each %enabled_plugins) {
+    while (my ($key, $plugin) = each %plugins) {
         my ($prefix, $basename) = @$plugin;
         my $exit = do {
             if ($prefix) {

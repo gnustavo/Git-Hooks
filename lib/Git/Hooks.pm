@@ -1213,24 +1213,24 @@ section.
 
 =head2 plugin PLUGIN...
 
-To enable one or more plugins you must add them to this configuration
+To enable or disable one or more plugins you must add them to this configuration
 option, like this:
 
     [githooks]
-      plugin CheckFile CheckJira
+      plugin CheckFile CheckJira !CheckLog
 
-You can add another list to the same variable to enable more plugins,
+You can add another list to the same variable to enable or disable more plugins,
 like this:
 
     [githooks]
       plugin CheckFile CheckJira
-      plugin CheckLog
+      plugin !CheckLog
 
-This is useful, for example, to enable some plugins globally and
+This is useful, for example, to enable or disable some plugins globally and
 others locally, per repository.
 
 A plugin may hook itself to one or more hooks. C<CheckJira>, for
-example, hook itself to three: C<commit-msg>, C<pre-receive>, and
+example, hooks itself to three: C<commit-msg>, C<pre-receive>, and
 C<update>. It's important that the corresponding symbolic links be
 created pointing from the hook names to the generic script so that the
 hooks are effectively invoked.
@@ -1259,10 +1259,10 @@ In the L<Git::Hooks> installation.
 
 =back
 
-The first match is taken as the desired plugin, which is executed (via
-C<do>) and the search stops. So, you may want to copy one of the
-standard plugins and change it to suit your needs better. (Don't shy
-away from sending your changes back to the author, please.)
+The first match is taken as the desired plugin, which, if enabled, is executed
+(via C<do>) and the search stops. So, you may want to copy one of the standard
+plugins and change it to suit your needs better. (Don't shy away from sending
+your changes back to the author, please.)
 
 However, if you use the fully qualified module name of the plugin in
 the configuration, then it will be simply C<required> as a normal
@@ -1271,7 +1271,17 @@ module. For example:
     [githooks]
       plugin = My::Hook::CheckSomething
 
-=head2 disable PLUGIN...
+If a plugin name is prefixed by an exclamation point (C<!>) it is disabled. This
+is useful if you want to enable a plugin globally and only disable it for some
+repositories. You can even re-enable it later, if you want, by mentioning it
+again without the prefix.
+
+=head2 [DEPRECATED after v3.3.0] disable PLUGIN...
+
+B<This option is deprecated.> Please, use the C<githooks.plugin> option with an
+exclamation point before the plugin name to disable it. This option has higher
+priority than the C<githooks.plugin> option and don't allow for re-enabling a
+disabled plugin later.
 
 This option disables plugins enabled by the C<githooks.plugin>
 option. It's useful if you want to enable a plugin globally and only
