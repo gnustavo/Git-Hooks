@@ -770,15 +770,17 @@ sub _githooks_colors {
 sub check_timeout {
     my ($git) = @_;
 
-    state $timeout = $git->get_config_integer(githooks => 'timeout');
+    my $cache = $git->cache('timeout');
 
-    return unless $timeout;
+    $cache->{timeout} = $git->get_config_integer(githooks => 'timeout');
 
-    state $start_time = time;
+    return unless $cache->{timeout};
+
+    $cache->{start_time} = time;
 
     my $now = time;
 
-    if (($now - $start_time) >= $timeout) {
+    if (($now - $cache->{start_time}) >= $cache->{timeout}) {
         $git->fault("Hook timeout");
         $git->fail_on_faults();
     }
