@@ -1285,7 +1285,7 @@ sub authenticated_user {
                 croak __PACKAGE__, ": option userenv environment variable ($userenv) is not defined.\n";
             }
         } else {
-            $git->{_plugin_githooks}{authenticated_user} = $ENV{GERRIT_USER_EMAIL} || $ENV{BB_USER_NAME} || $ENV{USER} || undef;
+            $git->{_plugin_githooks}{authenticated_user} = $ENV{GERRIT_USER_EMAIL} || $ENV{BB_USER_NAME} || $ENV{GL_USERNAME} || $ENV{USER} || undef;
         }
     }
 
@@ -1303,6 +1303,10 @@ sub repository_name {
             # Bitbucket Server environment variables available for hooks:
             # https://developer.atlassian.com/server/bitbucket/how-tos/write-hook-scripts/
             $git->{_plugin_githooks}{repository_name} = "$ENV{BB_PROJECT_KEY}/$ENV{BB_REPO_SLUG}";
+        } elsif (exists $ENV{GL_PROJECT_PATH}) {
+            # GitLab environment variables available for hooks:
+            # https://docs.gitlab.com/ee/administration/server_hooks.html
+            $git->{_plugin_githooks}{repository_name} = "$ENV{GL_PROJECT_PATH}";
         } else {
             # As a last resort, return GIT_DIR's basename
             my $gitdir = path($git->git_dir());
@@ -2133,15 +2137,15 @@ which is described in the L<Git::Hooks> documentation. It's useful for most
 access control check plugins.
 
 If C<githooks.userenv> isn't configured, it tries to grok the username from
-environment variables set by Gerrit and Bitbucket Server before trying the
-C<USER> environment variable as a last resort. If it can't find it, it returns
-undef.
+environment variables set by Gerrit, Bitbucket Server, and GitLab before trying
+the C<USER> environment variable as a last resort. If it can't find it, it
+returns undef.
 
 =head2 repository_name
 
 Returns the repository name as a string. Currently it knows how to grok the name
-from Gerrit and Bitbucket servers. Otherwise it tries to grok it from the
-C<GIT_DIR> environment variable, which holds the path to the Git repository.
+from Gerrit, Bitbucket, and GitLab servers. Otherwise it tries to grok it from
+the C<GIT_DIR> environment variable, which holds the path to the Git repository.
 
 =head2 get_current_branch
 
@@ -2344,6 +2348,8 @@ C<Git::Repository::Plugin>, C<Git::Hooks>.
 =over
 
 =item * L<Writing hook scripts|https://developer.atlassian.com/server/bitbucket/how-tos/write-hook-scripts/> in Bitbucket Server.
+
+=item * L<Git server hooks|Writing hook scripts|https://developer.atlassian.com/server/bitbucket/how-tos/write-hook-scripts> in GitLab.
 
 =item * L<Supported hooks|https://gerrit.googlesource.com/plugins/hooks/+/HEAD/src/main/resources/Documentation/hooks.md> in Gerrit.
 

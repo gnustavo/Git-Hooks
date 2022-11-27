@@ -91,14 +91,16 @@ sub sha1_link {
         if ($commit_url =~ /%R/) {
             # %R must be replaced by the repository name.
             my $repository_name = $git->repository_name;
-            # HACK: for Bitbucket Server the repository name is composed: a
-            # project ID and a repository name separated by a slash. We have to
-            # insert a "repos/" string between these two parts in order to
-            # construct a valid URL. Ideally we should be able to get the
-            # repository name and the project name separately, but I'll live
-            # with this hack for now, since, as far as I know, only Bitbucket
-            # has this notion of a "project".
-            $repository_name =~ s:/:/repos/:;
+            if (exists $ENV{BB_REPO_SLUG}) {
+                # HACK: for Bitbucket Server the repository name is composed: a
+                # project ID and a repository name separated by a slash. We have
+                # to insert a "repos/" string between these two parts in order
+                # to construct a valid URL. Ideally we should be able to get the
+                # repository name and the project name separately, but I'll live
+                # with this hack for now, since, as far as I know, only
+                # Bitbucket has this notion of a "project".
+                $repository_name =~ s:/:/repos/:;
+            }
             $commit_url =~ s/%R/$repository_name/g;
         }
         return $html ? "<a href=\"$commit_url\">$sha1</a>" : $commit_url;

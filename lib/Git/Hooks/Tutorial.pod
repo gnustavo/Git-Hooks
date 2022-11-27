@@ -397,7 +397,7 @@ mechanism has no such notion, but you can fake it using the same L<include
 mechanism discussed above|/Distributed configuration>. But you have to do it
 manually, though.
 
-=head1 TUTORIAL FOR BITBUCKET ADMINISTRATORS
+=head1 TUTORIAL FOR BITBUCKET SERVER ADMINISTRATORS
 
 L<Bitbucket Server|https://www.atlassian.com/software/bitbucket/server> is a
 proprietary Git server made by Atlassian. It doesn't support the standard Git
@@ -422,6 +422,14 @@ directory in the server, go to its I<repository details> page in the
 I<repository settings> section in Bitbucket's web interface. The page shows the
 repository's B<location on disk> where you find the F<config> file which you
 must edit to configure Git::Hooks plugins.
+
+=head1 TUTORIAL FOR GITLAB ADMINISTRATORS
+
+L<GitLab|https://about.gitlab.com/> is another very well known Git server, with
+proprietary and free software versions. It supports the standard Git hooks
+natively. Follow L<these
+instructions|https://docs.gitlab.com/ee/administration/server_hooks.html> to
+know where you have to install hooks for the repositories.
 
 =head1 TUTORIAL FOR HOOK DEVELOPERS
 
