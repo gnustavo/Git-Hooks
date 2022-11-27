@@ -1285,7 +1285,7 @@ sub authenticated_user {
                 croak __PACKAGE__, ": option userenv environment variable ($userenv) is not defined.\n";
             }
         } else {
-            $git->{_plugin_githooks}{authenticated_user} = $ENV{GERRIT_USER_EMAIL} || $ENV{USER} || undef;
+            $git->{_plugin_githooks}{authenticated_user} = $ENV{GERRIT_USER_EMAIL} || $ENV{BB_USER_NAME} || $ENV{USER} || undef;
         }
     }
 
@@ -2132,6 +2132,11 @@ groks it from the C<githooks.userenv> configuration variable specification,
 which is described in the L<Git::Hooks> documentation. It's useful for most
 access control check plugins.
 
+If C<githooks.userenv> isn't configured, it tries to grok the username from
+environment variables set by Gerrit and Bitbucket Server before trying the
+C<USER> environment variable as a last resort. If it can't find it, it returns
+undef.
+
 =head2 repository_name
 
 Returns the repository name as a string. Currently it knows how to grok the name
@@ -2336,3 +2341,10 @@ not having a WHO part, are returned in the list.
 
 C<Git::Repository::Plugin>, C<Git::Hooks>.
 
+=over
+
+=item * L<Writing hook scripts|https://developer.atlassian.com/server/bitbucket/how-tos/write-hook-scripts/> in Bitbucket Server.
+
+=item * L<Supported hooks|https://gerrit.googlesource.com/plugins/hooks/+/HEAD/src/main/resources/Documentation/hooks.md> in Gerrit.
+
+=back
