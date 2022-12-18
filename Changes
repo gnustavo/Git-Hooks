@@ -2,6 +2,14 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+3.4.0     2022-12-18 20:35:59-03:00 America/Sao_Paulo
+
+[New features]
+
+  - Install the githooks-docker.sh script which makes it easier to use
+    Git::Hooks in a Docker container so that you don't have to install it in
+    your system. Also, add a section in the tutorial explaing how to use it.
+
 3.3.1     2022-11-27 19:23:46-03:00 America/Sao_Paulo
 
 [Improvements]
