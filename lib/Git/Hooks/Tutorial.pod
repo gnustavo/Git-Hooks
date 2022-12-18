@@ -431,6 +431,137 @@ natively. Follow L<these
 instructions|https://docs.gitlab.com/ee/administration/server_hooks.html> to
 know where you have to install hooks for the repositories.
 
+=head1 TUTORIAL FOR USING GIT::HOOKS WITH DOCKER
+
+You may want to use Git::Hooks in a Docker container to avoid the need to
+install it and any other package needed to implement specific checks in your
+hooks.
+
+Besides being easier to install and upgrade it, using containers is more secure
+because the hooks don't have to have access to all of your environment. This is
+particularly important in a Git server context.
+
+The following sections explain how to set up your hooks to use containers,
+assuming you're logged as the user who owns the Git repositories and that you
+already have Docker installed. If not, follow L<the instructions for your
+system|https://docs.docker.com/engine/install/>.
+
+=head2 Install and configure the githooks-docker.sh script
+
+If you install Git::Hooks it comes with a script called F<githooks-docker.sh>
+which makes it easy to use it in a Docker container. You don't have to install
+the module though, as the script can be L<downloaded directly from
+GitHub|https://raw.githubusercontent.com/gnustavo/Git-Hooks/next/scripts/githooks-docker.sh|githooks-docker.sh>
+like this:
+
+  mkdir -p $HOME/bin
+  cd $HOME/bin
+  curl -s -O https://raw.githubusercontent.com/gnustavo/Git-Hooks/next/scripts/githooks-docker.sh
+  chmod +x githooks-docker.sh
+
+=head2 Build your own git-hooks Docker image
+
+The first step is to build a custom Docker image based on the L<official Perl
+image|https://hub.docker.com/_/perl> and installing Git::Hooks and a few other
+Perl modules in it.
+
+If you l<can't invoke docker without
+sudo|https://docs.docker.com/engine/install/linux-postinstall/> edit the
+F<githooks-docker.sh> script and set its C<SUDO> configuration variable like
+this:
+
+  SUDO=sudo
+
+Then, build the image with the following command:
+
+  $HOME/bin/githooks-docker.sh build
+
+It should take a few minutes to build the image.
+
+If you need to install other tools or modules you can edit the Dockerfile
+embedded in the script.
+
+The build process re-creates in the image the same group and user with which the
+command was invoked. This allows it to access the repositories and the global
+git configuration which will be bind-mounted on the containers as volumes.
+
+If you want to recreate your image to update Perl, Git::Hooks or to make any
+other change in the Dockerfile you simply have to edit the script and run the
+C<build> sub-command again.
+
+=head2 Configure hooks to create new containers
+
+The simplest way to use the new image is to create a new container for each hook
+invocation. First, create a script called F<$HOME/bin/githooks.sh> with the
+following contents:
+
+  #!/bin/sh
+  REPO_ROOT=$(realpath ../..)
+  $HOME/bin/githooks-docker.sh run $REPO_ROOT "$0" "$@"
+
+Make sure it's executable.
+
+Now you must create symbolic links under the F<.git/hooks> directory of your
+repositories pointing to the script. So, for example, if you want to enable some
+C<pre-receive> hook, you would do this:
+
+    $ cd /my/git/repo/.git/hooks
+    $ ln -s $HOME/bin/githooks.sh pre-receive
+
+The script will invoke the F<githooks-docker.sh> script using the C<run>
+sub-command. The first argument (REPO_ROOT) is important. It must be a directory
+containing all of your Git repositories. It doesn't have to be the direct parent
+of the repositories, but must be a prefix of the absolute path of all of
+repositories.
+
+In the example above, the REPO_ROOT is defined dynamically by the command
+C<realpath ../..>, which resolves to the grandparent of the repository which
+invoked the hook. This is good for Git servers in which all repositories are
+siblings, such as in Bitbucket and in GitLab. Gerrit, on the other hand, keeps
+its repositories in a hierarchy and you should define the C<REPO_ROOT> variable
+with a fixed string.
+
+This is all there is to it!
+
+=head2 Configure hooks to reuse an existing container
+
+Creating a new container isn't free. It takes about half a second on my machine
+to create a container that do nothing and finishes. In a heavy loaded server,
+hooks may be executed very frequently, and the overhead of creating and removing
+containers can have a significant impact.
+
+You can optimize it by keeping a never-ending container in which you can execute
+the hooks using C<docker-exec> instead of C<docker-run>. The container functions
+as a "git-hooks service".
+
+First, you need to start the git-hooks service with the following command:
+
+  $HOME/bin/githooks-docker.sh start $REPO_ROOT
+
+The variable REPO_ROOT must be a directory containing all of your Git
+repositories.
+
+If all goes well you should be able to see the container with the following
+command:
+
+  $HOME/bin/githooks-docker.sh start $REPO_ROOT
+  CONTAINER ID   IMAGE             COMMAND            CREATED         STATUS         PORTS     NAMES
+  319d57c5e34d   git-hooks:3.3.1   "sleep infinity"   5 minutes ago   Up 5 minutes             git-hooks
+
+Usually you'll keep the container running forever but if you need to restart it
+in order to, for example, update the image, you can stop it with the following
+command:
+
+  $HOME/bin/githooks-docker.sh stop
+
+Now you just need to change the F<$HOME/bin/githooks.sh> script to be like this:
+
+  #!/bin/sh
+  REPO_ROOT=$(realpath ../..)
+  $HOME/bin/githooks-docker.sh exec "$0" "$@"
+
+That's it. Your hooks should be faster and leaner now.
+
 =head1 TUTORIAL FOR HOOK DEVELOPERS
 
 I'm sorry but there is no gentle introduction to this. ;-)

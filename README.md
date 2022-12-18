@@ -30,6 +30,11 @@ do is to tell Perl where to find it by using this in your scripts:
     use lib '/path/to/clone/of/git-hooks/lib';
     use Git::Hooks;
 
+Another option is to run your hooks in a Docker container, so that you don't
+need to really install it. Read the Docker section of the
+[Git::Hooks::Tutorial](https://metacpan.org/pod/Git%3A%3AHooks%3A%3ATutorial) to
+know how to do it.
+
 ## Documentation
 
 The main module documents its [usage](https://metacpan.org/pod/Git%3A%3AHooks)
