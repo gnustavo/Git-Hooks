@@ -32,8 +32,8 @@ do is to tell Perl where to find it by using this in your scripts:
 
 Another option is to run your hooks in a Docker container, so that you don't
 need to really install it. Read the Docker section of the
-[Git::Hooks::Tutorial](https://metacpan.org/pod/Git%3A%3AHooks%3A%3ATutorial) to
-know how to do it.
+[Git::Hooks::Tutorial](https://metacpan.org/dist/Git-Hooks/view/lib/Git/Hooks/Tutorial.pod)
+to know how to do it.
 
 ## Documentation
 
@@ -68,8 +68,9 @@ plugins provided by the distribution are these:
   prepare commit messages before being edited
 
 For a gentler introduction you can read our
-[Git::Hooks::Tutorial](https://metacpan.org/pod/Git%3A%3AHooks%3A%3ATutorial). It
-has instructions for Git users, Git administrators, and Gerrit administrators.
+[Git::Hooks::Tutorial](https://metacpan.org/dist/Git-Hooks/view/lib/Git/Hooks/Tutorial.pod).
+It has instructions for Git users, Git administrators, and Gerrit
+administrators.
 
 ## Getting Help
 

@@ -343,7 +343,7 @@ takes place before the commits are integrated, it's more useful to enable just
 the other two.
 
 First, you have to create the same driver script as L<described for the
-server|https://github.com/gnustavo/Git-Hooks/wiki/Tutorial-for-Git-administrators#server-driver-script>.
+server|https://metacpan.org/dist/Git-Hooks/view/lib/Git/Hooks/Tutorial.pod#Server-Driver-Script>.
 
 Then we must create the symlinks from the hook names to the driver
 script. However, in Gerrit there's a single F<hooks> directory per server,
