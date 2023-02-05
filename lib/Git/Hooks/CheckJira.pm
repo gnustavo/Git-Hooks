@@ -147,13 +147,13 @@ sub check_codes {
                         ## no critic (ProhibitDeepNests)
                         if (length $@) {
                             $git->fault("I couldn't parse option value ($check).",
-                                        {option => 'check-code', details => $@});
+                                        {option => $type, details => $@});
                         } elsif (! defined $code) {
                             $git->fault("I couldn't do option value ($check).",
-                                        {option => 'check-code', details => $!});
+                                        {option => $type, details => $!});
                         } else {
                             $git->fault("I couldn't run  option value ($check).",
-                                        {option => 'check-code'});
+                                        {option => $type});
                         }
                         ## use critic (ProhibitDeepNests)
                         next CODE;
@@ -162,12 +162,12 @@ sub check_codes {
                     $code = eval $check; ## no critic (BuiltinFunctions::ProhibitStringyEval)
                     length $@
                         and $git->fault("I couldn't parse option value.",
-                                        {option => 'check-code', details => $@})
+                                        {option => $type, details => $@})
                         and next CODE;
                 }
                 defined $code and ref $code and ref $code eq 'CODE'
                     or $git->fault("The option value must end with a code-ref.",
-                                   {option => 'check-code'})
+                                   {option => $type})
                     and next CODE;
                 push @{$cache->{codes}}, [$type => $code];
             }
