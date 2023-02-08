@@ -623,7 +623,15 @@ sub get_config {
                 if ($option =~ /(.+)\.(.+)/) {
                     my ($osection, $okey) = (lc $1, lc $2);
                     if ($value =~ s/^\cJ//) {
-                        push @{$config{$osection}{$okey}}, $value;
+                        ## no critic (ProhibitDeepNests)
+                        if ($value eq 'undef') {
+                            # The 'undef' string is a special mark telling us to
+                            # disregard every previous value already set for
+                            # this variable.
+                            delete $config{$osection}{$okey};
+                        } else {
+                            push @{$config{$osection}{$okey}}, $value;
+                        }
                     } else {
                         # An option without a value is considered a boolean
                         # true. We mark it explicitly so instead of leaving it
@@ -1791,6 +1799,12 @@ C<undef>, if it's not defined.
 As a special case, options without values (i.e., with no equals sign after its
 name in the configuration file) are set to the string 'true' to force Perl
 recognize them as true Booleans.
+
+The string C<undef> may be used to reset the list of values. Only values after
+the last occurrence of C<undef> are considered either in list or in scalar
+context. This is a general way for you to cancel higher level configurations
+(e.g., system or global) configs in lower level configurations (e.g. local). And
+it works for every configuration option.
 
 =head2 get_config_boolean SECTION VARIABLE
 
