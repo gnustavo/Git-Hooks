@@ -2,6 +2,17 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+3.5.0     2023-02-07 22:09:06-03:00 America/Sao_Paulo
+
+[New features]
+
+  - Configuration options can take a list of values, which are set from higher
+    to lower levels of configuration. Sometimes one wants to reset in a lower
+    level (e.g. local repository) all values set in higher levels (e.g. system
+    or global). Now there is a general way to do it. You only need to set the
+    option to the string 'undef', which is taken as a special mark meaning to
+    reset the option configuration, as if it hadn't been configured previously.
+
 3.4.0     2022-12-18 20:35:59-03:00 America/Sao_Paulo
 
 [New features]
