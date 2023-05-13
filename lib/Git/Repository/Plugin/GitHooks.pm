@@ -891,10 +891,10 @@ sub fail_on_faults {
         $faults .= "\n" unless $faults =~ /\n$/;
         if ($warn_only) {
             $log->warning(Warning => {faults => $faults});
-            carp $faults;
+            warn $faults;       ## no critic (RequireCarping)
         } else {
             $log->error(Error => {faults => $faults});
-            croak $faults;
+            die $faults;       ## no critic (RequireCarping)
         }
     }
 
