@@ -856,9 +856,9 @@ sub get_faults {
     my @condition = split(" ", $git->get_config(githooks => 'plugin'));
 
     foreach (@{$git->{_plugin_githooks}{faults}}) {
-        my $plugin = '';
-        ($plugin) = $_ =~ /.*Git::Hooks::(\w+):.*/;
-        map {s/$plugin//} @condition;
+        my $origin = '';
+        ($origin) = $_ =~ /.*Git::Hooks::(\w+):.*/;
+        map {s/$origin//} @condition;
     }
 
     # If any parts of the condition are empty they have failed and we should return all faults
