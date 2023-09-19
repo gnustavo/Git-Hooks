@@ -862,7 +862,7 @@ sub get_faults {
     }
 
     # If any parts of the condition are empty they have failed and we should return all faults
-    if (grep {/^(\|*)$/} @condition) {
+    if (grep {/^\|*$/} @condition) {
         $faults .= join("\n\n", @{$git->{_plugin_githooks}{faults}});
     }
 
