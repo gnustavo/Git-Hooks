@@ -1278,6 +1278,13 @@ is useful if you want to enable a plugin globally and only disable it for some
 repositories. You can even re-enable it later, if you want, by mentioning it
 again without the prefix.
 
+Plugins can be OR-ed by separating them with a pipe (C<|>) instead of a space.
+
+    [githooks]
+      plugin = CheckFile|CheckJira
+
+In this case either CheckFile C<OR> CheckJira has to match.
+
 =head2 [DEPRECATED after v3.3.0] disable PLUGIN...
 
 B<This option is deprecated.> Please, use the C<githooks.plugin> option with an
