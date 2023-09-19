@@ -1281,9 +1281,9 @@ again without the prefix.
 Plugins can be OR-ed by separating them with a pipe (C<|>) instead of a space.
 
     [githooks]
-      plugin = CheckFile|CheckJira
+      plugin = CheckFile|CheckJira CheckWhitespace
 
-In this case either CheckFile C<OR> CheckJira has to match.
+In this case CheckWhitespace C<AND> either CheckFile C<OR> CheckJira has to match.
 
 =head2 [DEPRECATED after v3.3.0] disable PLUGIN...
 
