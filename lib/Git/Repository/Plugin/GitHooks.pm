@@ -384,7 +384,7 @@ sub load_plugins {
 
     my %plugins;
 
-    foreach my $plugin (map {split} $git->get_config(githooks => 'plugin')) {
+    foreach my $plugin (map {split /[\|\s]/} $git->get_config(githooks => 'plugin')) {
         my ($negation, $prefix, $basename) = ($plugin =~ /^(\!?)((?:.+::)?)(.+)/);
 
         if (exists $ENV{$basename} && ! $ENV{$basename}) {
@@ -853,7 +853,18 @@ sub get_faults {
         $faults .= $colors->{header} . qx{$header} . "$colors->{reset}\n"; ## no critic (ProhibitBacktickOperators)
     }
 
-    $faults .= join("\n\n", @{$git->{_plugin_githooks}{faults}});
+    my @condition = split(" ", $git->get_config(githooks => 'plugin'));
+
+    foreach (@{$git->{_plugin_githooks}{faults}}) {
+        my $plugin = '';
+        ($plugin) = $_ =~ /.*Git::Hooks::(\w+):.*/;
+        map {s/$plugin//} @condition;
+    }
+
+    # If any parts of the condition are empty they have failed and we should return all faults
+    if (grep {/^(\|*)$/} @condition) {
+        $faults .= join("\n\n", @{$git->{_plugin_githooks}{faults}});
+    }
 
     if ($git->{_plugin_githooks}{hookname} =~ /^commit-msg|pre-commit$/
             && ! $git->get_config_boolean(githooks => 'abort-commit')) {
