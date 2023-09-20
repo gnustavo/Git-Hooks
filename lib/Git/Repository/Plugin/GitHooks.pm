@@ -853,17 +853,19 @@ sub get_faults {
         $faults .= $colors->{header} . qx{$header} . "$colors->{reset}\n"; ## no critic (ProhibitBacktickOperators)
     }
 
-    my @condition = split(" ", $git->get_config(githooks => 'plugin'));
+    my @conditions = split(" ", $git->get_config(githooks => 'plugin'));
+    map {s/(\||$)/(ok)$1/g} @conditions;
 
     foreach (@{$git->{_plugin_githooks}{faults}}) {
         my $origin = '';
         ($origin) = $_ =~ /.*Git::Hooks::(\w+):.*/;
-        map {s/$origin//} @condition;
+        map {s/($origin)\(ok\)/$1(failed)/g} @conditions;
     }
 
-    # If any parts of the condition are empty they have failed and we should return all faults
-    if (grep {/^\|*$/} @condition) {
+    # If any parts of the condition still have an 'OK', they succeeded, otherwise we fail and need to log the faults
+    if (grep {!/\(ok\)/} @conditions) {
         $faults .= join("\n\n", @{$git->{_plugin_githooks}{faults}});
+        $faults .= join(" ", "\n\nOur hooks as they were evaluated:\n", @conditions, "\n\n");
     }
 
     if ($git->{_plugin_githooks}{hookname} =~ /^commit-msg|pre-commit$/
