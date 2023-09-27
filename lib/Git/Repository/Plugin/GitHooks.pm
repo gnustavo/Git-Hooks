@@ -803,10 +803,11 @@ sub fault {
     my $colors = _githooks_colors($git);
 
     my $msg;
+    my $prefix;
 
     {
-        my $prefix = $info->{prefix} || caller;
         my @context;
+        $prefix = $info->{prefix} || caller;
         if (my $commit = $info->{commit}) {
             $commit = $commit->commit
                 if ref $commit; # It's a Git::Repository::Log object
@@ -834,7 +835,7 @@ sub fault {
         $msg .= "\n$colors->{details}$details$colors->{reset}\n\n";
     }
 
-    push @{$git->{_plugin_githooks}{faults}}, $msg;
+    push @{$git->{_plugin_githooks}{faults}}, {msg => $msg, plugin => ($prefix) =~ /.*Git::Hooks::(\w+)/};
 
     # Return true to allow for the idiom: <expression> or $git->fault(...) and <next|last|return>;
     return 1;
@@ -856,16 +857,14 @@ sub get_faults {
     my @conditions = split(" ", $git->get_config(githooks => 'plugin'));
     map {s/(\||$)/(ok)$1/g} @conditions;
 
-    foreach (@{$git->{_plugin_githooks}{faults}}) {
-        my $origin = '';
-        ($origin) = $_ =~ /.*Git::Hooks::(\w+):.*/;
-        map {s/($origin)\(ok\)/$1(failed)/g} @conditions;
+    foreach my $fault (@{$git->{_plugin_githooks}{faults}}) {
+        map {s/($fault->{plugin})\(ok\)/$1(failed)/g} @conditions;
     }
 
-    # If any parts of the condition still have an 'OK', they succeeded, otherwise we fail and need to log the faults
+    # If any parts of the condition don't have an 'OK', they've failed and we need to deny the commit
     if (grep {!/\(ok\)/} @conditions) {
-        $faults .= join("\n\n", @{$git->{_plugin_githooks}{faults}});
-        $faults .= join(" ", "\n\nOur hooks as they were evaluated:\n", @conditions, "\n\n");
+        $faults .= join("\n\n", map {$_->{msg}} @{$git->{_plugin_githooks}{faults}});
+        $faults .= join(" ", "\n\nOur configured plugins as they were evaluated:\n", @conditions, "\n\n");
     }
 
     if ($git->{_plugin_githooks}{hookname} =~ /^commit-msg|pre-commit$/
