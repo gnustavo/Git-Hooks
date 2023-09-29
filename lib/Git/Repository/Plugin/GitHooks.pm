@@ -864,7 +864,7 @@ sub get_faults {
     # If any parts of the condition don't have an 'OK', they've failed and we need to deny the commit
     if (grep {!/\(ok\)/} @conditions) {
         $faults .= join("\n\n", map {$_->{msg}} @{$git->{_plugin_githooks}{faults}});
-        $faults .= join(" ", "\n\nOur configured plugins as they were evaluated:\n", @conditions, "\n\n");
+        $faults .= "\n\nOur configured plugins as they were evaluated:\n" . join(" ", @conditions) . "\n\n";
     }
 
     if ($git->{_plugin_githooks}{hookname} =~ /^commit-msg|pre-commit$/
