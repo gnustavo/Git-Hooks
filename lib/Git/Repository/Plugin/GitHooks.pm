@@ -614,7 +614,7 @@ sub get_config {
         }
 
         if (defined $config) {
-            # The --null option to git-log makes it output a null character
+            # The --null option to git-config makes it output a null character
             # after each option/value. The option and value are separated by a
             # newline, unless there is no value, in which case, there is no
             # newline.
