@@ -286,6 +286,60 @@ EOS
     return $errors;
 }
 
+sub check_locks {
+    my ($git, $ctx, $commit, $files) = @_;
+
+    my @lock_checks;
+
+    foreach my $pattern ($git->get_config($CFG => 'lock')) {
+        if ($pattern =~ m/^qr(.)(.*)\g{1}/) {
+            $pattern = qr/$2/;
+        } else {
+            $pattern = glob_to_regex($pattern);
+        }
+        push @lock_checks, qr/$pattern/i;
+    }
+
+    return 0 unless @lock_checks;
+
+    my @files_to_check;
+
+    foreach my $file (@$files) {
+        push @files_to_check, $file
+            if any {$file =~ $_} @lock_checks;
+    }
+
+    return 0 unless @files_to_check;
+
+    # Grok the list of all lock files in the repository at $commit
+    my @lock_files = split(
+        /\0/,
+        $git->run(qw/ls-tree -z --name-only --full-tree/,
+                  $commit ne ':0' ? $commit : $git->get_head_or_empty_tree,
+                  '--',
+                  map {"$_.lock"} @files_to_check,
+              ),
+    );
+
+    return 0 unless @lock_files;
+
+    $git->fault(<<"EOS", {%$ctx, option => 'lock'});
+This commit adds or changes files that are locked. A file is considered locked
+if there is another file with the same name and the '.lock' suffix in the same
+commit. You should see who added the lock file and coordinate with them how to
+integrate your changes in the changes that they may have already be working
+on. Wait for them to perform a commit and to remove the lock file. Then, you
+should create a lock of your own, manually integrate your changes into theirs,
+and commit your changes while removing your lock.
+
+These are the locked files that this commit tried to add or change:
+
+  @{[join("\n  ", map {s/\.lock$//r} @lock_files)]}
+EOS
+
+    return scalar @lock_files;
+}
+
 sub check_max_paths {
     my ($git, $ctx, $commit, $files) = @_;
 
@@ -470,6 +524,7 @@ sub check_everything {
     if (my @ACM_files = sort grep {$name2status{$_} =~ /[ACM]/} keys %name2status) {
         $errors +=
             check_executables($git, \%context, $commit, \@ACM_files) +
+            check_locks($git, \%context, $commit, \@ACM_files) +
             check_sizes($git, \%context, $commit, \@ACM_files);
         # Avoid external checks if there are errors already
         $errors += check_commands($git, \%context, $commit, \@ACM_files)
@@ -529,7 +584,7 @@ GITHOOKS_CHECK_PATCHSET(\&check_patchset, $options);
 1;
 
 __END__
-=for Pod::Coverage check_command check_commands check_sizes check_executables check_max_paths deny_case_conflicts deny_token check_acls check_everything check_ref check_commit check_patchset
+=for Pod::Coverage check_command check_commands check_sizes check_executables check_max_paths deny_case_conflicts check_locks deny_token check_acls check_everything check_ref check_commit check_patchset
 
 =head1 NAME
 
@@ -569,6 +624,12 @@ may configure it in a Git configuration file like this:
     # Reject files with names that would conflict with other files in the
     # repository in case-insensitive filesystems, such as the ones on Windows.
     deny-case-conflict = true
+
+    # Subject MS-Office and OpenDocument documents to the locking mechanism
+    lock = *.docx
+    lock = *.pptx
+    lock = *.xlsx
+    lock = qr/\\.(od[fgpst])$/
 
     # Reject commits adding scripts without the executable bit set.
     executable = *.sh
@@ -751,6 +812,44 @@ this option to be safe
 Note that this check have to check the newly added files against all files
 already in the repository. It can be a little slow for large repositories. Take
 heed!
+
+=head2 lock PATTERN
+
+This multi-valued directive implements a poor man's version of the L<Subversion
+locking
+mechanism|https://svnbook.red-bean.com/nightly/en/svn.advanced.locking.html>. The
+PATTERNs specified by one or more of these directives match, case-insensitively,
+the files that should be subject to the locking checks. Whenever one pushes a
+commit which creates or copies a file with a name matching one of the PATTERNs,
+the hook checks if the file is locked. If it is, the commit is rejected.
+
+The PATTERN argument can be expressed either as a globbing pattern or as a
+regular expression. Take a look at the explanation for the PATTERN argument to
+the C<name> directive above for the details.
+
+To lock a file you just need to create another file with the same name and
+suffixed with F<.lock>. For instance, suppose you're going to edit a file called
+F<doc/file.odt>. In order to signal to your colleagues that they should refrain
+from editing the file, just create another file called F<doc/file.odt.lock> and
+commit it. The lock file may even be empty.
+
+If a colleague doesn't notice the lock and tries to push a new version of the
+file, the push is rejected telling them that the file is locked and that they
+should coordinate with you how to integrate their changes into yours.
+
+When you commit the changes to the file, you should delete the lock file in the
+same commit. This way, when you push the commit, the commit will be accepted,
+the file will be changed and the lock removed.
+
+Note that this mechanism isn't able to alert users that they shouldn't edit
+locked files. In Subversion, files subject to locking are kept read-only so that
+the users have to execute the C<svn lock> command before editing them. There is
+no such alert in Git. The users should really remember to create a lock file
+before editing any file. If they forget, they will be reminded that the file is
+locked when they try to push them, which will avoid the race condition, but it
+will be too late to avoid the need to manually integrate the changes later. You
+should consider this mechanism as an informational protocol only. All people
+involved in changing the repository must learn to pay attention to it.
 
 =head2 max-path LENGTH
 

@@ -5,7 +5,7 @@ use warnings;
 use lib qw/t lib/;
 use Git::Hooks::Test ':all';
 use Path::Tiny;
-use Test::More tests => 38;
+use Test::More tests => 44;
 use Test::Requires::Git;
 
 my ($repo, $clone, $T);
@@ -219,6 +219,24 @@ check_can_commit('filename with unusual characteres OK', '$al\v@ção', 'truncat
 
 check_cannot_commit('filename with unusual characteres NOK', qr/the current limit is/,
                     '$al\v@ção', 'truncate', '12345');
+
+# Check lock
+
+$repo->run(qw/config --remove-section githooks.checkfile/);
+
+check_can_commit('create lock file', 'file.odt.lock');
+
+$repo->run(qw/config githooks.checkfile.lock *.odt/);
+
+check_cannot_commit('reject creation of locked file', qr/files that are locked/, 'file.odt');
+
+check_can_commit('remove lock file', 'file.odt.lock', 'rm');
+
+check_can_commit('create unlocked file', 'file.odt');
+
+check_can_commit('create lock file again', 'file.odt.lock');
+
+check_cannot_commit('reject modification of locked file', qr/files that are locked/, 'file.odt');
 
 # Check max-path
 

@@ -614,7 +614,7 @@ sub get_config {
         }
 
         if (defined $config) {
-            # The --null option to git-log makes it output a null character
+            # The --null option to git-config makes it output a null character
             # after each option/value. The option and value are separated by a
             # newline, unless there is no value, in which case, there is no
             # newline.
@@ -903,10 +903,10 @@ sub fail_on_faults {
         $faults .= "\n" unless $faults =~ /\n$/;
         if ($warn_only) {
             $log->warning(Warning => {faults => $faults});
-            warn $faults;
+            warn $faults;       ## no critic (RequireCarping)
         } else {
             $log->error(Error => {faults => $faults});
-            die $faults;
+            die $faults;       ## no critic (RequireCarping)
         }
     }
 
