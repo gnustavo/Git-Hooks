@@ -9,7 +9,7 @@ use Log::Any '$log';
 use Git::Hooks;
 use Git::Repository::Log;
 use Path::Tiny;
-use List::MoreUtils qw/last_index uniq/;
+use List::MoreUtils qw/any last_index uniq/;
 
 my $PKG = __PACKAGE__;
 my $CFG = __PACKAGE__ =~ s/.*::/githooks./r;
@@ -122,6 +122,16 @@ sub _jql_query {
     }
 
     return $cache->{jql}{$jql};
+}
+
+sub _skip_logs {
+    my ($git, $commit) = @_;
+
+    my $cache = $git->cache($PKG);
+    $cache->{skip_logs_regexes} = [map {qr/$_/} $git->get_config($CFG => 'skip-logs')]
+        unless exists $cache->{skip_logs_regexes};
+    my $message = $commit->message;
+    return any {$message =~ $_} $cache->{skip_logs_regexes}->@*;
 }
 
 sub _disconnect_jira {
@@ -378,6 +388,8 @@ sub check_commit_msg {
 
     if ($commit->parent() > 1 && $git->get_config_boolean($CFG => 'skip-merges')) {
         return 1;
+    } elsif (_skip_logs($git, $commit)) {
+        return 1;
     } else {
         return _check_jira_keys($git, $commit, $ref, uniq(grok_msg_jiras($git, $commit->message)));
     }
@@ -571,6 +583,17 @@ may configure it in a Git configuration file like this:
     # Commits pushed to release branches must cite Jiras associated with the
     # fixVersion named after the same major.minor version number.
     fixversion = ^refs/heads/(\\d+\\.\\d+)\\.  ^$+
+
+    # Skip commits created by git-merge. Although, it's better to use the
+    # skip-merges directive for this. See below.
+    skip-logs = ^Merge\\s
+    # Skip commits created by git-revert
+    skip-logs = ^(?:Reapply|Revert)\\s
+    # Skip commits with a special mark in them
+    skip-logs = DONT-CheckJira
+
+    # Skip merge commits
+    skip-merges
 
 =head1 DESCRIPTION
 
@@ -951,6 +974,15 @@ In this case, NAME must be the name of a Jira group.
 In this case, the visibility isn't restricted at all.
 
 =back
+
+=head2 skip-logs REGEXP
+
+Use this multi-valued directive to make CheckJira don't check
+commits which log messages match any of the REGEXes specified with it.
+
+As the examples in the L<SYNOPSIS> section shows, you may want to make CheckJira
+skip commits automatically created by C<git-revert> commands, or to skip commits
+with a special mark in them.
 
 =head2 skip-merges BOOL
 
