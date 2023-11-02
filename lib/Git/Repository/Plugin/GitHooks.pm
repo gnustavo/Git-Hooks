@@ -607,40 +607,38 @@ sub get_config {
            local $/ = "\c@";
            $git->run(qw/config --null --list/);
         };
+        $config //= '';
 
         if (defined $CONFIG_ENCODING) {
             require Encode;
             $config = Encode::decode($CONFIG_ENCODING, $config);
         }
 
-        if (defined $config) {
-            # The --null option to git-config makes it output a null character
-            # after each option/value. The option and value are separated by a
-            # newline, unless there is no value, in which case, there is no
-            # newline.
-            while ($config =~ /([^\cJ]+)(\cJ[^\c@]*|)\c@/sg) {
-                my ($option, $value) = ($1, $2);
-                if ($option =~ /(.+)\.(.+)/) {
-                    my ($osection, $okey) = (lc $1, lc $2);
-                    if ($value =~ s/^\cJ//) {
-                        ## no critic (ProhibitDeepNests)
-                        if ($value eq 'undef') {
-                            # The 'undef' string is a special mark telling us to
-                            # disregard every previous value already set for
-                            # this variable.
-                            delete $config{$osection}{$okey};
-                        } else {
-                            push @{$config{$osection}{$okey}}, $value;
-                        }
+        # The --null option to git-config makes it output a null character
+        # after each option/value. The option and value are separated by a
+        # newline, unless there is no value, in which case, there is no
+        # newline.
+        while ($config =~ /([^\cJ]+)(\cJ[^\c@]*|)\c@/sg) {
+            my ($option, $value) = ($1, $2);
+            if ($option =~ /(.+)\.(.+)/) {
+                my ($osection, $okey) = (lc $1, lc $2);
+                if ($value =~ s/^\cJ//) {
+                    if ($value eq 'undef') {
+                        # The 'undef' string is a special mark telling us to
+                        # disregard every previous value already set for
+                        # this variable.
+                        delete $config{$osection}{$okey};
                     } else {
-                        # An option without a value is considered a boolean
-                        # true. We mark it explicitly so instead of leaving it
-                        # undefined because Perl would consider it false.
-                        push @{$config{$osection}{$okey}}, 'true';
+                        push @{$config{$osection}{$okey}}, $value;
                     }
                 } else {
-                    croak __PACKAGE__, ": Cannot grok config variable name '$option'.\n";
+                    # An option without a value is considered a boolean
+                    # true. We mark it explicitly so instead of leaving it
+                    # undefined because Perl would consider it false.
+                    push @{$config{$osection}{$okey}}, 'true';
                 }
+            } else {
+                croak __PACKAGE__, ": Cannot grok config variable name '$option'.\n";
             }
         }
 
