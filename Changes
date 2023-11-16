@@ -2,6 +2,15 @@ Revision history for perl module Git-Hooks. -*- text -*-
 
 {{$NEXT}}
 
+3.6.0     2023-11-16 10:57:01-03:00 America/Sao_Paulo
+
+[New features]
+
+  - CheckFile: implement the lock directive
+    
+    The CheckFile.lock directive implements a poor man's version of the
+    Subversion locking mechanism, rejecting pushes that modify locked files.
+
 3.5.0     2023-02-07 22:09:06-03:00 America/Sao_Paulo
 
 [New features]
